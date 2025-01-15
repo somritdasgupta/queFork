@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
@@ -22,15 +21,26 @@ import { KeyValueEditor } from "./key-value-editor";
 import { Plus, Settings, Trash2, Edit2 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 
+interface Environment {
+  id: string;
+  name: string;
+  variables: { key: string; value: string }[];
+}
+
 export function EnvironmentManager({
   environments,
   currentEnvironment,
   onEnvironmentChange,
   onEnvironmentsUpdate,
+}: {
+  environments: Environment[];
+  currentEnvironment: Environment | null;
+  onEnvironmentChange: (environmentId: string) => void;
+  onEnvironmentsUpdate: (environments: Environment[]) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [newEnvironmentName, setNewEnvironmentName] = useState("");
-  const [editingEnvironment, setEditingEnvironment] = useState(null);
+  const [editingEnvironment, setEditingEnvironment] = useState<Environment | null>(null);
 
   const handleCreateEnvironment = () => {
     if (newEnvironmentName.trim()) {
@@ -45,28 +55,30 @@ export function EnvironmentManager({
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Select
-        value={currentEnvironment?.id || ""}
-        onValueChange={onEnvironmentChange}
-      >
-        <SelectTrigger className="w-40 bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 hover:border-blue-200">
-          <SelectValue placeholder="Select env" />
-        </SelectTrigger>
-        <SelectContent>
-          {environments.map((env) => (
-            <SelectItem key={env.id} value={env.id}>
-              {env.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="flex items-center gap-2 max-w-full">
+      <div className="flex-shrink sm:w-40 w-full">
+        <Select
+          value={currentEnvironment?.id || ""}
+          onValueChange={onEnvironmentChange}
+        >
+          <SelectTrigger className="w-full border-2 border-gray-200 bg-blue-50 text-blue-700 hover:bg-gray-200 hover:border-blue-200">
+            <SelectValue placeholder="Select env" />
+          </SelectTrigger>
+          <SelectContent>
+            {environments.map((env) => (
+              <SelectItem key={env.id} value={env.id}>
+                {env.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button
             size="icon"
-            className="h-9 w-9 bg-black hover:bg-gray-800 text-white"
+            className="h-10 w-12 flex-shrink-0 bg-black hover:bg-gray-800 text-white"
           >
             <Settings className="h-4 w-4" />
           </Button>
@@ -159,7 +171,6 @@ export function EnvironmentManager({
             <KeyValueEditor
               pairs={editingEnvironment.variables}
               onChange={(variables) => {
-                // Just update the local state, don't close the modal
                 setEditingEnvironment({
                   ...editingEnvironment,
                   variables: variables,
@@ -179,7 +190,6 @@ export function EnvironmentManager({
               </Button>
               <Button
                 onClick={() => {
-                  // Save the changes to the main state
                   onEnvironmentsUpdate(
                     environments.map((env) =>
                       env.id === editingEnvironment.id

@@ -26,7 +26,7 @@ import {
   HistoryItem,
   Collection,
   SavedRequest,
-  FolderType,
+  Folder as FolderType,
   Environment,
 } from "@/types";
 import DesktopSidePanel from "@/components/desktop-side-panel";
@@ -44,7 +44,7 @@ export default function Page() {
     { key: "", value: "", enabled: true },
   ]);
   const [body, setBody] = useState<RequestBody>({ type: "none", content: "" });
-  const [auth, setAuth] = useState({ type: "none" as const });
+  const [auth, setAuth] = useState<{ type: "none" } | { type: "bearer"; token: string } | { type: "basic"; username: string; password: string } | { type: "apiKey"; key: string }>({ type: "none" });
   const [response, setResponse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -195,7 +195,21 @@ export default function Page() {
       setBody(request.body);
     }
     if (request.auth) {
-      setAuth(request.auth);
+      const auth = request.auth;
+      switch (auth.type) {
+        case "bearer":
+          if (auth.token) setAuth({ type: "bearer", token: auth.token });
+          break;
+        case "basic":
+          if (auth.username && auth.password) setAuth({ type: "basic", username: auth.username, password: auth.password });
+          break;
+        case "apiKey":
+          if (auth.key) setAuth({ type: "apiKey", key: auth.key });
+          break;
+        case "none":
+          setAuth({ type: "none" });
+          break;
+      }
     }
   };
 
@@ -206,7 +220,21 @@ export default function Page() {
     setParams(item.request.params);
     setBody(item.request.body);
     if (item.request.auth) {
-      setAuth(item.request.auth);
+      const auth = item.request.auth;
+      switch (auth.type) {
+        case "bearer":
+          if (auth.token) setAuth({ type: "bearer", token: auth.token });
+          break;
+        case "basic":
+          if (auth.username && auth.password) setAuth({ type: "basic", username: auth.username, password: auth.password });
+          break;
+        case "apiKey":
+          if (auth.key) setAuth({ type: "apiKey", key: auth.key });
+          break;
+        case "none":
+          setAuth({ type: "none" });
+          break;
+      }
     }
     if (item.response) {
       setResponse(item.response);
@@ -225,6 +253,7 @@ export default function Page() {
       description: collection.description || "",
       folders: [],
       requests: [],
+      lastModified: new Date().toISOString(),
     };
     saveCollections([...collections, newCollection]);
   };
@@ -239,7 +268,13 @@ export default function Page() {
           ...collection,
           folders: [
             ...collection.folders,
-            { id: uuidv4(), ...folder, folders: [], requests: [] },
+            { 
+              id: uuidv4(), 
+              name: folder.name || "New Folder",
+              description: folder.description || "",
+              folders: [], 
+              requests: [] 
+            },
           ],
         };
       }
@@ -340,13 +375,13 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen grid grid-rows-[auto_1fr_auto]">
+    <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-gray-50 rounded-md">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-10 bg-white-70 rounded-b-lg border-b-2 border-gray-200 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-50 rounded-b-lg bg-gray-50 backdrop-blur supports-[backdrop-filter]:bg-gray/50 border-b-2 border-gray-300 shadow-md transition-all duration-200">
         <div className="flex flex-col md:flex-row md:h-16">
           {/* Mobile Layout */}
-          <div className="flex flex-col md:hidden">
-            <div className="flex items-center gap-2 py-4 px-2">
+          <div className="flex flex-col md:hidden w-full px-2 py-3 space-y-2">
+            <div className="flex items-center gap-2">
               <MobileNav
                 collections={collections}
                 history={history}
@@ -362,53 +397,51 @@ export default function Page() {
                 onDeleteHistoryItem={handleDeleteHistoryItem}
               />
               <div className="flex-1 flex gap-2 items-center">
-                <div className="w-max-[80px]">
-                  <Select value={method} onValueChange={setMethod}>
-                    <SelectTrigger className="w-[100px] font-bold border-0 bg-gray-200 rounded-l-md">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem
-                        value="GET"
-                        className="font-semibold text-green-600"
-                      >
-                        GET
-                      </SelectItem>
-                      <SelectItem
-                        value="POST"
-                        className="font-semibold text-blue-600"
-                      >
-                        POST
-                      </SelectItem>
-                      <SelectItem
-                        value="PUT"
-                        className="font-semibold text-yellow-600"
-                      >
-                        PUT
-                      </SelectItem>
-                      <SelectItem
-                        value="DELETE"
-                        className="font-semibold text-red-600"
-                      >
-                        DELETE
-                      </SelectItem>
-                      <SelectItem
-                        value="PATCH"
-                        className="font-semibold text-purple-600"
-                      >
-                        PATCH
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={method} onValueChange={setMethod}>
+                  <SelectTrigger className="w-24 font-semibold bg-blue-100 border-2 border-blue-300  rounded-md">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      value="GET"
+                      className="font-medium text-green-600"
+                    >
+                      GET
+                    </SelectItem>
+                    <SelectItem
+                      value="POST"
+                      className="font-medium text-blue-600"
+                    >
+                      POST
+                    </SelectItem>
+                    <SelectItem
+                      value="PUT"
+                      className="font-medium text-yellow-600"
+                    >
+                      PUT
+                    </SelectItem>
+                    <SelectItem
+                      value="DELETE"
+                      className="font-medium text-red-600"
+                    >
+                      DELETE
+                    </SelectItem>
+                    <SelectItem
+                      value="PATCH"
+                      className="font-medium text-purple-600"
+                    >
+                      PATCH
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
                 <Input
-                  className="flex w-full border-gray-200 bg-blue-50"
-                  placeholder="https://api.example.com/endpoint"
+                  className="flex-1 border-2 border-gray-200 bg-blue-50 focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter API endpoint"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                 />
                 <Button
-                  className="bg-slate-900 hover:bg-slate-800 text-white"
+                  className="bg-slate-900 hover:bg-slate-800 text-white transition-colors"
                   onClick={handleSendRequest}
                   disabled={isLoading}
                 >
@@ -420,89 +453,6 @@ export default function Page() {
                 </Button>
               </div>
             </div>
-          </div>
-
-          {/* Desktop Layout */}
-          <div className="hidden md:flex items-center gap-4 p-4 flex-1">
-            <MobileNav
-              collections={collections}
-              history={history}
-              onSelectRequest={handleLoadRequest}
-              onSelectHistoryItem={handleLoadHistoryItem}
-              onClearHistory={handleClearHistory}
-              onCreateCollection={handleCreateCollection}
-              onCreateFolder={handleCreateFolder}
-              onSaveRequest={handleSaveRequest}
-              onDeleteCollection={handleDeleteCollection}
-              onDeleteFolder={handleDeleteFolder}
-              onDeleteRequest={handleDeleteRequest}
-              onDeleteHistoryItem={handleDeleteHistoryItem}
-            />
-            <div className="flex items-center gap-2 bg-blue-100 rounded-md px-3">
-              <div className="w-5 h-5 bg-violet-600 rounded-md flex items-center justify-center text-white text-xs font-bold">
-                {method.charAt(0)}
-              </div>
-              <Select value={method} onValueChange={setMethod}>
-                <SelectTrigger className="w-[100px] font-bold border-0 bg-blue-100 rounded-md">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    value="GET"
-                    className="font-semibold text-green-600"
-                  >
-                    GET
-                  </SelectItem>
-                  <SelectItem
-                    value="POST"
-                    className="font-semibold text-blue-600"
-                  >
-                    POST
-                  </SelectItem>
-                  <SelectItem
-                    value="PUT"
-                    className="font-semibold text-yellow-600"
-                  >
-                    PUT
-                  </SelectItem>
-                  <SelectItem
-                    value="DELETE"
-                    className="font-semibold text-red-600"
-                  >
-                    DELETE
-                  </SelectItem>
-                  <SelectItem
-                    value="PATCH"
-                    className="font-semibold text-purple-600"
-                  >
-                    PATCH
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex-1 flex items-center gap-2">
-              <Input
-                className="flex-1 border-gray-200 bg-blue-50"
-                placeholder="https://api.example.com/endpoint"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-              />
-              <Button
-                className="bg-slate-900 hover:bg-slate-800 text-white px-8 transition-all duration-200 ease-in-out transform hover:scale-101"
-                onClick={handleSendRequest}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    Send
-                  </>
-                )}
-              </Button>
-            </div>
             <EnvironmentManager
               environments={environments}
               currentEnvironment={currentEnvironment}
@@ -510,17 +460,108 @@ export default function Page() {
               onEnvironmentsUpdate={handleEnvironmentsUpdate}
             />
           </div>
+
+          {/* Enhanced Desktop Layout */}
+          <div className="hidden bg-gray-50 md:flex items-center gap-4 p-4 flex-1 max-w-screen-2xl mx-auto">
+            <div className="flex items-center gap-4 flex-1">
+              <MobileNav
+                collections={collections}
+                history={history}
+                onSelectRequest={handleLoadRequest}
+                onSelectHistoryItem={handleLoadHistoryItem}
+                onClearHistory={handleClearHistory}
+                onCreateCollection={handleCreateCollection}
+                onCreateFolder={handleCreateFolder}
+                onSaveRequest={handleSaveRequest}
+                onDeleteCollection={handleDeleteCollection}
+                onDeleteFolder={handleDeleteFolder}
+                onDeleteRequest={handleDeleteRequest}
+                onDeleteHistoryItem={handleDeleteHistoryItem}
+              />
+
+              <div className="flex items-center gap-2 bg-blue-100 border-2 border-blue-300 rounded-md px-2">
+                <div className="w-6 h-6 bg-violet-600 rounded-md flex items-center justify-center text-white text-xs font-bold">
+                  {method.charAt(0)}
+                </div>
+                <Select value={method} onValueChange={setMethod}>
+                  <SelectTrigger className="w-[100px] font-bold bg-transparent border-0 rounded-md">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      value="GET"
+                      className="font-semibold text-green-600"
+                    >
+                      GET
+                    </SelectItem>
+                    <SelectItem
+                      value="POST"
+                      className="font-medium text-blue-600"
+                    >
+                      POST
+                    </SelectItem>
+                    <SelectItem
+                      value="PUT"
+                      className="font-medium text-yellow-600"
+                    >
+                      PUT
+                    </SelectItem>
+                    <SelectItem
+                      value="DELETE"
+                      className="font-medium text-red-600"
+                    >
+                      DELETE
+                    </SelectItem>
+                    <SelectItem
+                      value="PATCH"
+                      className="font-medium text-purple-600"
+                    >
+                      PATCH
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1 flex items-center gap-3">
+                <Input
+                  className="flex-1 border-2 border-gray-200 bg-blue-50 focus:ring-2 focus:ring-blue-500 transition-all"
+                  placeholder="Enter your API endpoint"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                />
+                <Button
+                  className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-lg "
+                  onClick={handleSendRequest}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Send className="w-4 h-4 mr-2" />
+                  )}
+                  Send
+                </Button>
+              </div>
+
+              <EnvironmentManager
+                environments={environments}
+                currentEnvironment={currentEnvironment}
+                onEnvironmentChange={handleEnvironmentChange}
+                onEnvironmentsUpdate={handleEnvironmentsUpdate}
+              />
+            </div>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="pt-20 md:pt-20 h-[calc(100vh-65px)] bg-gray-50">
-        <ResizablePanelGroup direction="horizontal">
-          {/* Left Sidebar - Combined Collections and History */}
+      <main className="pt-28 md:pt-20 h-[calc(100vh-4rem)] overflow-hidden rounded-lg">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          {/* Responsive Sidebar */}
           <ResizablePanel
             defaultSize={25}
-            minSize={25}
-            maxSize={25}
+            minSize={20}
+            maxSize={30}
             className="hidden md:block"
           >
             <DesktopSidePanel
@@ -539,11 +580,11 @@ export default function Page() {
             />
           </ResizablePanel>
 
-          {/* Main Panel */}
-          <ResizablePanel defaultSize={80}>
+          {/* Enhanced Main Panel */}
+          <ResizablePanel defaultSize={75} className="bg-gray-50 rounde-md">
             <ResizablePanelGroup direction="vertical">
-              <ResizablePanel defaultSize={50}>
-                <div className="h-full">
+              <ResizablePanel defaultSize={50} className="overflow-hidden">
+                <div className="h-full overflow-y-auto">
                   <RequestPanel
                     headers={headers}
                     params={params}
@@ -557,10 +598,18 @@ export default function Page() {
                 </div>
               </ResizablePanel>
 
-              <ResizableHandle withHandle />
+              <ResizableHandle
+                withHandle
+                className="bg-gray-200 hover:bg-gray-300 transition-colors"
+              />
 
-              <ResizablePanel defaultSize={35} minSize={35} maxSize={94}>
-                <div className="h-full bg-grey-100">
+              <ResizablePanel
+                defaultSize={50}
+                minSize={30}
+                maxSize={70}
+                className="overflow-hidden"
+              >
+                <div className="h-full bg-gray-50 overflow-y-auto">
                   <ResponsePanel
                     response={response}
                     isLoading={isLoading}
@@ -575,7 +624,9 @@ export default function Page() {
           </ResizablePanel>
         </ResizablePanelGroup>
       </main>
-      <footer>
+
+      {/* Enhanced Footer */}
+      <footer className="border-t border-transparent bg-transparent">
         <Footer />
       </footer>
     </div>

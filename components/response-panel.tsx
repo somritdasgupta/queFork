@@ -120,7 +120,7 @@ export function ResponsePanel({
       url,
       headers: [],
       params: [],
-      body: { type: "none", content: "" },
+      body: { type: "raw", content: "" },
     };
 
     onSaveToCollection(selectedCollection, request);
@@ -174,15 +174,15 @@ export function ResponsePanel({
       : "text-red-500";
 
   return (
-    <div className="border rounded-md bg-white h-full flex flex-col">
-      <div className="p-3 border-b flex items-center justify-between">
+    <div className="rounded-md bg-white h-full flex flex-col">
+      <div className="p-3 border-b-2 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <StatusIcon className={`h-5 w-5 ${statusColor}`} />
             <Badge
               variant={
                 response.status >= 200 && response.status < 300
-                  ? "success"
+                  ? "default"
                   : "destructive"
               }
             >
@@ -205,7 +205,6 @@ export function ResponsePanel({
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
                 <Save className="h-4 w-4" />
-                Save
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -255,7 +254,7 @@ export function ResponsePanel({
             </DialogContent>
           </Dialog>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={copyToClipboard}
             className="gap-2"

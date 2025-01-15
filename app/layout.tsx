@@ -12,7 +12,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <title>queFork • REST API Testing</title>
-        <link rel="icon" href="/public/favicon.ico" />
+        <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={inter.className}>{children}</body>
     </html>

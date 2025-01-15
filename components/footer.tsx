@@ -31,7 +31,7 @@ const Footer = () => {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm font-medium">Star on GitHub</span>
+                <span className="text-sm font-medium">GitHub</span>
               </a>
             </div>
           </div>

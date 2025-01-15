@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CollectionsPanel } from "@/components/collections-panel";
 import { HistoryPanel } from "@/components/history-panel";
-import { Collection, HistoryItem, SavedRequest, FolderType } from "@/types";
+import { Collection, HistoryItem, SavedRequest, Folder } from "@/types";
 
 interface DesktopSidePanelProps {
   collections: Collection[];
@@ -11,7 +11,7 @@ interface DesktopSidePanelProps {
   onSelectHistoryItem: (item: HistoryItem) => void;
   onClearHistory: () => void;
   onCreateCollection: (collection: Partial<Collection>) => void;
-  onCreateFolder: (collectionId: string, folder: Partial<FolderType>) => void;
+  onCreateFolder: (collectionId: string, folder: Partial<Folder>) => void;
   onSaveRequest: (collectionId: string, request: Partial<SavedRequest>) => void;
   onDeleteCollection: (collectionId: string) => void;
   onDeleteFolder: (collectionId: string, folderId: string) => void;
@@ -38,7 +38,7 @@ const DesktopSidePanel = ({
   );
 
   return (
-    <div className="h-full flex flex-col bg-white-0 border-2 rounded-lg">
+    <div className="h-full flex flex-col bg-white border-2 rounded-lg">
       <div className="px-2 py-2">
         <div className="flex bg-blue-100 rounded-lg p-1">
           <Button

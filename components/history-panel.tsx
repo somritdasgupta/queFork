@@ -131,12 +131,12 @@ export function HistoryPanel({
           </div>
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search history"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-gray-50 border-gray-200 rounded-lg"
+            className="pl-10 h-8 bg-gray-100"
           />
         </div>
       </div>
@@ -155,7 +155,7 @@ export function HistoryPanel({
             filteredHistory.map((item) => (
               <div
                 key={item.id}
-                className="relative group rounded-lg border border-gray-100 hover:border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+                className="relative group rounded-lg border-2 border-gray-200 hover:border-gray-200 bg-gray-50 hover:bg-gray-50 transition-colors"
               >
                 <button
                   onClick={() => onSelectItem(item)}
