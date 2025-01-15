@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 220.6 83.5% 12.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 262 83% 58%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 263.4 70% 50.4%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 263.4 70% 50.4%;
+}
+
+@layer components {
+  /* Method Colors */
+  .method-get {
+    @apply bg-emerald-50 text-emerald-700 border-emerald-200;
+  }
+
+  .method-post {
+    @apply bg-blue-50 text-blue-700 border-blue-200;
+  }
+
+  .method-put {
+    @apply bg-yellow-50 text-yellow-700 border-yellow-200;
+  }
+
+  .method-delete {
+    @apply bg-red-50 text-red-700 border-red-200;
+  }
+
+  .method-patch {
+    @apply bg-purple-50 text-purple-700 border-purple-200;
+  }
+
+  /* Collection Styles */
+  .collection-folder {
+    @apply transition-all duration-200;
+  }
+
+  .collection-item {
+    @apply transition-all duration-200;
+  }
+
+  .collection-tag {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* Response Panel */
+  .response-pre {
+    @apply rounded-lg;
+  }
+
+  .response-content {
+    @apply font-mono text-sm;
+  }
+
+  /* Collections Panel */
+  .collections-header {
+    @apply sticky top-0 z-10 bg-white border-b border-gray-100;
+  }
+
+  .collections-search {
+    @apply relative;
+  }
+
+  .collections-list {
+    @apply space-y-2 p-2;
+  }
+
+  /* Accordion Styles */
+  .accordion-item {
+    @apply border border-gray-100 rounded-lg overflow-hidden;
+  }
+
+  .accordion-trigger {
+    @apply w-full transition-colors hover:bg-gray-50;
+  }
+
+  .accordion-content {
+    @apply py-2;
+  }
+
+  /* Button States */
+  .button-hover-effect {
+    @apply transition-all duration-200 hover:shadow-sm active:transform active:scale-95;
+  }
+
+  /* Focus States */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  }
+}
+
