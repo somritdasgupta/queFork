@@ -1,6 +1,29 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import hljs from "highlight.js";
+import "highlight.js/styles/tokyo-night-dark.css";
+
+const highlightCode = (code: string, language: string): string => {
+  try {
+    return hljs.highlight(code, { language }).value;
+  } catch {
+    return code;
+  }
+};
+
+const getLanguage = (contentType: string): string => {
+  switch (contentType) {
+    case "json":
+      return "json";
+    case "html":
+      return "html";
+    case "xml":
+      return "xml";
+    default:
+      return "text";
+  }
+};
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +39,7 @@ import {
   AlertCircle,
   FileJson,
   FileText,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -201,24 +225,34 @@ export function ResponsePanel({
 
   if (!response) {
     return (
-      <div className="min-h-[200px] flex items-center justify-center p-6 mt-8">
+      <div className="min-h-[200px] flex items-center justify-center p-6 mt-4">
         <div className="text-center space-y-4 max-w-md">
-          <div className="relative">
-            <div className="w-24 h-10 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-blue-500 font-semibold">
-              {"Ready"}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <ul className="text-sm text-gray-500 space-y-1 mt-8">
-              <li>• Enter a URL in the request bar above</li>
-              <li>• Select type of HTTP method</li>
-              <li>• Click the Send button to make the request</li>
-            </ul>
-          </div>
           <div className="pt-4">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500 text-blue-50 animate-pulse">
+            <span className="inline-flex px-4 py-2 rounded-full text-xs font-medium bg-slate-800 text-blue-50 animate-pulse">
               Waiting for request
             </span>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="w-8 h-8 rounded-full font-bold bg-gray-100 flex items-center justify-center">
+                1
+              </div>
+              <span>Select an HTTP method (GET, POST, PUT, etc.)</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="w-8 h-8 rounded-full font-bold bg-gray-100 flex items-center justify-center">
+                2
+              </div>
+              <span>Enter the request URL in the bar above</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="w-8 h-8 rounded-full font-bold bg-gray-100 flex items-center justify-center">
+                3
+              </div>
+              <span>Click Send to make the request</span>
+            </div>
           </div>
         </div>
       </div>
@@ -235,10 +269,10 @@ export function ResponsePanel({
             <span className="text-sm text-gray-500 ml-2">{response.time}</span>
           </div>
           <Button
-            variant="ghost"
+            variant="default"
             size="sm"
             onClick={copyToClipboard}
-            className="gap-2"
+            className="gap-2 bg-gray-200 text-slate-800 hover:bg-gray-300"
           >
             {copyStatus[activeTab] ? (
               <Check className="h-4 w-4" />
@@ -249,7 +283,7 @@ export function ResponsePanel({
         </div>
         <div className="flex-1 bg-slate-900 p-4">
           <pre className="text-red-400 font-mono text-sm whitespace-pre-wrap">
-            {response.error}
+            Error: {response.error}
           </pre>
         </div>
       </div>
@@ -259,7 +293,7 @@ export function ResponsePanel({
   return (
     <div className="border bg-white h-full flex flex-col">
       <div className="p-3 border-b flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
             {response.status >= 200 && response.status < 300 ? (
               <CheckCircle className="h-5 w-5 text-green-500" />
@@ -269,14 +303,20 @@ export function ResponsePanel({
             <Badge
               variant={
                 response.status >= 200 && response.status < 300
-                  ? "secondary"
+                  ? "default"
                   : "destructive"
               }
             >
               {response.status}
             </Badge>
+            <Badge
+              variant="outline"
+              className="ml-0 bg-slate-200 border-red-200 border-2 text-slate-800 font-mono text-xs"
+            >
+              {contentType.toLowerCase()}
+            </Badge>
           </div>
-          <div className="flex items-center gap-4 text-sm text-gray-500">
+          <div className="flex items-center gap-2 text-sm font-mono text-gray-500">
             <div className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
               <span>{response.time}</span>
@@ -285,20 +325,21 @@ export function ResponsePanel({
               <Database className="h-4 w-4" />
               <span>{response.size}</span>
             </div>
-            <Badge variant="outline" className="ml-0 bg-gray-100 text-gray-600">
-              {contentType.toUpperCase()}
-            </Badge>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-2 border-2 border-gray-200 bg-gray-100 text-slate-800 hover:bg-gray-300"
+              >
                 <Save className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg">
               <DialogHeader>
                 <DialogTitle>Save to Collection</DialogTitle>
               </DialogHeader>
@@ -354,7 +395,7 @@ export function ResponsePanel({
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label>Request Name</Label>
+                  <Label>Request Name *</Label>
                   <Input
                     placeholder="Enter request name"
                     value={requestName}
@@ -362,22 +403,30 @@ export function ResponsePanel({
                   />
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="sm:space-x-2 flex flex-col sm:flex-row gap-2 sm:gap-0">
                 <Button
                   variant="outline"
                   onClick={() => setIsSaveDialogOpen(false)}
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleSaveToCollection}>Save Request</Button>
+                <Button
+                  onClick={handleSaveToCollection}
+                  disabled={!requestName.trim()}
+                  className={
+                    !requestName.trim() ? "opacity-50 cursor-not-allowed" : ""
+                  }
+                >
+                  Save Request
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             onClick={copyToClipboard}
-            className="gap-2"
+            className="gap-2 border-2 border-gray-200 bg-gray-100 text-slate-800 hover:bg-gray-300"
           >
             {copyStatus[activeTab] ? (
               <Check className="h-4 w-4" />
@@ -415,35 +464,37 @@ export function ResponsePanel({
           </TabsTrigger>
         </TabsList>
 
-        <div className="flex-1 relative bg-slate-900 text-blue-300">
+        <div className="flex-1 relative bg-slate-900/90 text-blue-300">
           <TabsContent value="pretty" className="absolute inset-0 m-0">
             <ScrollArea className="h-full overflow-auto">
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-4 text-slate-400">
-                  <FileJson className="h-4 w-4" />
-                  <span>Formatted Response</span>
-                </div>
-                <pre className="whitespace-pre-wrap font-mono text-sm bg-slate-800 p-4 rounded-md overflow-x-auto">
-                  {getContentForTab()}
-                </pre>
+              <div className="p-2">
+                <pre
+                  className="font-mono text-sm p-2 whitespace-pre-wrap break-all sm:break-words sm:max-w-sm sm:max-w-none"
+                  dangerouslySetInnerHTML={{
+                    __html: highlightCode(
+                      getContentForTab(),
+                      getLanguage(contentType)
+                    ),
+                  }}
+                />
               </div>
             </ScrollArea>
           </TabsContent>
-
           <TabsContent value="raw" className="absolute inset-0 m-0">
             <ScrollArea className="h-full overflow-auto">
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-4 text-slate-400">
-                  <FileText className="h-4 w-4" />
-                  <span>Raw Response</span>
-                </div>
-                <div className="font-mono text-sm break-all bg-slate-800 p-4 rounded-md overflow-x-auto">
-                  {getContentForTab()}
-                </div>
+              <div className="p-2">
+                <div
+                  className="font-mono text-sm break-all p-2 overflow-x-auto"
+                  dangerouslySetInnerHTML={{
+                    __html: highlightCode(
+                      getContentForTab(),
+                      getLanguage(contentType)
+                    ),
+                  }}
+                />
               </div>
             </ScrollArea>
           </TabsContent>
-
           <TabsContent value="headers" className="absolute inset-0 m-0">
             <ScrollArea className="h-full">
               <div className="p-4">

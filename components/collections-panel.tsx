@@ -180,7 +180,6 @@ export function CollectionsPanel({
     return (
       <div className="flex items-center justify-between w-full group">
         <div className="flex items-center gap-2 min-w-0">
-          <ChevronRight className="h-4 w-4 text-gray-400 transition-transform duration-200" />
           <span className="text-sm font-medium text-gray-700 truncate">
             {collection.name}
           </span>
@@ -217,7 +216,7 @@ export function CollectionsPanel({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-8 w-8 p-0 opacity-50 hover:opacity-100 transition-opacity"
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
@@ -294,7 +293,7 @@ export function CollectionsPanel({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-7 w-7 p-0 opacity-50 group-hover:opacity-100 transition-opacity"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreVertical className="h-4 w-4" />
@@ -470,15 +469,86 @@ export function CollectionsPanel({
       {/* Header Section */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-100 p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Directories</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setSortBy((prev) =>
+                prev === "name" ? "date" : prev === "date" ? "method" : "name"
+              )
+            }
+            className="text-xs h-8 px-2 gap-1"
+          >
+            <SortAsc className="h-3 w-3" />
+            {sortBy}
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8 px-2 gap-1"
+              >
+                <Filter className="h-3 w-3" />
+                {filterBy || "All"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => setFilterBy("")}>
+                All Methods
+              </DropdownMenuItem>
+              {["GET", "POST", "PUT", "DELETE", "PATCH"].map((method) => (
+                <DropdownMenuItem
+                  key={method}
+                  onClick={() => setFilterBy(method)}
+                >
+                  {method}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8 px-2 gap-1"
+              >
+                <TagIcon className="h-3 w-3" />
+                {selectedTags.length ? `${selectedTags.length} Tags` : "Tags"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[200px]">
+              {allTags.length === 0 ? (
+                <div className="px-2 py-1.5 text-sm text-gray-500">
+                  No tags available
+                </div>
+              ) : (
+                allTags.map((tag) => (
+                  <DropdownMenuCheckboxItem
+                    key={tag}
+                    checked={selectedTags.includes(tag)}
+                    onCheckedChange={(checked) => {
+                      setSelectedTags((prev) =>
+                        checked ? [...prev, tag] : prev.filter((t) => t !== tag)
+                      );
+                    }}
+                  >
+                    {tag}
+                  </DropdownMenuCheckboxItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button variant="outline" size="sm" className="gap-1 p-2">
                 <Plus className="h-4 w-4" />
-                New Collection
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Collection</DialogTitle>
                 <DialogDescription>
@@ -527,95 +597,20 @@ export function CollectionsPanel({
                 </div>
               </div>
               <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreateOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateCollection}>
-                  Create Collection
-                </Button>
+                <div className="flex flex-col gap-3 justify-end w-full">
+                  <Button onClick={handleCreateCollection}>
+                    Create Collection
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCreateOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-
-        {/* Filters Section */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setSortBy((prev) =>
-                prev === "name" ? "date" : prev === "date" ? "method" : "name"
-              )
-            }
-            className="text-xs h-8 px-3 gap-1.5"
-          >
-            <SortAsc className="h-3 w-3" />
-            Sort: {sortBy}
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs h-8 px-3 gap-1.5"
-              >
-                <Filter className="h-3 w-3" />
-                {filterBy || "All Methods"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => setFilterBy("")}>
-                All Methods
-              </DropdownMenuItem>
-              {["GET", "POST", "PUT", "DELETE", "PATCH"].map((method) => (
-                <DropdownMenuItem
-                  key={method}
-                  onClick={() => setFilterBy(method)}
-                >
-                  {method}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs h-8 px-3 gap-1.5"
-              >
-                <TagIcon className="h-3 w-3" />
-                {selectedTags.length ? `${selectedTags.length} Tags` : "Tags"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[200px]">
-              {allTags.length === 0 ? (
-                <div className="px-2 py-1.5 text-sm text-gray-500">
-                  No tags available
-                </div>
-              ) : (
-                allTags.map((tag) => (
-                  <DropdownMenuCheckboxItem
-                    key={tag}
-                    checked={selectedTags.includes(tag)}
-                    onCheckedChange={(checked) => {
-                      setSelectedTags((prev) =>
-                        checked ? [...prev, tag] : prev.filter((t) => t !== tag)
-                      );
-                    }}
-                  >
-                    {tag}
-                  </DropdownMenuCheckboxItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         {/* Search Input */}
@@ -680,7 +675,7 @@ export function CollectionsPanel({
 
       {/* Tag Management Dialog */}
       <Dialog open={isTagDialogOpen} onOpenChange={setIsTagDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg max-w-md">
           <DialogHeader>
             <DialogTitle>Manage Tags</DialogTitle>
           </DialogHeader>

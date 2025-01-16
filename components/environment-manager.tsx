@@ -76,7 +76,10 @@ export function EnvironmentManager({
       onEnvironmentsUpdate([...environments, newEnvironment]);
       setNewEnvironmentName("");
     } else {
-      toast({ variant: "destructive", description: "Please enter a valid environment name (not 'Default')" });
+      toast({
+        variant: "destructive",
+        description: "Please enter a valid environment name (not 'Default')",
+      });
     }
   };
 
@@ -87,7 +90,7 @@ export function EnvironmentManager({
           value={currentEnvironment?.id || ""}
           onValueChange={onEnvironmentChange}
         >
-          <SelectTrigger className="w-full border-2 border-gray-200 bg-blue-50 text-blue-700 hover:bg-gray-200 hover:border-blue-200">
+          <SelectTrigger className="w-full border-2 border-blue-200 bg-blue-50 font-medium text-blue-700 hover:bg-gray-200 hover:border-blue-200">
             <SelectValue placeholder="Select env" />
           </SelectTrigger>
           <SelectContent>
@@ -110,7 +113,7 @@ export function EnvironmentManager({
           </Button>
         </DialogTrigger>
 
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">
               Manage Environments
@@ -140,7 +143,7 @@ export function EnvironmentManager({
                 {environments.map((env) => (
                   <div
                     key={env.id}
-                    className="flex items-center justify-between rounded-lg bg-secondary/20 px-3 py-2"
+                    className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-2"
                   >
                     <span className="font-medium">{env.name}</span>
                     <div className="flex gap-1">
@@ -190,7 +193,7 @@ export function EnvironmentManager({
           open={!!editingEnvironment}
           onOpenChange={() => setEditingEnvironment(null)}
         >
-          <DialogContent className="max-w-md">
+          <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg max-w-md">
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold">
                 Edit: {editingEnvironment.name}
@@ -208,7 +211,7 @@ export function EnvironmentManager({
               addButtonText="Add Variable"
             />
 
-            <DialogFooter className="flex justify-between space-x-2">
+            <DialogFooter className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -229,7 +232,7 @@ export function EnvironmentManager({
                   setEditingEnvironment(null);
                 }}
               >
-                Save Changes
+                Save
               </Button>
             </DialogFooter>
           </DialogContent>

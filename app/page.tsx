@@ -398,7 +398,7 @@ export default function Page() {
               />
               <div className="flex-1 flex gap-2 items-center">
                 <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger className="w-24 font-semibold bg-blue-100 border-2 border-blue-300  rounded-md">
+                  <SelectTrigger className="w-24 font-semibold bg-blue-50 border-2 border-blue-200 rounded-md">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -435,7 +435,7 @@ export default function Page() {
                   </SelectContent>
                 </Select>
                 <Input
-                  className="flex-1 border-2 border-gray-200 bg-blue-50 focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 font-mono border-2 border-blue-200 bg-blue-50 focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter API endpoint"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
@@ -524,7 +524,7 @@ export default function Page() {
 
               <div className="flex-1 flex items-center gap-3">
                 <Input
-                  className="flex-1 border-2 border-gray-200 bg-blue-50 focus:ring-2 focus:ring-blue-500 transition-all"
+                  className="flex-1 font-mono border-2 border-blue-200 bg-blue-50 focus:ring-2 focus:ring-blue-500 transition-all"
                   placeholder="Enter your API endpoint"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
@@ -555,7 +555,7 @@ export default function Page() {
       </header>
 
       {/* Main Content */}
-      <main className="pt-28 md:pt-20 h-[calc(100vh-4rem)] overflow-hidden rounded-lg">
+      <main className="pt-28 md:pt-20 h-[calc(100vh-3rem)] overflow-hidden rounded-lg">
         <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* Responsive Sidebar */}
           <ResizablePanel

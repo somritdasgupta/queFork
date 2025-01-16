@@ -91,7 +91,7 @@ export function KeyValueEditor({
                 variant="default"
                 size="icon"
                 onClick={() => removePair(index)}
-                className="bg-blue-50 text-gray-500 hover:text-red-500 hover:bg-blue-100"
+                className="bg-blue-50 text-gray-500 border-2 border-blue-100 hover:text-red-500 hover:bg-blue-100"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

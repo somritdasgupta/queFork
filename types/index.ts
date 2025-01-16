@@ -35,6 +35,7 @@ export interface Folder {
   description?: string;
   folders: Folder[];
   requests: SavedRequest[];
+  parentFolderId?: string;
 }
 
 

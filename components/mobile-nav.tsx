@@ -54,7 +54,7 @@ export function MobileNav({
         <Button 
           variant="default" 
           size="icon" 
-          className="bg-blue-100 hover:bg-blue-200 active:bg-blue-300 border-2 border-blue-300 md:hidden transition-colors"
+          className="bg-blue-50 hover:bg-blue-100 active:bg-blue-200 border-2 border-blue-200 md:hidden transition-colors"
         >
           <PanelRightClose className="h-8 text-slate-800" />
         </Button>
