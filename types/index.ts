@@ -23,8 +23,11 @@ export interface Collection {
   createdAt?: Date;
   folders: Folder[];
   requests: SavedRequest[];
+  tags?: string[];
   lastModified: string;
+  apiVersion?: string;
 }
+
 
 export interface Folder {
   id: string;

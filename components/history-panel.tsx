@@ -163,14 +163,14 @@ export function HistoryPanel({
                 >
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className={cn(
-                      "px-2 py-0.5 text-xs font-medium rounded-full",
+                      "px-2 py-0.5 text-xs font-mono border-2 rounded-full",
                       getMethodColor(item.method)
                     )}>
                       {item.method}
                     </span>
                     {item.response?.status && (
                       <span className={cn(
-                        "px-2 py-0.5 text-xs font-medium rounded-full",
+                        "px-2 py-0.5 text-xs font-mono border-2 rounded-full",
                         getStatusColor(item.response.status)
                       )}>
                         {item.response.status}

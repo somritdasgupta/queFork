@@ -626,7 +626,7 @@ export default function Page() {
       </main>
 
       {/* Enhanced Footer */}
-      <footer className="border-t border-transparent bg-transparent">
+      <footer className="border-t border-transparent bg-transparent shadow-md backdrop-blur supports-[backdrop-filter]:bg-gray/50">
         <Footer />
       </footer>
     </div>
