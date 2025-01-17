@@ -1,3 +1,5 @@
+//app/page.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -26,7 +28,6 @@ import {
   HistoryItem,
   Collection,
   SavedRequest,
-  Folder as FolderType,
   Environment,
 } from "@/types";
 import DesktopSidePanel from "@/components/desktop-side-panel";
@@ -44,7 +45,12 @@ export default function Page() {
     { key: "", value: "", enabled: true },
   ]);
   const [body, setBody] = useState<RequestBody>({ type: "none", content: "" });
-  const [auth, setAuth] = useState<{ type: "none" } | { type: "bearer"; token: string } | { type: "basic"; username: string; password: string } | { type: "apiKey"; key: string }>({ type: "none" });
+  const [auth, setAuth] = useState<
+    | { type: "none" }
+    | { type: "bearer"; token: string }
+    | { type: "basic"; username: string; password: string }
+    | { type: "apiKey"; key: string }
+  >({ type: "none" });
   const [response, setResponse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -52,6 +58,7 @@ export default function Page() {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [currentEnvironment, setCurrentEnvironment] =
     useState<Environment | null>(null);
+  const [isHistorySavingEnabled, setIsHistorySavingEnabled] = useState(true); // Added state for history saving
 
   useEffect(() => {
     const savedHistory = localStorage.getItem("apiHistory");
@@ -61,7 +68,11 @@ export default function Page() {
 
     const savedCollections = localStorage.getItem("apiCollections");
     if (savedCollections) {
-      setCollections(JSON.parse(savedCollections));
+      setCollections(
+        JSON.parse(savedCollections).map((collection: Collection) => ({
+          ...collection,
+        }))
+      );
     }
 
     const savedEnvironments = localStorage.getItem("apiEnvironments");
@@ -72,7 +83,7 @@ export default function Page() {
     }
   }, []);
 
-  const handleSendRequest = async () => {
+  const executeRequest = async () => {
     if (!url) {
       toast.error("Please enter a URL");
       return;
@@ -150,26 +161,123 @@ export default function Page() {
       };
 
       setResponse(finalResponse);
+      toast.success(`${method} request successful`);
+    } catch (error) {
+      console.error("Request failed:", error);
+      toast.error("Request failed. Please check the console for details.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      const historyItem: HistoryItem = {
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString(),
-        method,
-        url,
-        request: {
-          headers,
-          params,
-          body,
-          auth,
+  const handleSendRequest = async () => {
+    if (!url) {
+      toast.error("Please enter a URL");
+      return;
+    }
+
+    // Don't proceed with history saving if disabled
+    if (!isHistorySavingEnabled) {
+      // Execute request without saving to history
+      await executeRequest();
+      return;
+    }
+
+    setIsLoading(true);
+    const startTime = Date.now();
+
+    try {
+      const queryString = params
+        .filter((p) => p.key && p.value && p.enabled)
+        .map(
+          (p) =>
+            `${encodeURIComponent(p.key)}=${encodeURIComponent(
+              replaceEnvironmentVariables(p.value)
+            )}`
+        )
+        .join("&");
+
+      const requestHeaders: Record<string, string> = {};
+      headers
+        .filter((h) => h.key && h.value && h.enabled)
+        .forEach((h) => {
+          requestHeaders[h.key] = replaceEnvironmentVariables(h.value);
+        });
+
+      if (auth.type === "bearer" && auth.token) {
+        requestHeaders["Authorization"] = `Bearer ${replaceEnvironmentVariables(
+          auth.token
+        )}`;
+      } else if (auth.type === "basic" && auth.username && auth.password) {
+        requestHeaders["Authorization"] = `Basic ${btoa(
+          `${replaceEnvironmentVariables(
+            auth.username
+          )}:${replaceEnvironmentVariables(auth.password)}`
+        )}`;
+      } else if (auth.type === "apiKey" && auth.key) {
+        requestHeaders["X-API-Key"] = replaceEnvironmentVariables(auth.key);
+      }
+
+      const fullUrl = `${replaceEnvironmentVariables(url)}${
+        queryString ? `?${queryString}` : ""
+      }`;
+      const response = await fetch("/api/proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        response: finalResponse,
+        body: JSON.stringify({
+          method,
+          url: fullUrl,
+          headers: requestHeaders,
+          body:
+            body.type !== "none"
+              ? replaceEnvironmentVariables(body.content as string)
+              : undefined,
+        }),
+      });
+
+      const responseData = await response.json();
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      const responseSize = new Blob([JSON.stringify(responseData.body)]).size;
+      const formattedSize =
+        responseSize > 1024
+          ? `${(responseSize / 1024).toFixed(1)} KB`
+          : `${responseSize} B`;
+
+      const finalResponse = {
+        ...responseData,
+        time: `${duration}ms`,
+        size: formattedSize,
+        timestamp: new Date().toISOString(),
       };
 
-      setHistory((prev) => {
-        const newHistory = [historyItem, ...prev];
-        localStorage.setItem("apiHistory", JSON.stringify(newHistory));
-        return newHistory;
-      });
+      setResponse(finalResponse);
+
+      // Only save to history if enabled
+      if (isHistorySavingEnabled) {
+        const historyItem: HistoryItem = {
+          id: Date.now().toString(),
+          timestamp: new Date().toISOString(),
+          method,
+          url,
+          request: {
+            headers,
+            params,
+            body,
+            auth,
+          },
+          response: finalResponse,
+        };
+
+        setHistory((prev) => {
+          const newHistory = [historyItem, ...prev];
+          localStorage.setItem("apiHistory", JSON.stringify(newHistory));
+          return newHistory;
+        });
+      }
 
       toast.success(`${method} request successful`);
     } catch (error) {
@@ -201,7 +309,12 @@ export default function Page() {
           if (auth.token) setAuth({ type: "bearer", token: auth.token });
           break;
         case "basic":
-          if (auth.username && auth.password) setAuth({ type: "basic", username: auth.username, password: auth.password });
+          if (auth.username && auth.password)
+            setAuth({
+              type: "basic",
+              username: auth.username,
+              password: auth.password,
+            });
           break;
         case "apiKey":
           if (auth.key) setAuth({ type: "apiKey", key: auth.key });
@@ -226,7 +339,12 @@ export default function Page() {
           if (auth.token) setAuth({ type: "bearer", token: auth.token });
           break;
         case "basic":
-          if (auth.username && auth.password) setAuth({ type: "basic", username: auth.username, password: auth.password });
+          if (auth.username && auth.password)
+            setAuth({
+              type: "basic",
+              username: auth.username,
+              password: auth.password,
+            });
           break;
         case "apiKey":
           if (auth.key) setAuth({ type: "apiKey", key: auth.key });
@@ -246,41 +364,26 @@ export default function Page() {
     localStorage.setItem("apiCollections", JSON.stringify(newCollections));
   };
 
+  // In parent component
+  const saveCollectionsToStorage = (collections: Collection[]) => {
+    localStorage.setItem("collections", JSON.stringify(collections));
+  };
+
+  const handleUpdateCollections = (newCollections: Collection[]) => {
+    saveCollectionsToStorage(newCollections);
+    setCollections(newCollections);
+  };
+
   const handleCreateCollection = (collection: Partial<Collection>) => {
     const newCollection: Collection = {
       id: uuidv4(),
       name: collection.name || "New Collection",
       description: collection.description || "",
-      folders: [],
+      apiVersion: collection.apiVersion || "",
       requests: [],
       lastModified: new Date().toISOString(),
     };
     saveCollections([...collections, newCollection]);
-  };
-
-  const handleCreateFolder = (
-    collectionId: string,
-    folder: Partial<FolderType>
-  ) => {
-    const newCollections = collections.map((collection) => {
-      if (collection.id === collectionId) {
-        return {
-          ...collection,
-          folders: [
-            ...collection.folders,
-            { 
-              id: uuidv4(), 
-              name: folder.name || "New Folder",
-              description: folder.description || "",
-              folders: [], 
-              requests: [] 
-            },
-          ],
-        };
-      }
-      return collection;
-    });
-    saveCollections(newCollections);
   };
 
   const handleSaveRequest = (
@@ -296,6 +399,8 @@ export default function Page() {
       params,
       body,
       auth,
+      statusCode: undefined,
+      timestamp: 0
     };
     const newCollections = collections.map((collection) => {
       if (collection.id === collectionId) {
@@ -313,21 +418,6 @@ export default function Page() {
     const newCollections = collections.filter(
       (collection) => collection.id !== collectionId
     );
-    saveCollections(newCollections);
-  };
-
-  const handleDeleteFolder = (collectionId: string, folderId: string) => {
-    const newCollections = collections.map((collection) => {
-      if (collection.id === collectionId) {
-        return {
-          ...collection,
-          folders: collection.folders.filter(
-            (folder) => folder.id !== folderId
-          ),
-        };
-      }
-      return collection;
-    });
     saveCollections(newCollections);
   };
 
@@ -374,6 +464,11 @@ export default function Page() {
     });
   };
 
+  const toggleHistorySaving = (enabled: boolean) => {
+    // Added function to toggle history saving
+    setIsHistorySavingEnabled(enabled);
+  };
+
   return (
     <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-gray-50 rounded-md">
       {/* Header */}
@@ -389,10 +484,8 @@ export default function Page() {
                 onSelectHistoryItem={handleLoadHistoryItem}
                 onClearHistory={handleClearHistory}
                 onCreateCollection={handleCreateCollection}
-                onCreateFolder={handleCreateFolder}
                 onSaveRequest={handleSaveRequest}
                 onDeleteCollection={handleDeleteCollection}
-                onDeleteFolder={handleDeleteFolder}
                 onDeleteRequest={handleDeleteRequest}
                 onDeleteHistoryItem={handleDeleteHistoryItem}
               />
@@ -471,10 +564,8 @@ export default function Page() {
                 onSelectHistoryItem={handleLoadHistoryItem}
                 onClearHistory={handleClearHistory}
                 onCreateCollection={handleCreateCollection}
-                onCreateFolder={handleCreateFolder}
                 onSaveRequest={handleSaveRequest}
                 onDeleteCollection={handleDeleteCollection}
-                onDeleteFolder={handleDeleteFolder}
                 onDeleteRequest={handleDeleteRequest}
                 onDeleteHistoryItem={handleDeleteHistoryItem}
               />
@@ -571,12 +662,12 @@ export default function Page() {
               onSelectHistoryItem={handleLoadHistoryItem}
               onClearHistory={handleClearHistory}
               onCreateCollection={handleCreateCollection}
-              onCreateFolder={handleCreateFolder}
               onSaveRequest={handleSaveRequest}
               onDeleteCollection={handleDeleteCollection}
-              onDeleteFolder={handleDeleteFolder}
               onDeleteRequest={handleDeleteRequest}
               onDeleteHistoryItem={handleDeleteHistoryItem}
+              isHistorySavingEnabled={isHistorySavingEnabled}
+              onToggleHistorySaving={toggleHistorySaving}
             />
           </ResizablePanel>
 

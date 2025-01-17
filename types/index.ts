@@ -10,6 +10,12 @@ export interface RequestBody {
   content: string | KeyValuePair[];
 }
 
+export interface CollectionVersion {
+  version: string;
+  timestamp: string;
+  changes?: string;
+}
+
 export interface Environment {
   id: string;
   name: string;
@@ -20,28 +26,16 @@ export interface Collection {
   id: string;
   name: string;
   description?: string;
-  createdAt?: Date;
-  folders: Folder[];
-  requests: SavedRequest[];
-  tags?: string[];
-  lastModified: string;
   apiVersion?: string;
-}
-
-
-export interface Folder {
-  id: string;
-  name: string;
-  description?: string;
-  folders: Folder[];
   requests: SavedRequest[];
-  parentFolderId?: string;
+  lastModified: string;
 }
 
 
 export interface SavedRequest {
+  statusCode: any;
+  timestamp: number;
   id: string;
-  folderId?: string;
   name: string;
   description?: string;
   method: string;
@@ -56,7 +50,15 @@ export interface SavedRequest {
     password?: string;
     key?: string;
   };
+  response?: {
+
+    status: number;
+
+    body?: any;
+
+  };
 }
+
 
 export interface RequestResponse {
   status: number;

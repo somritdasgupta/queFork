@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CollectionsPanel } from "@/components/collections-panel";
 import { HistoryPanel } from "@/components/history-panel";
-import { Collection, HistoryItem, SavedRequest, Folder } from "@/types";
+import { Collection, HistoryItem, SavedRequest} from "@/types";
 
 interface DesktopSidePanelProps {
   collections: Collection[];
@@ -11,12 +11,12 @@ interface DesktopSidePanelProps {
   onSelectHistoryItem: (item: HistoryItem) => void;
   onClearHistory: () => void;
   onCreateCollection: (collection: Partial<Collection>) => void;
-  onCreateFolder: (collectionId: string, folder: Partial<Folder>) => void;
   onSaveRequest: (collectionId: string, request: Partial<SavedRequest>) => void;
   onDeleteCollection: (collectionId: string) => void;
-  onDeleteFolder: (collectionId: string, folderId: string) => void;
   onDeleteRequest: (collectionId: string, requestId: string) => void;
   onDeleteHistoryItem: (id: string) => void;
+  isHistorySavingEnabled: boolean;
+  onToggleHistorySaving: (enabled: boolean) => void;
 }
 
 const DesktopSidePanel = ({
@@ -26,12 +26,12 @@ const DesktopSidePanel = ({
   onSelectHistoryItem,
   onClearHistory,
   onCreateCollection,
-  onCreateFolder,
   onSaveRequest,
   onDeleteCollection,
-  onDeleteFolder,
   onDeleteRequest,
   onDeleteHistoryItem,
+  isHistorySavingEnabled,
+  onToggleHistorySaving,
 }: DesktopSidePanelProps) => {
   const [activePanel, setActivePanel] = useState<"collections" | "history">(
     "collections"
@@ -66,9 +66,7 @@ const DesktopSidePanel = ({
             onSelectRequest={onSelectRequest}
             onSaveRequest={onSaveRequest}
             onCreateCollection={onCreateCollection}
-            onCreateFolder={onCreateFolder}
             onDeleteCollection={onDeleteCollection}
-            onDeleteFolder={onDeleteFolder}
             onDeleteRequest={onDeleteRequest}
           />
         ) : (
@@ -77,6 +75,8 @@ const DesktopSidePanel = ({
             onSelectItem={onSelectHistoryItem}
             onClearHistory={onClearHistory}
             onDeleteItem={onDeleteHistoryItem}
+            onToggleHistorySaving={onToggleHistorySaving}
+            isHistorySavingEnabled={isHistorySavingEnabled}
           />
         )}
       </div>

@@ -12,7 +12,7 @@ import { PanelRightClose } from "lucide-react";
 import { useState } from "react";
 import { CollectionsPanel } from "./collections-panel";
 import { HistoryPanel } from "./history-panel";
-import { Collection, HistoryItem, SavedRequest, Folder } from "@/types";
+import { Collection, HistoryItem, SavedRequest } from "@/types";
 
 interface MobileNavProps {
   collections: Collection[];
@@ -21,10 +21,8 @@ interface MobileNavProps {
   onSelectHistoryItem: (item: HistoryItem) => void;
   onClearHistory: () => void;
   onCreateCollection: (collection: Partial<Collection>) => void;
-  onCreateFolder: (collectionId: string, folder: Partial<Folder>) => void;
   onSaveRequest: (collectionId: string, request: Partial<SavedRequest>) => void;
   onDeleteCollection: (collectionId: string) => void;
-  onDeleteFolder: (collectionId: string, folderId: string) => void;
   onDeleteRequest: (collectionId: string, requestId: string) => void;
   onDeleteHistoryItem: (id: string) => void;
 }
@@ -36,10 +34,8 @@ export function MobileNav({
   onSelectHistoryItem,
   onClearHistory,
   onCreateCollection,
-  onCreateFolder,
   onSaveRequest,
   onDeleteCollection,
-  onDeleteFolder,
   onDeleteRequest,
   onDeleteHistoryItem,
 }: MobileNavProps) {
@@ -51,9 +47,9 @@ export function MobileNav({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button 
-          variant="default" 
-          size="icon" 
+        <Button
+          variant="default"
+          size="icon"
           className="bg-blue-50 hover:bg-blue-100 active:bg-blue-200 border-2 border-blue-200 md:hidden transition-colors"
         >
           <PanelRightClose className="h-8 text-slate-800" />
@@ -101,9 +97,7 @@ export function MobileNav({
               }}
               onSaveRequest={onSaveRequest}
               onCreateCollection={onCreateCollection}
-              onCreateFolder={onCreateFolder}
               onDeleteCollection={onDeleteCollection}
-              onDeleteFolder={onDeleteFolder}
               onDeleteRequest={onDeleteRequest}
             />
           ) : (
@@ -116,6 +110,10 @@ export function MobileNav({
               onClearHistory={onClearHistory}
               onDeleteItem={onDeleteHistoryItem}
               isMobile={true}
+              onToggleHistorySaving={function (enabled: boolean): void {
+                throw new Error("Function not implemented.");
+              }}
+              isHistorySavingEnabled={false}
             />
           )}
         </div>

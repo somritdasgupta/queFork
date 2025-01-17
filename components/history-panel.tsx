@@ -24,6 +24,9 @@ interface HistoryPanelProps {
   onClearHistory: () => void;
   onDeleteItem: (id: string) => void;
   isMobile?: boolean;
+  onToggleHistorySaving: (enabled: boolean) => void;
+  isHistorySavingEnabled: boolean;
+  
 }
 
 export function HistoryPanel({
@@ -32,6 +35,7 @@ export function HistoryPanel({
   onClearHistory,
   onDeleteItem,
   isMobile = false,
+  onToggleHistorySaving,
 }: HistoryPanelProps) {
   const [search, setSearch] = useState("");
   const [isHistoryEnabled, setIsHistoryEnabled] = useState(true);
@@ -53,22 +57,23 @@ export function HistoryPanel({
     localStorage.setItem("historySettings", JSON.stringify(settings));
     setIsHistoryEnabled(settings.isEnabled);
     setAutoDeleteDays(settings.autoDeleteDays);
+    onToggleHistorySaving(settings.isEnabled);
   };
 
   const handleDeleteItem = (id: string) => {
-    if (!isHistoryEnabled) return; // Prevent operation if history is disabled
+    if (!isHistoryEnabled) return;
     onDeleteItem(id);
     toast.success("History item removed");
   };
 
   const handleClearHistory = () => {
-    if (!isHistoryEnabled) return; // Prevent operation if history is disabled
+    if (!isHistoryEnabled) return;
     onClearHistory();
     toast.success("History cleared");
   };
 
   const handleSelectItem = (item: HistoryItem) => {
-    if (!isHistoryEnabled) return; // Prevent operation if history is disabled
+    if (!isHistoryEnabled) return;
     onSelectItem(item);
   };
 
@@ -96,33 +101,34 @@ export function HistoryPanel({
       item.method.toLowerCase().includes(search.toLowerCase())
   );
 
-  function getMethodColor(method: string): import("clsx").ClassValue {
+  function getMethodColor(method: string): string {
     switch (method.toUpperCase()) {
-      case 'GET':
-        return 'border-blue-200 bg-blue-50 text-blue-700';
-      case 'POST':
-        return 'border-green-200 bg-green-50 text-green-700';
-      case 'PUT':
-        return 'border-yellow-200 bg-yellow-50 text-yellow-700';
-      case 'DELETE':
-        return 'border-red-200 bg-red-50 text-red-700';
-      case 'PATCH':
-        return 'border-purple-200 bg-purple-50 text-purple-700';
+      case "GET":
+        return "border-blue-200 bg-blue-50 text-blue-700";
+      case "POST":
+        return "border-green-200 bg-green-50 text-green-700";
+      case "PUT":
+        return "border-yellow-200 bg-yellow-50 text-yellow-700";
+      case "DELETE":
+        return "border-red-200 bg-red-50 text-red-700";
+      case "PATCH":
+        return "border-purple-200 bg-purple-50 text-purple-700";
       default:
-        return 'border-gray-200 bg-gray-50 text-gray-700';
+        return "border-gray-200 bg-gray-50 text-gray-700";
     }
   }
-  function getStatusColor(status: number): import("clsx").ClassValue {
+
+  function getStatusColor(status: number): string {
     if (status >= 200 && status < 300) {
-      return 'border-green-200 bg-green-50 text-green-700'; // Success
+      return "border-green-200 bg-green-50 text-green-700";
     } else if (status >= 300 && status < 400) {
-      return 'border-blue-200 bg-blue-50 text-blue-700';    // Redirection
+      return "border-blue-200 bg-blue-50 text-blue-700";
     } else if (status >= 400 && status < 500) {
-      return 'border-yellow-200 bg-yellow-50 text-yellow-700'; // Client Error
+      return "border-yellow-200 bg-yellow-50 text-yellow-700";
     } else if (status >= 500) {
-      return 'border-red-200 bg-red-50 text-red-700';       // Server Error
+      return "border-red-200 bg-red-50 text-red-700";
     } else {
-      return 'border-gray-200 bg-gray-50 text-gray-700';    // Unknown
+      return "border-gray-200 bg-gray-50 text-gray-700";
     }
   }
 
@@ -140,7 +146,7 @@ export function HistoryPanel({
               variant="ghost"
               size="icon"
               onClick={handleClearHistory}
-              disabled={!isHistoryEnabled} // Disable button if history is disabled
+              disabled={!isHistoryEnabled}
               className="h-8 w-8 text-gray-500 hover:text-gray-900"
             >
               <Trash2 className="h-4 w-4" />
@@ -255,7 +261,7 @@ export function HistoryPanel({
                   size="icon"
                   className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={() => handleDeleteItem(item.id)}
-                  disabled={!isHistoryEnabled} // Disable delete button if history is disabled
+                  disabled={!isHistoryEnabled}
                 >
                   <X className="h-3 w-3" />
                 </Button>

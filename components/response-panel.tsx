@@ -129,7 +129,6 @@ export function ResponsePanel({
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [selectedCollection, setSelectedCollection] = useState("");
   const [requestName, setRequestName] = useState("");
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -201,13 +200,11 @@ export function ResponsePanel({
       headers: [],
       params: [],
       body: { type: "none", content: "" },
-      folderId: selectedFolder || undefined,
     };
 
     onSaveToCollection(selectedCollection, request);
     setIsSaveDialogOpen(false);
     setSelectedCollection("");
-    setSelectedFolder(null);
     setRequestName("");
     toast.success("Request saved to collection");
   };
@@ -225,33 +222,45 @@ export function ResponsePanel({
 
   if (!response) {
     return (
-      <div className="min-h-[200px] flex items-center justify-center p-6 mt-4">
-        <div className="text-center space-y-4 max-w-md">
+      <div className="min-h-[200px] flex items-center justify-center p-4 mt-2">
+        <div className="text-center space-y-6 max-w-md mx-auto">
           <div className="pt-4">
-            <span className="inline-flex px-4 py-2 rounded-full text-xs font-medium bg-slate-800 text-blue-50 animate-pulse">
-              Waiting for request
+            <span className="inline-flex px-4 rounded-md text-sm bg-gray-100 border-2 border-gray-200 text-blue-600 duration-9000 animate-pulse">
+              waiting for request
             </span>
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-8 h-8 rounded-full font-bold bg-gray-100 flex items-center justify-center">
-                1
+          <div className="space-y-6">
+            <div className="group hover:scale-105 transition-transform cursor-pointer">
+              <div className="flex items-center justify-center gap-2 text-sm text-blue-500">
+                <div className="px-2 rounded-md font-bold bg-gray-200 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                  1
+                </div>
+                <span className="group-hover:text-blue-500 transition-colors text-center">
+                  Select the type of HTTP method
+                </span>
               </div>
-              <span>Select an HTTP method (GET, POST, PUT, etc.)</span>
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-8 h-8 rounded-full font-bold bg-gray-100 flex items-center justify-center">
-                2
+            <div className="group hover:scale-105 transition-transform cursor-pointer">
+              <div className="flex items-center justify-center gap-3 text-sm text-blue-500">
+                <div className="px-2 rounded-md font-bold bg-gray-200 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                  2
+                </div>
+                <span className="group-hover:text-blue-500 transition-colors text-center">
+                  Enter request URL endpoint
+                </span>
               </div>
-              <span>Enter the request URL in the bar above</span>
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-8 h-8 rounded-full font-bold bg-gray-100 flex items-center justify-center">
-                3
+            <div className="group hover:scale-105 transition-transform cursor-pointer">
+              <div className="flex items-center justify-center gap-3 text-sm text-blue-500">
+                <div className="px-2 rounded-md font-bold bg-gray-200 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                  3
+                </div>
+                <span className="group-hover:text-blue-500 transition-colors text-center">
+                  Click send for request
+                </span>
               </div>
-              <span>Click Send to make the request</span>
             </div>
           </div>
         </div>
@@ -261,18 +270,18 @@ export function ResponsePanel({
 
   if (response.error) {
     return (
-      <div className="border rounded-md bg-white h-full flex flex-col">
-        <div className="p-3 border-b flex items-center justify-between">
+      <div className="border border-slate-700 rounded-md bg-slate-900 h-full flex flex-col">
+        <div className="px-4 py-2 border-b border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-500" />
             <Badge variant="destructive">Error</Badge>
-            <span className="text-sm text-gray-500 ml-2">{response.time}</span>
+            <span className="text-sm text-slate-400 ml-2">{response.time}</span>
           </div>
           <Button
             variant="default"
             size="sm"
             onClick={copyToClipboard}
-            className="gap-2 bg-gray-200 text-slate-800 hover:bg-gray-300"
+            className="gap-2 bg-slate-800 text-slate-200 hover:bg-slate-700"
           >
             {copyStatus[activeTab] ? (
               <Check className="h-4 w-4" />
@@ -291,149 +300,53 @@ export function ResponsePanel({
   }
 
   return (
-    <div className="border bg-white h-full flex flex-col">
-      <div className="p-3 border-b flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
+    <div className="bg-slate-950 h-full flex flex-col">
+      <div className="px-4 py-2 border-b-2 border-slate-700 backdrop-blur-lg bg-slate-800/50 flex flex-row gap-2 justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Status Badge */}
+          <div
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full font-medium text-xs
+            ${
+              response.status >= 200 && response.status < 300
+                ? "bg-gradient-to-r from-green-600/40 to-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30 border-2 border-green-700"
+                : "bg-gradient-to-r from-red-600/40 to-rose-500/20 text-red-400 ring-1 ring-red-500/30 border-2 border-red-700"
+            }`}
+          >
             {response.status >= 200 && response.status < 300 ? (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-3 w-3" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500" />
+              <XCircle className="h-3 w-3" />
             )}
-            <Badge
-              variant={
-                response.status >= 200 && response.status < 300
-                  ? "default"
-                  : "destructive"
-              }
-            >
-              {response.status}
-            </Badge>
-            <Badge
-              variant="outline"
-              className="ml-0 bg-slate-200 border-red-200 border-2 text-slate-800 font-mono text-xs"
-            >
-              {contentType.toLowerCase()}
-            </Badge>
+            <span>{response.status}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm font-mono text-gray-500">
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>{response.time}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Database className="h-4 w-4" />
-              <span>{response.size}</span>
-            </div>
+
+          {/* Content Type Chip */}
+          <div className="inline-flex justify-items-end px-2 py-1 rounded-full border-2 border-slate-600 bg-slate-600/40 text-xs font-medium text-slate-300 ring-1 ring-emerald-500/30  transition-colors hover:bg-slate-700">
+            {contentType === "json" ? (
+              <FileJson className="h-3.5 w-3.5 mr-1.5 text-blue-400" />
+            ) : (
+              <FileText className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+            )}
+            {contentType.toLowerCase()}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="default"
-                size="sm"
-                className="gap-2 border-2 border-gray-200 bg-gray-100 text-slate-800 hover:bg-gray-300"
-              >
-                <Save className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg">
-              <DialogHeader>
-                <DialogTitle>Save to Collection</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Collection</Label>
-                  <Select
-                    value={selectedCollection}
-                    onValueChange={(value) => {
-                      setSelectedCollection(value);
-                      setSelectedFolder(null);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a collection" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Collections</SelectLabel>
-                        {collections.map((collection) => (
-                          <SelectItem key={collection.id} value={collection.id}>
-                            {collection.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {selectedCollection && (
-                  <div className="space-y-2">
-                    <Label>Folder (Optional)</Label>
-                    <Select
-                      value={selectedFolder || ""}
-                      onValueChange={setSelectedFolder}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a folder" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Folders</SelectLabel>
-                          <SelectItem value="root">Root</SelectItem>
-                          {collections
-                            .find((c) => c.id === selectedCollection)
-                            ?.folders.map((folder) => (
-                              <SelectItem key={folder.id} value={folder.id}>
-                                {folder.name}
-                              </SelectItem>
-                            ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label>Request Name *</Label>
-                  <Input
-                    placeholder="Enter request name"
-                    value={requestName}
-                    onChange={(e) => setRequestName(e.target.value)}
-                  />
-                </div>
-              </div>
-              <DialogFooter className="sm:space-x-2 flex flex-col sm:flex-row gap-2 sm:gap-0">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsSaveDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSaveToCollection}
-                  disabled={!requestName.trim()}
-                  className={
-                    !requestName.trim() ? "opacity-50 cursor-not-allowed" : ""
-                  }
-                >
-                  Save Request
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={copyToClipboard}
-            className="gap-2 border-2 border-gray-200 bg-gray-100 text-slate-800 hover:bg-gray-300"
-          >
-            {copyStatus[activeTab] ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-          </Button>
+        {/* Metrics */}
+        <div className="flex items-center divide-x divide-slate-600">
+          <div className="flex items-center px-3 text-xs font-medium text-slate-300">
+            <Clock className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+            <span className="tabular-nums">{response.time}</span>
+          </div>
+          <div className="flex items-center px-3 text-xs font-medium text-slate-300">
+            <Database className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+            <span className="tabular-nums">{response.size}</span>
+          </div>
+          {!isOnline && (
+            <div className="flex items-center px-3 text-xs font-medium text-amber-400">
+              <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
+              Offline
+            </div>
+          )}
         </div>
       </div>
 
@@ -443,25 +356,106 @@ export function ResponsePanel({
         value={activeTab}
         onValueChange={setActiveTab}
       >
-        <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0">
+        <TabsList className="w-full justify-start rounded-none bg-slate-800 border-b-2 border-slate-700 p-0">
           <TabsTrigger
             value="pretty"
-            className="rounded-none border-b-2 border-transparent px-4 py-2 font-medium data-[state=active]:border-primary"
+            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
           >
             Pretty
           </TabsTrigger>
           <TabsTrigger
             value="raw"
-            className="rounded-none border-b-2 border-transparent px-4 py-2 font-medium data-[state=active]:border-primary"
+            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
           >
             Raw
           </TabsTrigger>
           <TabsTrigger
             value="headers"
-            className="rounded-none border-b-2 border-transparent px-4 py-2 font-medium data-[state=active]:border-primary"
+            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
           >
             Headers
           </TabsTrigger>
+
+          <div className="ml-auto flex items-center pr-2">
+            <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+              <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-2 hover:text-slate-400 hover:bg-transparent"
+              >
+                <Save className="h-4 w-4" />
+              </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg">
+              <DialogHeader>
+                <DialogTitle>Save Request to Collection</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                <Label htmlFor="collection">Collection</Label>
+                <Select
+                  value={selectedCollection}
+                  onValueChange={setSelectedCollection}
+                >
+                  <SelectTrigger id="collection">
+                  <SelectValue placeholder="Select collection" />
+                  </SelectTrigger>
+                  <SelectContent>
+                  <SelectGroup>
+                    {collections.map((collection) => (
+                    <SelectItem
+                      key={collection.id}
+                      value={collection.id}
+                    >
+                      {collection.name}
+                    </SelectItem>
+                    ))}
+                  </SelectGroup>
+                  </SelectContent>
+                </Select>
+                </div>
+                <div className="grid gap-2">
+                <Label htmlFor="name">Request Name</Label>
+                <Input
+                  id="name"
+                  value={requestName}
+                  onChange={(e) => setRequestName(e.target.value.slice(0, 12))}
+                  placeholder="Enter request name"
+                  maxLength={12}
+                />
+                </div>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button
+                variant="outline"
+                onClick={() => setIsSaveDialogOpen(false)}
+                >
+                Cancel
+                </Button>
+                <Button 
+                onClick={handleSaveToCollection}
+                disabled={!selectedCollection || !requestName}
+                >
+                <Send className="mr-2 h-4 w-4" />
+                Save
+                </Button>
+              </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={copyToClipboard}
+              className="p-2 hover:text-slate-400 hover:bg-transparent"
+            >
+              {copyStatus[activeTab] ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </TabsList>
 
         <div className="flex-1 relative bg-slate-900/90 text-blue-300">
