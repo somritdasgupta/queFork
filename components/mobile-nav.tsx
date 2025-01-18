@@ -50,9 +50,9 @@ export function MobileNav({
         <Button
           variant="default"
           size="icon"
-          className="bg-blue-50 hover:bg-blue-100 active:bg-blue-200 border-2 border-blue-200 md:hidden transition-colors"
+          className="bg-slate-900 hover:bg-slate-800 border-1 border-slate-700 md:hidden transition-colors"
         >
-          <PanelRightClose className="h-8 text-slate-800" />
+          <PanelRightClose className="h-8 text-slate-100" />
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-[300px] p-0">
@@ -68,7 +68,7 @@ export function MobileNav({
               onClick={() => setOpen(false)}
             ></Button>
           </div>
-          <div className="flex gap-2 mt-2 bg-blue-100 border-blue-200 border-2 shadow-inner shadow-lg rounded-lg p-1">
+          <div className="flex gap-2 mt-2 bg-blue-50 border-blue-200 border-2 shadow-inner shadow-lg rounded-lg p-1">
             <Button
               variant={activePanel === "collections" ? "default" : "ghost"}
               size="sm"
@@ -110,7 +110,7 @@ export function MobileNav({
               onClearHistory={onClearHistory}
               onDeleteItem={onDeleteHistoryItem}
               isMobile={true}
-              onToggleHistorySaving={function (enabled: boolean): void {
+              onToggleHistorySaving={function (): void {
                 throw new Error("Function not implemented.");
               }}
               isHistorySavingEnabled={false}

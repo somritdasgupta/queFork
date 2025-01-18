@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,25 +41,25 @@ export function RequestPanel({
         <TabsList className="grid grid-cols-4 overflow-x-auto whitespace-nowrap h-auto min-h-[3rem] items-center rounded-lg border-2 border-blue-100 bg-blue-50 px-1 text-gray-700 shadow-inner w-full">
           <TabsTrigger
             value="params"
-            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
           >
             Parameters
           </TabsTrigger>
           <TabsTrigger
             value="headers"
-            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
           >
             Headers
           </TabsTrigger>
           <TabsTrigger
             value="body"
-            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
           >
             Body
           </TabsTrigger>
           <TabsTrigger
             value="auth"
-            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
           >
             Auth
           </TabsTrigger>
@@ -68,9 +67,24 @@ export function RequestPanel({
 
         <TabsContent value="params" className="mt-2">
           <Card>
-            <CardContent className="p-4">
-              <ScrollArea className="h-[calc(100vh-280px)]">
-                <KeyValueEditor pairs={params} onChange={onParamsChange} />
+            <CardContent className="p-4 bg-slate-50 border-2 rounded-lg border-blue-100">
+              <ScrollArea className="max-h-[calc(100vh-280px)]">
+                <KeyValueEditor
+                  pairs={
+                    params.length === 0
+                      ? [
+                          {
+                            key: "",
+                            value: "",
+                            type: "text",
+                            showSecrets: false,
+                          },
+                        ]
+                      : params
+                  }
+                  onChange={onParamsChange}
+                  addButtonText="Add Parameter"
+                />
               </ScrollArea>
             </CardContent>
           </Card>
@@ -78,9 +92,24 @@ export function RequestPanel({
 
         <TabsContent value="headers" className="mt-2">
           <Card>
-            <CardContent className="p-4">
-              <ScrollArea className="h-[calc(100vh-280px)]">
-                <KeyValueEditor pairs={headers} onChange={onHeadersChange} />
+            <CardContent className="p-4 bg-slate-50 border-2 rounded-lg border-blue-100">
+              <ScrollArea className="max-h-[calc(100vh-280px)]">
+                <KeyValueEditor
+                  pairs={
+                    params.length === 0
+                      ? [
+                          {
+                            key: "",
+                            value: "",
+                            type: "text",
+                            showSecrets: false,
+                          },
+                        ]
+                      : params
+                  }
+                  onChange={onParamsChange}
+                  addButtonText="Add Parameter"
+                />
               </ScrollArea>
             </CardContent>
           </Card>

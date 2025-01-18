@@ -1,8 +1,6 @@
-//app/page.tsx
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, PlugZap2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { RequestPanel } from "@/components/request-panel";
 import { ResponsePanel } from "@/components/response-panel";
@@ -31,18 +29,34 @@ import {
   Environment,
 } from "@/types";
 import DesktopSidePanel from "@/components/desktop-side-panel";
-import { EnvironmentManager } from "@/components/environment-manager";
+import {
+  EnvironmentManager,
+  EnvironmentManagerRef,
+} from "@/components/environment-manager";
 import { v4 as uuidv4 } from "uuid";
 import Footer from "@/components/footer";
+import { WebSocketPanel } from "@/components/websocket-panel";
 
 export default function Page() {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("");
   const [headers, setHeaders] = useState<KeyValuePair[]>([
-    { key: "", value: "", enabled: true },
+    {
+      key: "",
+      value: "",
+      enabled: true,
+      showSecrets: false,
+      type: "",
+    },
   ]);
   const [params, setParams] = useState<KeyValuePair[]>([
-    { key: "", value: "", enabled: true },
+    {
+      key: "",
+      value: "",
+      enabled: true,
+      showSecrets: false,
+      type: "",
+    },
   ]);
   const [body, setBody] = useState<RequestBody>({ type: "none", content: "" });
   const [auth, setAuth] = useState<
@@ -58,9 +72,34 @@ export default function Page() {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [currentEnvironment, setCurrentEnvironment] =
     useState<Environment | null>(null);
-  const [isHistorySavingEnabled, setIsHistorySavingEnabled] = useState(true); // Added state for history saving
+  const [isHistorySavingEnabled, setIsHistorySavingEnabled] = useState(true);
+  const [mergedEnvVariables, setMergedEnvVariables] = useState<
+    { key: string; value: string }[]
+  >([]);
+  const environmentManagerRef = useRef<EnvironmentManagerRef>(null);
+  const [isWebSocketOpen, setIsWebSocketOpen] = useState(false);
+  const [wsUrl, setWsUrl] = useState("");
+  const [webSocketUrl, setWebSocketUrl] = useState("");
+  const [webSocketProtocols, setWebSocketProtocols] = useState<string[]>([]);
 
   useEffect(() => {
+    const savedEnvironments = localStorage.getItem("que-environments");
+    if (savedEnvironments) {
+      try {
+        const parsedEnvironments = JSON.parse(savedEnvironments);
+        setEnvironments(parsedEnvironments);
+        if (parsedEnvironments.length > 0) {
+          setCurrentEnvironment(parsedEnvironments[0]);
+        }
+      } catch (error) {
+        console.error("Error loading environments:", error);
+        createDefaultEnvironment();
+      }
+    } else {
+      createDefaultEnvironment();
+    }
+
+    // Load other data
     const savedHistory = localStorage.getItem("apiHistory");
     if (savedHistory) {
       setHistory(JSON.parse(savedHistory));
@@ -68,19 +107,43 @@ export default function Page() {
 
     const savedCollections = localStorage.getItem("apiCollections");
     if (savedCollections) {
-      setCollections(
-        JSON.parse(savedCollections).map((collection: Collection) => ({
-          ...collection,
-        }))
+      setCollections(JSON.parse(savedCollections));
+    }
+  }, []);
+
+  const createDefaultEnvironment = () => {
+    const defaultEnv: Environment = {
+      id: "default",
+      name: "Default",
+      variables: [],
+      global: true,
+      created: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+    };
+    setEnvironments([defaultEnv]);
+    setCurrentEnvironment(defaultEnv);
+    localStorage.setItem("que-environments", JSON.stringify([defaultEnv]));
+  };
+
+  useEffect(() => {
+    if (environmentManagerRef.current) {
+      setMergedEnvVariables(
+        environmentManagerRef.current.getMergedEnvironmentVariables()
       );
     }
+  }, [environments, currentEnvironment]);
 
-    const savedEnvironments = localStorage.getItem("apiEnvironments");
-    if (savedEnvironments) {
-      const parsedEnvironments = JSON.parse(savedEnvironments);
-      setEnvironments(parsedEnvironments);
-      setCurrentEnvironment(parsedEnvironments[0] || null);
-    }
+  useEffect(() => {
+    const handleWebSocketOpen = (event: CustomEvent) => {
+      setWebSocketUrl(event.detail.url);
+      setWebSocketProtocols(event.detail.protocols || []);
+      setIsWebSocketOpen(true);
+    };
+
+    window.addEventListener('openWebSocket', handleWebSocketOpen as EventListener);
+    return () => {
+      window.removeEventListener('openWebSocket', handleWebSocketOpen as EventListener);
+    };
   }, []);
 
   const executeRequest = async () => {
@@ -178,7 +241,6 @@ export default function Page() {
 
     // Don't proceed with history saving if disabled
     if (!isHistorySavingEnabled) {
-      // Execute request without saving to history
       await executeRequest();
       return;
     }
@@ -256,8 +318,13 @@ export default function Page() {
 
       setResponse(finalResponse);
 
-      // Only save to history if enabled
-      if (isHistorySavingEnabled) {
+      // Only save successful responses to history if enabled
+      if (
+        isHistorySavingEnabled &&
+        finalResponse.status &&
+        finalResponse.status >= 200 &&
+        finalResponse.status < 300
+      ) {
         const historyItem: HistoryItem = {
           id: Date.now().toString(),
           timestamp: new Date().toISOString(),
@@ -270,6 +337,7 @@ export default function Page() {
             auth,
           },
           response: finalResponse,
+          type: "rest",
         };
 
         setHistory((prev) => {
@@ -364,16 +432,6 @@ export default function Page() {
     localStorage.setItem("apiCollections", JSON.stringify(newCollections));
   };
 
-  // In parent component
-  const saveCollectionsToStorage = (collections: Collection[]) => {
-    localStorage.setItem("collections", JSON.stringify(collections));
-  };
-
-  const handleUpdateCollections = (newCollections: Collection[]) => {
-    saveCollectionsToStorage(newCollections);
-    setCollections(newCollections);
-  };
-
   const handleCreateCollection = (collection: Partial<Collection>) => {
     const newCollection: Collection = {
       id: uuidv4(),
@@ -400,7 +458,7 @@ export default function Page() {
       body,
       auth,
       statusCode: undefined,
-      timestamp: 0
+      timestamp: 0,
     };
     const newCollections = collections.map((collection) => {
       if (collection.id === collectionId) {
@@ -451,21 +509,28 @@ export default function Page() {
   const handleEnvironmentsUpdate = (updatedEnvironments: Environment[]) => {
     setEnvironments(updatedEnvironments);
     localStorage.setItem(
-      "apiEnvironments",
+      "que-environments",
       JSON.stringify(updatedEnvironments)
     );
+
+    // Update current environment if it was deleted
+    if (
+      currentEnvironment &&
+      !updatedEnvironments.find((env) => env.id === currentEnvironment.id)
+    ) {
+      const firstEnv = updatedEnvironments[0] || null;
+      setCurrentEnvironment(firstEnv);
+    }
   };
 
   const replaceEnvironmentVariables = (value: string): string => {
-    if (!currentEnvironment) return value;
     return value.replace(/\{\{(.+?)\}\}/g, (_, key) => {
-      const variable = currentEnvironment.variables.find((v) => v.key === key);
+      const variable = mergedEnvVariables.find((v) => v.key === key);
       return variable ? variable.value : `{{${key}}}`;
     });
   };
 
   const toggleHistorySaving = (enabled: boolean) => {
-    // Added function to toggle history saving
     setIsHistorySavingEnabled(enabled);
   };
 
@@ -528,7 +593,7 @@ export default function Page() {
                   </SelectContent>
                 </Select>
                 <Input
-                  className="flex-1 font-mono border-2 border-blue-200 bg-blue-50 focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 font-mono border-2 border-blue-200 bg-blue-50 shadow-inner focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter API endpoint"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
@@ -546,15 +611,27 @@ export default function Page() {
                 </Button>
               </div>
             </div>
-            <EnvironmentManager
-              environments={environments}
-              currentEnvironment={currentEnvironment}
-              onEnvironmentChange={handleEnvironmentChange}
-              onEnvironmentsUpdate={handleEnvironmentsUpdate}
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                className="w-10 h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center justify-center"
+                onClick={() => setIsWebSocketOpen(true)}
+                title="Open WebSocket Connection"
+              >
+                <PlugZap2Icon className="w-4 h-4" />
+              </Button>
+              <div className="flex-1">
+                <EnvironmentManager
+                  ref={environmentManagerRef}
+                  environments={environments}
+                  currentEnvironment={currentEnvironment}
+                  onEnvironmentChange={handleEnvironmentChange}
+                  onEnvironmentsUpdate={handleEnvironmentsUpdate}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Enhanced Desktop Layout */}
+          {/* Desktop Layout */}
           <div className="hidden bg-gray-50 md:flex items-center gap-4 p-4 flex-1 max-w-screen-2xl mx-auto">
             <div className="flex items-center gap-4 flex-1">
               <MobileNav
@@ -615,26 +692,33 @@ export default function Page() {
 
               <div className="flex-1 flex items-center gap-3">
                 <Input
-                  className="flex-1 font-mono border-2 border-blue-200 bg-blue-50 focus:ring-2 focus:ring-blue-500 transition-all"
-                  placeholder="Enter your API endpoint"
+                  className="flex-1 font-mono border-2 border-blue-200 bg-blue-50 shadow-inner focus:ring-2 focus:ring-blue-500 transition-all"
+                  placeholder="Enter API endpoint"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                 />
                 <Button
-                  className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-lg "
+                  className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-lg"
                   onClick={handleSendRequest}
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   ) : (
-                    <Send className="w-4 h-4 mr-2" />
+                    <Send className="w-4 h-4" />
                   )}
-                  Send
+                </Button>
+                <Button
+                  className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center gap-2 px-4"
+                  onClick={() => setIsWebSocketOpen(true)}
+                  title="Open WebSocket Connection"
+                >
+                  <PlugZap2Icon className="w-4 h-4" />
                 </Button>
               </div>
 
               <EnvironmentManager
+                ref={environmentManagerRef}
                 environments={environments}
                 currentEnvironment={currentEnvironment}
                 onEnvironmentChange={handleEnvironmentChange}
@@ -647,13 +731,16 @@ export default function Page() {
 
       {/* Main Content */}
       <main className="pt-28 md:pt-20 h-[calc(100vh-3rem)] overflow-hidden rounded-lg">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Responsive Sidebar */}
+        <ResizablePanelGroup
+          direction="horizontal"
+          className="h-full rounded-lg"
+        >
+          {/* Sidebar */}
           <ResizablePanel
             defaultSize={25}
             minSize={20}
             maxSize={30}
-            className="hidden md:block"
+            className="hidden md:block rounded-lg"
           >
             <DesktopSidePanel
               collections={collections}
@@ -671,10 +758,13 @@ export default function Page() {
             />
           </ResizablePanel>
 
-          {/* Enhanced Main Panel */}
-          <ResizablePanel defaultSize={75} className="bg-gray-50 rounde-md">
+          {/* Main Panel */}
+          <ResizablePanel defaultSize={75} className="bg-gray-50 rounded-lg">
             <ResizablePanelGroup direction="vertical">
-              <ResizablePanel defaultSize={50} className="overflow-hidden">
+              <ResizablePanel
+                defaultSize={50}
+                className="overflow-hidden rounded-lg"
+              >
                 <div className="h-full overflow-y-auto">
                   <RequestPanel
                     headers={headers}
@@ -716,10 +806,16 @@ export default function Page() {
         </ResizablePanelGroup>
       </main>
 
-      {/* Enhanced Footer */}
+      {/* Footer */}
       <footer className="border-t border-transparent bg-transparent shadow-md backdrop-blur supports-[backdrop-filter]:bg-gray/50">
         <Footer />
       </footer>
+      <WebSocketPanel
+        url={wsUrl}
+        onUrlChange={setWsUrl}
+        isOpen={isWebSocketOpen}
+        onClose={() => setIsWebSocketOpen(false)}
+      />
     </div>
   );
 }

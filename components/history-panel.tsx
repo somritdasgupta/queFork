@@ -26,7 +26,7 @@ interface HistoryPanelProps {
   isMobile?: boolean;
   onToggleHistorySaving: (enabled: boolean) => void;
   isHistorySavingEnabled: boolean;
-  
+  shouldSaveErrors?: boolean;
 }
 
 export function HistoryPanel({
@@ -36,6 +36,8 @@ export function HistoryPanel({
   onDeleteItem,
   isMobile = false,
   onToggleHistorySaving,
+  isHistorySavingEnabled,
+  shouldSaveErrors = false,
 }: HistoryPanelProps) {
   const [search, setSearch] = useState("");
   const [isHistoryEnabled, setIsHistoryEnabled] = useState(true);
@@ -74,7 +76,19 @@ export function HistoryPanel({
 
   const handleSelectItem = (item: HistoryItem) => {
     if (!isHistoryEnabled) return;
-    onSelectItem(item);
+
+    if (item.type === "websocket") {
+      // Dispatching event to open WebSocket modal
+      const event = new CustomEvent("openWebSocket", {
+        detail: {
+          url: item.url,
+          protocols: item.wsStats?.protocols || [],
+        },
+      });
+      window.dispatchEvent(event);
+    } else {
+      onSelectItem(item);
+    }
   };
 
   const exportHistory = () => {
@@ -98,10 +112,11 @@ export function HistoryPanel({
   const filteredHistory = history.filter(
     (item) =>
       item.url.toLowerCase().includes(search.toLowerCase()) ||
-      item.method.toLowerCase().includes(search.toLowerCase())
+      (item.method?.toLowerCase() || "ws").includes(search.toLowerCase())
   );
 
-  function getMethodColor(method: string): string {
+  function getMethodColor(method: string | undefined): string {
+    if (!method) return "border-gray-200 bg-gray-50 text-gray-700";
     switch (method.toUpperCase()) {
       case "GET":
         return "border-blue-200 bg-blue-50 text-blue-700";
@@ -112,7 +127,11 @@ export function HistoryPanel({
       case "DELETE":
         return "border-red-200 bg-red-50 text-red-700";
       case "PATCH":
+        return "border-orange-200 bg-orange-50 text-orange-700";
+      case "WS":
         return "border-purple-200 bg-purple-50 text-purple-700";
+      case "WSS":
+        return "border-indigo-200 bg-indigo-50 text-indigo-700";
       default:
         return "border-gray-200 bg-gray-50 text-gray-700";
     }
@@ -207,8 +226,19 @@ export function HistoryPanel({
               History is currently disabled
             </div>
           ) : filteredHistory.length === 0 ? (
-            <div className="text-center py-8 text-sm text-gray-500">
-              No history found
+            <div className="flex flex-col items-center justify-center mt-12 py-12 px-4">
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 b p-6 mb-8 shadow-lg shadow-inner">
+                <Clock className="h-8 w-8 text-gray-400 animate-pulse" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No Request History
+              </h3>
+              <div className="max-w-sm text-center space-y-2">
+                <p className="text-sm text-gray-500">
+                  Your API request history log will show here once make some
+                  requests.
+                </p>
+              </div>
             </div>
           ) : (
             filteredHistory.map((item) => (
@@ -227,8 +257,22 @@ export function HistoryPanel({
                         getMethodColor(item.method)
                       )}
                     >
-                      {item.method}
+                      {item.type === "websocket" ? "WS" : item.method}
                     </span>
+                    {/* Show WebSocket stats if available */}
+                    {item.type === "websocket" && item.wsStats && (
+                      <>
+                        <span className="text-xs text-gray-500">
+                          ↑{item.wsStats.messagesSent} ↓
+                          {item.wsStats.messagesReceived}
+                        </span>
+                        {item.wsStats.avgLatency && (
+                          <span className="text-xs text-gray-500">
+                            {Math.round(item.wsStats.avgLatency)}ms
+                          </span>
+                        )}
+                      </>
+                    )}
                     {item.response?.status && (
                       <span
                         className={cn(
@@ -255,6 +299,20 @@ export function HistoryPanel({
                   <div className="text-sm font-mono text-gray-900 break-all">
                     {item.url}
                   </div>
+                  {item.type === "websocket" &&
+                    item.wsStats?.protocols &&
+                    item.wsStats.protocols.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {item.wsStats?.protocols.map((protocol) => (
+                          <span
+                            key={protocol}
+                            className="text-xs bg-gray-100 px-2 py-0.5 rounded"
+                          >
+                            {protocol}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                 </button>
                 <Button
                   variant="ghost"

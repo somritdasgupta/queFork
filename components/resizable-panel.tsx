@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { CodeSandboxLogoIcon, DragHandleDots2Icon, HeightIcon } from "@radix-ui/react-icons";
 import * as ResizablePrimitive from "react-resizable-panels";
 import { FaDraftingCompass } from "react-icons/fa";
 
@@ -18,7 +17,7 @@ const ResizableHandle = ({
     {...props}
   >
     {withHandle && (
-      <div className="z-10 flex h-8 w-8 items-center justify-center rounded-lg">
+      <div className="z-10 flex h-8 w-8 shadow-inner items-center justify-center rounded-lg">
         <FaDraftingCompass className="h-6 w-6 text-blue-400 stroke-3" />
       </div>
     )}

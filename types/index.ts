@@ -1,8 +1,10 @@
 export interface KeyValuePair {
+  type: string;
   key: string;
   value: string;
   description?: string;
   enabled?: boolean;
+  showSecrets: boolean;
 }
 
 export interface RequestBody {
@@ -19,7 +21,24 @@ export interface CollectionVersion {
 export interface Environment {
   id: string;
   name: string;
-  variables: KeyValuePair[];
+  variables: {
+    key: string;
+    value: string;
+    type: "text" | "secret";
+    enabled: boolean;
+  }[];
+  global?: boolean;
+  description?: string;
+  created: string;
+  lastModified: string;
+}
+
+export interface WebSocketPanelProps {
+  url: string;
+  onUrlChange: (url: string) => void;
+  type: "sent" | "received" | "system";
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export interface Collection {
@@ -30,7 +49,6 @@ export interface Collection {
   requests: SavedRequest[];
   lastModified: string;
 }
-
 
 export interface SavedRequest {
   statusCode: any;
@@ -51,14 +69,11 @@ export interface SavedRequest {
     key?: string;
   };
   response?: {
-
     status: number;
 
     body?: any;
-
   };
 }
-
 
 export interface RequestResponse {
   status: number;
@@ -72,20 +87,50 @@ export interface RequestResponse {
 
 export interface HistoryItem {
   id: string;
-  timestamp: string;
+  type: "rest" | "websocket"; // Add type field
   method: string;
   url: string;
+  timestamp: string;
+  response?: {
+    status: number;
+  };
   request: {
     headers: KeyValuePair[];
+
     params: KeyValuePair[];
+
     body: RequestBody;
-    auth?: {
-      type: "none" | "bearer" | "basic" | "apiKey";
-      token?: string;
-      username?: string;
-      password?: string;
-      key?: string;
-    };
+
+    auth: { type: string } & Record<string, any>;
   };
-  response?: RequestResponse;
+  wsStats?: {
+    messagesSent: number;
+    messagesReceived: number;
+    avgLatency: number | null;
+    connectionDuration: number;
+    protocols: string[];
+  };
+}
+
+export interface WebSocketHistoryItem extends HistoryItem {
+  type: "websocket";
+  protocols?: string[];
+  connectionDuration?: number;
+  messagesCount?: {
+    sent: number;
+    received: number;
+  };
+  avgLatency?: number;
+  lastConnected?: string;
+}
+
+export interface WebSocketMessage {
+  type: "sent" | "received";
+  content: string;
+  timestamp: string;
+}
+
+export interface WebSocketState {
+  isConnected: boolean;
+  messages: WebSocketMessage[];
 }

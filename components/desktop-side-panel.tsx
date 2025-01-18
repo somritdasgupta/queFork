@@ -40,7 +40,7 @@ const DesktopSidePanel = ({
   return (
     <div className="h-full flex flex-col bg-white border-2 rounded-lg">
       <div className="px-2 py-2">
-        <div className="flex bg-blue-100 border-blue-200 border-2 shadow-inner shadow-lg rounded-lg p-1">
+        <div className="flex bg-blue-50 border-blue-200 border-2 shadow-inner shadow-lg rounded-lg p-1">
           <Button
             variant={activePanel === "collections" ? "default" : "ghost"}
             size="sm"

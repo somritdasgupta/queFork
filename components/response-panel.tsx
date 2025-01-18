@@ -55,7 +55,6 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -85,15 +84,6 @@ interface ResponsePanelProps {
   method: string;
   url: string;
 }
-
-const isJsonString = (str: string): boolean => {
-  try {
-    JSON.parse(str);
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 const formatContent = (content: any, contentType: string): string => {
   if (contentType === "json") {
@@ -270,30 +260,89 @@ export function ResponsePanel({
 
   if (response.error) {
     return (
-      <div className="border border-slate-700 rounded-md bg-slate-900 h-full flex flex-col">
-        <div className="px-4 py-2 border-b border-slate-700 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-500" />
-            <Badge variant="destructive">Error</Badge>
-            <span className="text-sm text-slate-400 ml-2">{response.time}</span>
+      <div className="bg-slate-950 h-full w-full flex flex-col">
+        <div className="w-full px-4 py-3 border-b border-slate-800 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="animate-pulse bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-xs font-medium border border-red-500/20 flex items-center">
+              <XCircle className="h-3 w-3 mr-1.5" />
+              Error
+            </div>
+            <Badge variant="secondary" className="bg-slate-800 text-slate-300">
+              {method.toUpperCase()}
+            </Badge>
           </div>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={copyToClipboard}
-            className="gap-2 bg-slate-800 text-slate-200 hover:bg-slate-700"
-          >
-            {copyStatus[activeTab] ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Copy className="h-4 w-4" />
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center text-slate-400">
+              <Clock className="h-4 w-4 mr-1.5 opacity-70" />
+              <span className="text-xs font-medium">{response.time}</span>
+            </div>
+            {!isOnline && (
+              <div className="flex items-center text-amber-400">
+                <AlertCircle className="h-4 w-4 mr-1.5" />
+                <span className="text-xs font-medium">Offline</span>
+              </div>
             )}
-          </Button>
+          </div>
         </div>
-        <div className="flex-1 bg-slate-900 p-4">
-          <pre className="text-red-400 font-mono text-sm whitespace-pre-wrap">
-            Error: {response.error}
-          </pre>
+
+        <div className="flex-1 w-full p-6 bg-gradient-to-b from-slate-900 to-slate-950">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 bg-red-500/10 rounded-full">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+            </div>
+            <h3 className="text-lg font-medium text-slate-200">
+              Request Failed
+            </h3>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-400">
+                Request URL
+              </label>
+              <div className="p-2.5 bg-slate-800/30 rounded-md border border-slate-700/50">
+                <code className="text-sm text-blue-400 font-mono break-all">
+                  {url}
+                </code>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-400">
+                Error Details
+              </label>
+              <div className="p-2.5 bg-slate-800/30 rounded-md border border-slate-700/50">
+                <pre className="text-sm text-red-400 font-mono whitespace-pre-wrap break-words">
+                  {response.error}
+                </pre>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-slate-300 mb-3">
+                Troubleshooting Steps
+              </h4>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li className="flex items-center">
+                  <div className="mr-2 w-1.5 h-1.5 rounded-full bg-slate-600" />
+                  Check your network connection
+                </li>
+                <li className="flex items-center">
+                  <div className="mr-2 w-1.5 h-1.5 rounded-full bg-slate-600" />
+                  Verify the API endpoint URL
+                </li>
+                <li className="flex items-center">
+                  <div className="mr-2 w-1.5 h-1.5 rounded-full bg-slate-600" />
+                  Ensure proper authentication if required
+                </li>
+                <li className="flex items-center">
+                  <div className="mr-2 w-1.5 h-1.5 rounded-full bg-slate-600" />
+                  Check request headers and parameters
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -379,68 +428,70 @@ export function ResponsePanel({
           <div className="ml-auto flex items-center pr-2">
             <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
               <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-2 hover:text-slate-400 hover:bg-transparent"
-              >
-                <Save className="h-4 w-4" />
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-2 hover:text-slate-400 hover:bg-transparent"
+                >
+                  <Save className="h-4 w-4" />
+                </Button>
               </DialogTrigger>
               <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg">
-              <DialogHeader>
-                <DialogTitle>Save Request to Collection</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                <Label htmlFor="collection">Collection</Label>
-                <Select
-                  value={selectedCollection}
-                  onValueChange={setSelectedCollection}
-                >
-                  <SelectTrigger id="collection">
-                  <SelectValue placeholder="Select collection" />
-                  </SelectTrigger>
-                  <SelectContent>
-                  <SelectGroup>
-                    {collections.map((collection) => (
-                    <SelectItem
-                      key={collection.id}
-                      value={collection.id}
+                <DialogHeader>
+                  <DialogTitle>Save Request to Collection</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="collection">Collection</Label>
+                    <Select
+                      value={selectedCollection}
+                      onValueChange={setSelectedCollection}
                     >
-                      {collection.name}
-                    </SelectItem>
-                    ))}
-                  </SelectGroup>
-                  </SelectContent>
-                </Select>
+                      <SelectTrigger id="collection">
+                        <SelectValue placeholder="Select collection" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {collections.map((collection) => (
+                            <SelectItem
+                              key={collection.id}
+                              value={collection.id}
+                            >
+                              {collection.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Request Name</Label>
+                    <Input
+                      id="name"
+                      value={requestName}
+                      onChange={(e) =>
+                        setRequestName(e.target.value.slice(0, 12))
+                      }
+                      placeholder="Enter request name"
+                      maxLength={12}
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                <Label htmlFor="name">Request Name</Label>
-                <Input
-                  id="name"
-                  value={requestName}
-                  onChange={(e) => setRequestName(e.target.value.slice(0, 12))}
-                  placeholder="Enter request name"
-                  maxLength={12}
-                />
-                </div>
-              </div>
-              <DialogFooter className="gap-2">
-                <Button
-                variant="outline"
-                onClick={() => setIsSaveDialogOpen(false)}
-                >
-                Cancel
-                </Button>
-                <Button 
-                onClick={handleSaveToCollection}
-                disabled={!selectedCollection || !requestName}
-                >
-                <Send className="mr-2 h-4 w-4" />
-                Save
-                </Button>
-              </DialogFooter>
+                <DialogFooter className="gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsSaveDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveToCollection}
+                    disabled={!selectedCollection || !requestName}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    Save
+                  </Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
             <Button
@@ -459,56 +510,56 @@ export function ResponsePanel({
         </TabsList>
 
         <div className="flex-1 relative bg-slate-900/90 text-blue-300">
-            <TabsContent value="pretty" className="absolute inset-0 m-0">
+          <TabsContent value="pretty" className="absolute inset-0 m-0">
             <ScrollArea className="h-full">
               <div className="p-4">
-              {contentType === "json" ? (
-                <pre
-                className="font-mono text-sm"
-                style={{ 
-                  tabSize: 2,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word'
-                }}
-                dangerouslySetInnerHTML={{
-                  __html: highlightCode(
-                  JSON.stringify(JSON.parse(getContentForTab()), null, 2),
-                  'json'
-                  ),
-                }}
-                />
-              ) : contentType === "html" ? (
-                <pre
-                className="font-mono text-sm"
-                style={{ 
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word'
-                }}
-                dangerouslySetInnerHTML={{
-                  __html: highlightCode(
-                  getContentForTab().replace(/></g, '>\n<'),
-                  'html'
-                  ),
-                }}
-                />
-              ) : (
-                <pre
-                className="font-mono text-sm"
-                style={{ 
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word'
-                }}
-                dangerouslySetInnerHTML={{
-                  __html: highlightCode(
-                  getContentForTab(),
-                  getLanguage(contentType)
-                  ),
-                }}
-                />
-              )}
+                {contentType === "json" ? (
+                  <pre
+                    className="font-mono text-sm"
+                    style={{
+                      tabSize: 2,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html: highlightCode(
+                        JSON.stringify(JSON.parse(getContentForTab()), null, 2),
+                        "json"
+                      ),
+                    }}
+                  />
+                ) : contentType === "html" ? (
+                  <pre
+                    className="font-mono text-sm"
+                    style={{
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html: highlightCode(
+                        getContentForTab().replace(/></g, ">\n<"),
+                        "html"
+                      ),
+                    }}
+                  />
+                ) : (
+                  <pre
+                    className="font-mono text-sm"
+                    style={{
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html: highlightCode(
+                        getContentForTab(),
+                        getLanguage(contentType)
+                      ),
+                    }}
+                  />
+                )}
               </div>
             </ScrollArea>
-            </TabsContent>
+          </TabsContent>
           <TabsContent value="raw" className="absolute inset-0 m-0">
             <ScrollArea className="h-full overflow-auto">
               <div className="p-2">

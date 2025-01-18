@@ -2,13 +2,20 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { KeyValueEditor } from "./key-value-editor";
 import { Textarea } from "@/components/ui/textarea";
-import { RequestBody } from "@/types";
+import { KeyValuePair, RequestBody } from "@/types";
+import { useState } from "react";
 
 interface RequestBodyEditorProps {
   body: RequestBody;
   onChange: (body: RequestBody) => void;
 }
 export function RequestBodyEditor({ body, onChange }: RequestBodyEditorProps) {
+  const [params, setParams] = useState<KeyValuePair[]>([]);
+  function onParamsChange(pairs: KeyValuePair[]): void {
+    setParams(pairs);
+    onChange({ ...body, content: pairs });
+  }
+
   return (
     <Tabs
       value={body.type}
@@ -18,7 +25,7 @@ export function RequestBodyEditor({ body, onChange }: RequestBodyEditorProps) {
       <TabsList className="grid grid-cols-4 overflow-x-auto whitespace-nowrap h-auto min-h-[2rem] items-center rounded-lg border-2 border-blue-100 bg-blue-50 px-1 text-gray-700 shadow-inner w-full">
         <TabsTrigger
           value="json"
-          className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[10px] xs:text-xs sm:text-sm font-semibold transition-all hover:bg-gray-100 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+          className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[10px] xs:text-xs sm:text-sm font-semibold transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
         >
           <svg
             className="hidden sm:block h-3 w-3 sm:h-4 sm:w-4"
@@ -37,7 +44,7 @@ export function RequestBodyEditor({ body, onChange }: RequestBodyEditorProps) {
         </TabsTrigger>
         <TabsTrigger
           value="form-data"
-          className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[10px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+          className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[10px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
         >
           <svg
             className="hidden sm:block h-3 w-3 sm:h-4 sm:w-4"
@@ -56,7 +63,7 @@ export function RequestBodyEditor({ body, onChange }: RequestBodyEditorProps) {
         </TabsTrigger>
         <TabsTrigger
           value="x-www-form-urlencoded"
-          className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[10px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+          className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[10px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
         >
           <svg
             className="hidden sm:block h-3 w-3 sm:h-4 sm:w-4"
@@ -75,7 +82,7 @@ export function RequestBodyEditor({ body, onChange }: RequestBodyEditorProps) {
         </TabsTrigger>
         <TabsTrigger
           value="raw"
-          className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[10px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+          className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[10px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
         >
           <svg
             className="hidden sm:block h-3 w-3 sm:h-4 sm:w-4"
@@ -97,23 +104,10 @@ export function RequestBodyEditor({ body, onChange }: RequestBodyEditorProps) {
       <div className="mt-4">
         <TabsContent
           value="none"
-          className="rounded-lg border border-gray-200 p-4"
+          className="rounded-lg border-2 border-dashed border-gray-200 text-center p-4"
         >
-          <div className="flex items-center justify-center text-sm text-gray-500">
-            <svg
-              className="mr-2 h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            This request does not have a body
+          <div className="text-sm md:text-base font-medium text-muted-foreground">
+            This request doesn't have a body
           </div>
         </TabsContent>
         <TabsContent value="json" className="mt-0">
@@ -124,25 +118,47 @@ export function RequestBodyEditor({ body, onChange }: RequestBodyEditorProps) {
                 : JSON.stringify(body.content, null, 2)
             }
             onChange={(e) => onChange({ ...body, content: e.target.value })}
-            className="min-h-[200px] rounded-lg border border-gray-200 font-mono text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="min-h-[200px] rounded-lg font-mono text-sm shadow-sm bg-blue-50 border-2 border-blue-100 focus:border-blue-500 focus:ring-blue-500"
             placeholder="Enter JSON body"
           />
         </TabsContent>
         <TabsContent value="form-data" className="mt-0">
-          <div className="rounded-lg border border-gray-200 p-4">
+          <div className="p-4 bg-slate-50 border-2 rounded-lg border-blue-100">
             <KeyValueEditor
-              pairs={Array.isArray(body.content) ? body.content : []}
-              onChange={(pairs) => onChange({ ...body, content: pairs })}
+              pairs={
+                params.length === 0
+                  ? [
+                      {
+                        key: "",
+                        value: "",
+                        type: "text",
+                        showSecrets: false,
+                      },
+                    ]
+                  : params
+              }
+              onChange={onParamsChange}
               addButtonText="Add Form Field"
               showDescription={true}
             />
           </div>
         </TabsContent>
         <TabsContent value="x-www-form-urlencoded" className="mt-0">
-          <div className="rounded-lg border border-gray-200 p-4">
+          <div className="p-4 bg-slate-50 border-2 rounded-lg border-blue-100">
             <KeyValueEditor
-              pairs={Array.isArray(body.content) ? body.content : []}
-              onChange={(pairs) => onChange({ ...body, content: pairs })}
+              pairs={
+                params.length === 0
+                  ? [
+                      {
+                        key: "",
+                        value: "",
+                        type: "text",
+                        showSecrets: false,
+                      },
+                    ]
+                  : params
+              }
+              onChange={onParamsChange}
               addButtonText="Add Parameter"
             />
           </div>
@@ -151,7 +167,7 @@ export function RequestBodyEditor({ body, onChange }: RequestBodyEditorProps) {
           <Textarea
             value={typeof body.content === "string" ? body.content : ""}
             onChange={(e) => onChange({ ...body, content: e.target.value })}
-            className="min-h-[200px] rounded-lg border border-gray-200 font-mono text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="min-h-[200px] rounded-lg font-mono text-sm shadow-sm bg-blue-50 border-2 border-blue-100 focus:border-blue-500 focus:ring-blue-500"
             placeholder="Enter raw body"
           />
         </TabsContent>

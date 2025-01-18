@@ -23,7 +23,11 @@ export function KeyValueEditor({
   const addPair = () => {
     onChange([
       ...pairs,
-      { key: "", value: "", description: "", enabled: true },
+      {
+        key: "", value: "", description: "", enabled: true,
+        type: "",
+        showSecrets: false
+      },
     ]);
   };
 
@@ -102,7 +106,7 @@ export function KeyValueEditor({
       <Button
         variant="outline"
         onClick={addPair}
-        className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+        className="w-full border-2 border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
       >
         <Plus className="mr-2 h-4 w-4" />
         {addButtonText}

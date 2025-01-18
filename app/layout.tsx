@@ -1,5 +1,6 @@
 import '@/styles/globals.css'
 import { Inter } from 'next/font/google'
+import WebSocketHandler from '@/components/WebSocketHandler'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -14,7 +15,10 @@ export default function RootLayout({
         <title>queFork • REST API Testing</title>
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <WebSocketHandler />
+        {children}
+      </body>
     </html>
   )
 }
