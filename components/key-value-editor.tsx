@@ -45,7 +45,7 @@ export function KeyValueEditor({
 
   return (
     <div className="space-y-4">
-      <ScrollArea className="h-auto max-h-[210px] pr-4 overflow-y-auto">
+      <ScrollArea className="h-auto max-h-[210px] overflow-y-auto">
         <div className="space-y-2">
           {pairs.map((pair, index) => (
             <div key={index} className="flex items-start gap-2">

@@ -459,21 +459,56 @@ export function ResponsePanel({
         </TabsList>
 
         <div className="flex-1 relative bg-slate-900/90 text-blue-300">
-          <TabsContent value="pretty" className="absolute inset-0 m-0">
-            <ScrollArea className="h-full overflow-auto">
-              <div className="p-2">
+            <TabsContent value="pretty" className="absolute inset-0 m-0">
+            <ScrollArea className="h-full">
+              <div className="p-4">
+              {contentType === "json" ? (
                 <pre
-                  className="font-mono text-sm p-2 whitespace-pre-wrap break-all sm:break-words sm:max-w-sm sm:max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: highlightCode(
-                      getContentForTab(),
-                      getLanguage(contentType)
-                    ),
-                  }}
+                className="font-mono text-sm"
+                style={{ 
+                  tabSize: 2,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word'
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: highlightCode(
+                  JSON.stringify(JSON.parse(getContentForTab()), null, 2),
+                  'json'
+                  ),
+                }}
                 />
+              ) : contentType === "html" ? (
+                <pre
+                className="font-mono text-sm"
+                style={{ 
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word'
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: highlightCode(
+                  getContentForTab().replace(/></g, '>\n<'),
+                  'html'
+                  ),
+                }}
+                />
+              ) : (
+                <pre
+                className="font-mono text-sm"
+                style={{ 
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word'
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: highlightCode(
+                  getContentForTab(),
+                  getLanguage(contentType)
+                  ),
+                }}
+                />
+              )}
               </div>
             </ScrollArea>
-          </TabsContent>
+            </TabsContent>
           <TabsContent value="raw" className="absolute inset-0 m-0">
             <ScrollArea className="h-full overflow-auto">
               <div className="p-2">

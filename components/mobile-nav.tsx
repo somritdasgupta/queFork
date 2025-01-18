@@ -68,7 +68,7 @@ export function MobileNav({
               onClick={() => setOpen(false)}
             ></Button>
           </div>
-          <div className="flex gap-2 mt-2 bg-blue-100 rounded-lg p-1">
+          <div className="flex gap-2 mt-2 bg-blue-100 border-blue-200 border-2 shadow-inner shadow-lg rounded-lg p-1">
             <Button
               variant={activePanel === "collections" ? "default" : "ghost"}
               size="sm"

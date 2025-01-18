@@ -189,10 +189,8 @@ export function CollectionsPanel({
   );
 
   const handleDeleteCollection = (collectionId: string) => {
-    if (confirm("Are you sure you want to delete this collection?")) {
       onDeleteCollection(collectionId);
       toast.success("Collection deleted successfully");
-    }
   };
 
   const filteredCollections = useMemo(() => {
