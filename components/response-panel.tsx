@@ -260,14 +260,14 @@ export function ResponsePanel({
 
   if (response.error) {
     return (
-      <div className="bg-slate-950 h-full w-full flex flex-col">
-        <div className="w-full px-4 py-3 border-b border-slate-800 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between">
+      <div className="bg-slate-950 h-auto w-full flex flex-col">
+        <div className="sticky top-0 w-full px-4 py-3 border-b border-slate-800 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="animate-pulse bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-xs font-medium border border-red-500/20 flex items-center">
               <XCircle className="h-3 w-3 mr-1.5" />
               Error
             </div>
-            <Badge variant="secondary" className="bg-slate-800 text-slate-300">
+            <Badge className="inline-flex items-center px-2.5 rounded-full bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-cyan-400 text-xs font-medium tracking-wide border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.15)] backdrop-blur-sm transform transition-all hover:scale-105 hover:shadow-[0_0_25px_rgba(34,211,238,0.25)] hover:border-cyan-400/40 hover:text-cyan-200">
               {method.toUpperCase()}
             </Badge>
           </div>
@@ -286,22 +286,15 @@ export function ResponsePanel({
           </div>
         </div>
 
-        <div className="flex-1 w-full p-6 bg-gradient-to-b from-slate-900 to-slate-950">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 bg-red-500/10 rounded-full">
-              <AlertCircle className="h-5 w-5 text-red-400" />
-            </div>
-            <h3 className="text-lg font-medium text-slate-200">
-              Request Failed
-            </h3>
-          </div>
-
-          <div className="space-y-4">
+        <div className="flex-1 w-full flex flex-col lg:flex-row gap-4 p-4 bg-gradient-to-b from-slate-900 to-slate-950">
+          {/* Left side - Error details */}
+          <div className="flex-1 lg:w-1/2 space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">
+              <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                <Send className="h-4 w-4" />
                 Request URL
               </label>
-              <div className="p-2.5 bg-slate-800/30 rounded-md border border-slate-700/50">
+              <div className="p-2 bg-slate-800/30 rounded-md border border-slate-700/50">
                 <code className="text-sm text-blue-400 font-mono break-all">
                   {url}
                 </code>
@@ -309,39 +302,41 @@ export function ResponsePanel({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">
+              <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-400" />
                 Error Details
               </label>
-              <div className="p-2.5 bg-slate-800/30 rounded-md border border-slate-700/50">
+              <div className="p-2 bg-slate-800/30 rounded-md border border-red-700/30">
                 <pre className="text-sm text-red-400 font-mono whitespace-pre-wrap break-words">
                   {response.error}
                 </pre>
               </div>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-slate-300 mb-3">
-                Troubleshooting Steps
-              </h4>
-              <ul className="space-y-2 text-sm text-slate-400">
-                <li className="flex items-center">
-                  <div className="mr-2 w-1.5 h-1.5 rounded-full bg-slate-600" />
-                  Check your network connection
-                </li>
-                <li className="flex items-center">
-                  <div className="mr-2 w-1.5 h-1.5 rounded-full bg-slate-600" />
-                  Verify the API endpoint URL
-                </li>
-                <li className="flex items-center">
-                  <div className="mr-2 w-1.5 h-1.5 rounded-full bg-slate-600" />
-                  Ensure proper authentication if required
-                </li>
-                <li className="flex items-center">
-                  <div className="mr-2 w-1.5 h-1.5 rounded-full bg-slate-600" />
-                  Check request headers and parameters
-                </li>
-              </ul>
-            </div>
+          {/* Right side - Troubleshooting */}
+          <div className="lg:w-1/2 p-4 font-mono text-sm bg-slate-800/20 rounded-lg border border-slate-700/50">
+            <ul className="space-y-0 text-sm text-slate-400">
+              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-md transition-colors">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <span>
+                  Check your network connection{" "}
+                  {!isOnline && "(Currently Offline)"}
+                </span>
+              </li>
+              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-md transition-colors">
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                <span>Verify the API endpoint URL is correct</span>
+              </li>
+              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-md transition-colors">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <span>Ensure proper authentication if required</span>
+              </li>
+              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-md transition-colors">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                <span>Check request headers and parameters</span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -436,7 +431,7 @@ export function ResponsePanel({
                   <Save className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg">
+              <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg">
                 <DialogHeader>
                   <DialogTitle>Save Request to Collection</DialogTitle>
                 </DialogHeader>

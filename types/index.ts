@@ -83,6 +83,8 @@ export interface RequestResponse {
   size: string;
   time: string;
   timestamp: string;
+  error?: boolean;
+
 }
 
 export interface HistoryItem {

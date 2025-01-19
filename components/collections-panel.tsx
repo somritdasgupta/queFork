@@ -228,7 +228,7 @@ export function CollectionsPanel({
                 <Plus className="h-5 w-5" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg max-w-md">
+            <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Collection</DialogTitle>
                 <DialogDescription>

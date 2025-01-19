@@ -1,6 +1,6 @@
 import '@/styles/globals.css'
 import { Inter } from 'next/font/google'
-import WebSocketHandler from '@/components/WebSocketHandler'
+import { WebSocketWrapper } from '@/components/websocket/websocket-wrapper'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -16,8 +16,9 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={inter.className}>
-        <WebSocketHandler />
-        {children}
+        <WebSocketWrapper>
+          {children}
+        </WebSocketWrapper>
       </body>
     </html>
   )

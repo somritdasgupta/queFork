@@ -72,7 +72,7 @@ const EnvironmentHelp = () => (
         <HelpCircle className="h-4 w-4" />
       </Button>
     </DialogTrigger>
-    <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lgd">
+    <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg">
       <DialogHeader>
         <DialogTitle>Using Environment Variables</DialogTitle>
         <DialogDescription>
@@ -125,29 +125,6 @@ export const EnvironmentManager = forwardRef<
     const [editingEnvironment, setEditingEnvironment] =
       useState<Environment | null>(null);
 
-    // Initialize with default environment
-    useEffect(() => {
-      if (environments.length === 0) {
-        const defaultEnv: Environment = {
-          id: "default",
-          name: "Default",
-          variables: [],
-          global: true,
-          created: new Date().toISOString(),
-          lastModified: new Date().toISOString(),
-        };
-        onEnvironmentsUpdate([defaultEnv]);
-        onEnvironmentChange(defaultEnv.id);
-      } else if (!currentEnvironment) {
-        onEnvironmentChange(environments[0].id);
-      }
-    }, [
-      environments,
-      currentEnvironment,
-      onEnvironmentsUpdate,
-      onEnvironmentChange,
-    ]);
-
     const createDefaultEnvironment = () => {
       const defaultEnv: Environment = {
         id: "default",
@@ -160,33 +137,6 @@ export const EnvironmentManager = forwardRef<
       onEnvironmentsUpdate([defaultEnv]);
       onEnvironmentChange(defaultEnv.id);
     };
-
-    useEffect(() => {
-      // Load saved environments first
-      const savedEnvironments = localStorage.getItem("que-environments");
-      if (savedEnvironments) {
-        try {
-          const parsedEnvironments = JSON.parse(savedEnvironments);
-          // Validate the loaded environments
-          const validEnvironments = parsedEnvironments.map((env: Environment) => ({
-            ...env,
-            variables: Array.isArray(env.variables) ? env.variables.filter(v => v.key.trim() !== '') : [],
-            lastModified: env.lastModified || new Date().toISOString()
-          }));
-          onEnvironmentsUpdate(validEnvironments);
-    
-          // Set current environment
-          if (validEnvironments.length > 0) {
-            onEnvironmentChange(validEnvironments[0].id);
-          }
-        } catch (error) {
-          console.error("Error loading environments:", error);
-          createDefaultEnvironment();
-        }
-      } else {
-        createDefaultEnvironment();
-      }
-    }, []);
 
     const getMergedEnvironmentVariables = () => {
       const globalEnv = environments.find((env) => env.global);
@@ -226,7 +176,11 @@ export const EnvironmentManager = forwardRef<
           created: new Date().toISOString(),
           lastModified: new Date().toISOString(),
         };
-        onEnvironmentsUpdate([...environments, newEnvironment]);
+        
+        const updatedEnvironments = [...environments, newEnvironment];
+        handleEnvironmentsUpdate(updatedEnvironments);
+        setNewEnvironmentName('');
+        setIsOpen(false);
       }
     };
 
@@ -299,24 +253,26 @@ export const EnvironmentManager = forwardRef<
     };
 
     const handleEnvironmentsUpdate = (updatedEnvironments: Environment[]) => {
+      // Save to localStorage first
+      localStorage.setItem('que-environments', JSON.stringify(updatedEnvironments));
+      // Then update state through callback
       onEnvironmentsUpdate(updatedEnvironments);
-      // Ensure the environments are properly stringified and saved
-      localStorage.setItem(
-        "que-environments",
-        JSON.stringify(updatedEnvironments.map(env => ({
-          ...env,
-          variables: env.variables.filter(v => v.key.trim() !== ''), // Only save valid variables
-          lastModified: new Date().toISOString()
-        })))
-      );
-    
-      // Update current environment if it was deleted
-      if (
-        currentEnvironment &&
-        !updatedEnvironments.find((env) => env.id === currentEnvironment.id)
-      ) {
-        const firstEnv = updatedEnvironments[0] || null;
-        onEnvironmentChange(firstEnv?.id || "");
+    };
+
+    const handleSaveEnvironment = () => {
+      if (editingEnvironment) {
+        const updatedEnvironments = environments.map((env) =>
+          env.id === editingEnvironment.id
+            ? {
+                ...editingEnvironment,
+                lastModified: new Date().toISOString(),
+                variables: editingEnvironment.variables.filter(v => v.key.trim() !== '')
+              }
+            : env
+        );
+        handleEnvironmentsUpdate(updatedEnvironments);
+        setEditingEnvironment(null);
+        toast.success("Environment updated");
       }
     };
 
@@ -350,7 +306,7 @@ export const EnvironmentManager = forwardRef<
             </Button>
           </DialogTrigger>
 
-          <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lgd">
+          <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg">
             <DialogHeader>
               <DialogTitle>Manage Environments</DialogTitle>
               <DialogDescription>
@@ -366,7 +322,7 @@ export const EnvironmentManager = forwardRef<
                       <HelpCircle className="h-4 w-4" />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg">
+                  <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg">
                     <DialogHeader>
                       <DialogTitle>Using Environment Manager</DialogTitle>
                       <DialogDescription>
@@ -582,7 +538,7 @@ export const EnvironmentManager = forwardRef<
             open={!!editingEnvironment}
             onOpenChange={() => setEditingEnvironment(null)}
           >
-            <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-b-none sm:rounded-lg">
+            <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg">
               <DialogHeader>
                 <DialogTitle>Variables ({editingEnvironment.name})</DialogTitle>
               </DialogHeader>
@@ -631,21 +587,7 @@ export const EnvironmentManager = forwardRef<
 
               <DialogFooter>
                 <Button
-                  onClick={() => {
-                    const updatedEnvironments = environments.map((env) =>
-                      env.id === editingEnvironment.id
-                        ? {
-                            ...editingEnvironment,
-                            lastModified: new Date().toISOString(),
-                            variables: editingEnvironment.variables.filter(v => v.key.trim() !== ''), // Add this filter
-                          }
-                        : env
-                    );
-                    handleEnvironmentsUpdate(updatedEnvironments);
-                    setEditingEnvironment(null);
-                    localStorage.setItem('que-environments', JSON.stringify(updatedEnvironments)); // Add this line
-                    toast.success("Environment updated");
-                  }}
+                  onClick={handleSaveEnvironment}
                 >
                   Save changes
                 </Button>

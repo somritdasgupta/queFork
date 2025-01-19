@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Send, Loader2, PlugZap2Icon } from "lucide-react";
+import { Send, Loader2, GlobeIcon } from "lucide-react";
 import { toast } from "sonner";
 import { RequestPanel } from "@/components/request-panel";
 import { ResponsePanel } from "@/components/response-panel";
@@ -35,7 +35,8 @@ import {
 } from "@/components/environment-manager";
 import { v4 as uuidv4 } from "uuid";
 import Footer from "@/components/footer";
-import { WebSocketPanel } from "@/components/websocket-panel";
+import { WebSocketPanel } from "@/components/websocket/websocket-panel";
+import { useWebSocket } from "@/components/websocket/websocket-context";
 
 export default function Page() {
   const [method, setMethod] = useState("GET");
@@ -81,35 +82,69 @@ export default function Page() {
   const [wsUrl, setWsUrl] = useState("");
   const [webSocketUrl, setWebSocketUrl] = useState("");
   const [webSocketProtocols, setWebSocketProtocols] = useState<string[]>([]);
+  const { isConnected: wsConnected } = useWebSocket();
 
   useEffect(() => {
-    const savedEnvironments = localStorage.getItem("que-environments");
-    if (savedEnvironments) {
+    const loadSavedEnvironments = () => {
       try {
-        const parsedEnvironments = JSON.parse(savedEnvironments);
-        setEnvironments(parsedEnvironments);
-        if (parsedEnvironments.length > 0) {
-          setCurrentEnvironment(parsedEnvironments[0]);
+        const savedEnvironments = localStorage.getItem("que-environments");
+        let envs: Environment[] = [];
+
+        if (savedEnvironments) {
+          const parsed = JSON.parse(savedEnvironments);
+          envs = parsed.map((env: Environment) => ({
+            ...env,
+            variables: Array.isArray(env.variables) ? env.variables.filter(v => v.key.trim() !== '') : [],
+            lastModified: env.lastModified || new Date().toISOString()
+          }));
         }
+
+        // Create default environment if no environments exist
+        if (!envs || envs.length === 0) {
+          const defaultEnv: Environment = {
+            id: "default",
+            name: "Default",
+            variables: [],
+            global: true,
+            created: new Date().toISOString(),
+            lastModified: new Date().toISOString(),
+          };
+          envs = [defaultEnv];
+        }
+
+        // Save cleaned environments back to localStorage
+        localStorage.setItem("que-environments", JSON.stringify(envs));
+        
+        // Update state
+        setEnvironments(envs);
+        
+        // Set current environment if not set
+        const savedCurrentEnvId = localStorage.getItem("que-current-environment");
+        const currentEnv = savedCurrentEnvId 
+          ? envs.find(env => env.id === savedCurrentEnvId)
+          : envs[0];
+        setCurrentEnvironment(currentEnv || envs[0]);
+
       } catch (error) {
         console.error("Error loading environments:", error);
         createDefaultEnvironment();
       }
-    } else {
-      createDefaultEnvironment();
+    };
+
+    // Load collections
+    const savedCollections = localStorage.getItem("apiCollections");
+    if (savedCollections) {
+      setCollections(JSON.parse(savedCollections));
     }
 
-    // Load other data
+    // Load history
     const savedHistory = localStorage.getItem("apiHistory");
     if (savedHistory) {
       setHistory(JSON.parse(savedHistory));
     }
 
-    const savedCollections = localStorage.getItem("apiCollections");
-    if (savedCollections) {
-      setCollections(JSON.parse(savedCollections));
-    }
-  }, []);
+    loadSavedEnvironments();
+  }, []); // Run only on mount
 
   const createDefaultEnvironment = () => {
     const defaultEnv: Environment = {
@@ -140,9 +175,15 @@ export default function Page() {
       setIsWebSocketOpen(true);
     };
 
-    window.addEventListener('openWebSocket', handleWebSocketOpen as EventListener);
+    window.addEventListener(
+      "openWebSocket",
+      handleWebSocketOpen as EventListener
+    );
     return () => {
-      window.removeEventListener('openWebSocket', handleWebSocketOpen as EventListener);
+      window.removeEventListener(
+        "openWebSocket",
+        handleWebSocketOpen as EventListener
+      );
     };
   }, []);
 
@@ -504,6 +545,7 @@ export default function Page() {
     const selectedEnvironment =
       environments.find((env) => env.id === environmentId) || null;
     setCurrentEnvironment(selectedEnvironment);
+    localStorage.setItem("que-current-environment", environmentId);
   };
 
   const handleEnvironmentsUpdate = (updatedEnvironments: Environment[]) => {
@@ -532,6 +574,15 @@ export default function Page() {
 
   const toggleHistorySaving = (enabled: boolean) => {
     setIsHistorySavingEnabled(enabled);
+  };
+
+  // Add new class for the WebSocket button animation
+  const getWebSocketButtonClasses = () => {
+    const baseClasses = "w-10 h-10 rounded-lg transition-all relative overflow-hidden";
+    if (wsConnected) {
+      return `${baseClasses} bg-slate-900 after:absolute after:inset-0 after:bg-green-500/20 after:animate-ping`;
+    }
+    return `${baseClasses} bg-slate-900 hover:bg-slate-800`;
   };
 
   return (
@@ -613,11 +664,20 @@ export default function Page() {
             </div>
             <div className="flex items-center gap-2">
               <Button
-                className="w-10 h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center justify-center"
+                className={getWebSocketButtonClasses()}
                 onClick={() => setIsWebSocketOpen(true)}
-                title="Open WebSocket Connection"
+                title={wsConnected ? "WebSocket Connected" : "Open WebSocket Connection"}
               >
-                <PlugZap2Icon className="w-4 h-4" />
+                <div className="relative z-10">
+                  <GlobeIcon
+                    className={`w-4 h-4 transition-colors ${
+                      wsConnected ? "text-green-400 animate-pulse" : "text-white"
+                    }`}
+                  />
+                  {wsConnected && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  )}
+                </div>
               </Button>
               <div className="flex-1">
                 <EnvironmentManager
@@ -709,11 +769,24 @@ export default function Page() {
                   )}
                 </Button>
                 <Button
-                  className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center gap-2 px-4"
+                  className={getWebSocketButtonClasses()}
                   onClick={() => setIsWebSocketOpen(true)}
-                  title="Open WebSocket Connection"
+                  title={
+                    wsConnected
+                      ? "WebSocket Connected"
+                      : "Open WebSocket Connection"
+                  }
                 >
-                  <PlugZap2Icon className="w-4 h-4" />
+                  <div className="relative z-10">
+                    <GlobeIcon
+                      className={`w-4 h-4 transition-colors ${
+                        wsConnected
+                          ? "text-blue-400 animate-pulse"
+                          : "text-white"
+                      }`}
+                    />
+                    {wsConnected }
+                  </div>
                 </Button>
               </div>
 
@@ -741,6 +814,7 @@ export default function Page() {
             minSize={20}
             maxSize={30}
             className="hidden md:block rounded-lg"
+            response={null}
           >
             <DesktopSidePanel
               collections={collections}
@@ -759,11 +833,16 @@ export default function Page() {
           </ResizablePanel>
 
           {/* Main Panel */}
-          <ResizablePanel defaultSize={75} className="bg-gray-50 rounded-lg">
+          <ResizablePanel
+            defaultSize={75}
+            className="bg-gray-50 rounded-lg"
+            response={null}
+          >
             <ResizablePanelGroup direction="vertical">
               <ResizablePanel
                 defaultSize={50}
                 className="overflow-hidden rounded-lg"
+                response={null}
               >
                 <div className="h-full overflow-y-auto">
                   <RequestPanel
@@ -786,9 +865,10 @@ export default function Page() {
 
               <ResizablePanel
                 defaultSize={50}
-                minSize={30}
-                maxSize={70}
+                minSize={35}
+                maxSize={!response?.status ? 35 : 70}
                 className="overflow-hidden"
+                response={response}
               >
                 <div className="h-full bg-gray-50 overflow-y-auto">
                   <ResponsePanel

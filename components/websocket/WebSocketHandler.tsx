@@ -7,12 +7,12 @@ const WebSocketHandler: React.FC = () => {
     const ws = new WebSocket("your-websocket-url");
 
     ws.onmessage = (event) => {
-      // Handle's those incoming messages
       console.log("Received:", event.data);
     };
 
+    // Remove ws.close() to keep the connection open
     return () => {
-      ws.close(); // Cleans up on unmount
+      // ws.close(); // Cleans up on unmount
     };
   }, []);
 

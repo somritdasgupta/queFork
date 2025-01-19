@@ -3,8 +3,24 @@
 import * as React from "react";
 import * as ResizablePrimitive from "react-resizable-panels";
 import { FaDraftingCompass } from "react-icons/fa";
+import { RequestResponse } from "@/types";
 
-const ResizablePanel = ResizablePrimitive.Panel;
+interface ResponsePanelProps {
+  response: RequestResponse | null;
+}
+
+const ResizablePanel = React.forwardRef<
+  ResizablePrimitive.ImperativePanelHandle,
+  React.ComponentProps<typeof ResizablePrimitive.Panel> & ResponsePanelProps
+>(({ response, className, ...props }, ref) => (
+  <ResizablePrimitive.Panel
+    className={`${className} ${response?.error ? 'max-h-[30vh]' : ''}`}
+    {...props}
+    ref={ref}
+  />
+));
+ResizablePanel.displayName = "ResizablePanel";
+
 const ResizableHandle = ({
   withHandle,
   className,
@@ -33,4 +49,5 @@ const ResizablePanelGroup = ({
     {...props}
   />
 );
+
 export { ResizablePanel, ResizableHandle, ResizablePanelGroup };
