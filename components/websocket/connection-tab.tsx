@@ -196,46 +196,57 @@ interface ProtocolConfig {
   color: string;
   defaultUrl?: string;
   description?: string;
+  urlPattern: RegExp;
+  placeholder: string;
 }
 
 const AVAILABLE_PROTOCOLS: Record<string, ProtocolConfig> = {
-  "websocket": { 
-    name: "WebSocket", 
+  websocket: {
+    name: "WebSocket",
     color: "blue",
-    description: "Standard WebSocket Protocol"
+    description: "Standard WebSocket Protocol",
+    urlPattern: /^wss?:\/\/.*/,
+    placeholder: "ws://localhost:8080 or wss://example.com",
   },
-  "mqtt": { 
-    name: "MQTT", 
-    color: "blue",
-    description: "Message Queue Telemetry Transport"
+  mqtt: {
+    name: "MQTT",
+    color: "green",
+    description: "Message Queue Telemetry Transport",
+    urlPattern: /.*(mqtt|mosquitto).*/i,
+    placeholder: "ws://broker.mqtt.com:8080 or wss://test.mosquitto.org:8081",
   },
-  "graphql-ws": { 
-    name: "GraphQL", 
-    color: "blue",
-    description: "GraphQL over WebSocket"
+  "graphql-ws": {
+    name: "GraphQL",
+    color: "purple",
+    description: "GraphQL over WebSocket",
+    urlPattern: /.*(graphql|gql|hasura).*/i,
+    placeholder: "wss://your-graphql-endpoint/graphql",
   },
-  "socketio": { 
-    name: "Socket.IO", 
-    color: "blue",
-    description: "Socket.IO Protocol"
-  }
+  socketio: {
+    name: "Socket.IO",
+    color: "yellow",
+    description: "Socket.IO Protocol",
+    urlPattern: /.*(socket\.io|io).*/i,
+    placeholder: "ws://localhost:3000/socket.io or wss://socket.example.com",
+  },
 };
 
 export function ConnectionTab() {
-  const { 
-    isConnected, 
-    connectionStatus, 
-    connect, 
-    disconnect, 
-    url, 
-    onUrlChange, 
-    stats, 
+  const {
+    isConnected,
+    connectionStatus,
+    connect,
+    disconnect,
+    url,
+    onUrlChange,
+    stats,
     latencyHistory,
     connectionTime,
-    currentLatency 
+    currentLatency,
   } = useWebSocket();
 
-  const [selectedProtocol, setSelectedProtocol] = useState<keyof typeof AVAILABLE_PROTOCOLS>("websocket");
+  const [selectedProtocol, setSelectedProtocol] =
+    useState<keyof typeof AVAILABLE_PROTOCOLS>("websocket");
 
   const handleProtocolSelect = (protocol: keyof typeof AVAILABLE_PROTOCOLS) => {
     setSelectedProtocol(protocol);
@@ -260,15 +271,40 @@ export function ConnectionTab() {
     if (isConnected) {
       disconnect();
     } else {
-      connect(selectedProtocol !== 'websocket' ? [selectedProtocol] : undefined);
+      connect(
+        selectedProtocol !== "websocket" ? [selectedProtocol] : undefined
+      );
     }
   };
 
+  // Add URL detection handler
+  const handleUrlChange = (newUrl: string) => {
+    onUrlChange(newUrl);
+
+    // Auto-detect protocol from URL
+    if (newUrl) {
+      for (const [protocol, config] of Object.entries(AVAILABLE_PROTOCOLS)) {
+        if (config.urlPattern.test(newUrl)) {
+          setSelectedProtocol(protocol as keyof typeof AVAILABLE_PROTOCOLS);
+          break;
+        }
+      }
+    }
+  };
+
+  // Get current placeholder text
+  const getUrlPlaceholder = () => {
+    return (
+      AVAILABLE_PROTOCOLS[selectedProtocol]?.placeholder ||
+      "Enter WebSocket URL"
+    );
+  };
+
   return (
-    <div className="h-full overflow-y-auto space-y-4 p-4 pb-20"> {/* Added pb-20 for bottom spacing */}
+    <div className="h-full overflow-y-auto space-y-4 p-4 pb-20 bg-slate-950">
       {/* Connection Controls */}
-      <div className="sticky top-0 z-10 bg-background pb-2">
-        <Card className="p-4">
+      <div className="sticky top-0 z-10 bg-slate-950 pb-2">
+        <Card className="p-4 bg-slate-900 border-slate-800">
           <div className="space-y-4">
             {/* Protocol Selection */}
             <div className="flex gap-1 md:gap-1.5 flex-wrap">
@@ -277,13 +313,22 @@ export function ConnectionTab() {
                   key={key}
                   variant={selectedProtocol === key ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleProtocolSelect(key as keyof typeof AVAILABLE_PROTOCOLS)}
+                  onClick={() =>
+                    handleProtocolSelect(
+                      key as keyof typeof AVAILABLE_PROTOCOLS
+                    )
+                  }
                   className={cn(
-                    "rounded-full text-[10px] md:text-sm py-0.5 md:py-2 px-1.5 md:px-3 h-6 md:h-auto min-w-0",
-                    selectedProtocol === key && "bg-primary text-primary-foreground"
+                    "rounded-full text-[10px] md:text-sm py-0.5 md:py-2 px-1.5 md:px-3 h-6 md:h-auto min-w-0 bg-slate-900 text-slate-200 flex items-center gap-1.5",
+                    selectedProtocol === key
+                      ? "bg-slate-800 text-slate-200"
+                      : "border-slate-700 text-slate-200 hover:bg-slate-800/80"
                   )}
                 >
-                  <div className={`w-1 md:w-2 h-1 md:h-2 rounded-full bg-${protocol.color}-400`} />
+                  <div
+                    className={`w-2 h-2 rounded-full`}
+                    style={{ backgroundColor: protocol.color }}
+                  />
                   {protocol.name}
                 </Button>
               ))}
@@ -294,17 +339,13 @@ export function ConnectionTab() {
               <div className="flex-1 relative">
                 <Input
                   value={url}
-                  onChange={(e) => onUrlChange(e.target.value)}
-                  placeholder={`${
-                    selectedProtocol === 'websocket' 
-                      ? 'ws' 
-                      : AVAILABLE_PROTOCOLS[selectedProtocol].name.toLowerCase()
-                  }:// URL`}
-                  className="pr-24"
+                  onChange={(e) => handleUrlChange(e.target.value)}
+                  placeholder={getUrlPlaceholder()}
+                  className="bg-slate-950 border-slate-800 text-slate-200 pr-24"
                 />
-                <Badge 
-                  variant="secondary" 
-                  className="absolute right-2 top-1/2 -translate-y-1/2"
+                <Badge
+                  variant="secondary"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-slate-800 text-slate-400"
                 >
                   {AVAILABLE_PROTOCOLS[selectedProtocol].name}
                 </Badge>
@@ -312,22 +353,34 @@ export function ConnectionTab() {
               <Button
                 onClick={handleConnect}
                 variant={isConnected ? "destructive" : "default"}
-                className="gap-2 min-w-[120px]"
-                disabled={!url || connectionStatus === 'connecting'}
+                className={cn(
+                  "gap-2",
+                  isConnected
+                    ? "bg-red-500 hover:bg-red-600"
+                    : "bg-slate-800 hover:bg-slate-700 text-slate-200"
+                )}
+                disabled={!url || connectionStatus === "connecting"}
               >
-                {connectionStatus === 'connecting' ? (
-                  <span className="animate-pulse">Connecting...</span>
+                {connectionStatus === "connecting" ? (
+                  <span className="animate-pulse">...</span>
                 ) : isConnected ? (
                   <>
-                    <Unplug className="h-4 w-4" /> Disconnect
+                    <Unplug className="h-4 w-4" />
                   </>
                 ) : (
                   <>
-                    <PlugZap2 className="h-4 w-4" /> Connect
+                    <PlugZap2 className="h-4 w-4" />
                   </>
                 )}
               </Button>
             </div>
+
+            {/* Optional: Add Protocol Description */}
+            {url && (
+              <div className="text-xs text-slate-400">
+                {AVAILABLE_PROTOCOLS[selectedProtocol].description}
+              </div>
+            )}
           </div>
         </Card>
       </div>
@@ -335,36 +388,43 @@ export function ConnectionTab() {
       {/* Main Stats Cards */}
       <div className="grid md:grid-cols-2 gap-4">
         {/* Connection Status */}
-        <Card className="p-6">
+        <Card className="p-6 bg-slate-900 border-slate-800">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium flex items-center gap-2">
+            <h3 className="text-sm font-medium flex items-center gap-2 text-slate-200">
               <Signal className="h-4 w-4" /> Connection Status
             </h3>
             <Badge variant={isConnected ? "default" : "destructive"}>
               {connectionStatus.toUpperCase()}
             </Badge>
           </div>
-          
+
           <div className="space-y-4">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Uptime</span>
-              <span className="font-mono">
+              <span className="text-slate-400">Uptime</span>
+              <span className="font-mono text-slate-200">
                 {(connectionTime ?? 0) > 0
-                  ? `${Math.floor((connectionTime ?? 0) / 60)}m ${(connectionTime ?? 0) % 60}s`
+                  ? `${Math.floor((connectionTime ?? 0) / 60)}m ${
+                      (connectionTime ?? 0) % 60
+                    }s`
                   : "N/A"}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Reconnections</span>
-              <span className="font-mono">{stats.reconnectAttempts}</span>
+              <span className="text-slate-400">Reconnections</span>
+              <span className="font-mono text-slate-200">
+                {stats.reconnectAttempts}
+              </span>
             </div>
-            <div className="pt-4 border-t">
+            <div className="pt-4 border-t border-slate-800">
               <div className="flex items-center justify-between">
-                <Label htmlFor="auto-reconnect">Auto Reconnect</Label>
+                <Label htmlFor="auto-reconnect" className="text-slate-200">
+                  Auto Reconnect
+                </Label>
                 <Switch
                   id="auto-reconnect"
                   checked={autoReconnect}
                   onCheckedChange={setAutoReconnect}
+                  className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-slate-700"
                 />
               </div>
             </div>
@@ -372,31 +432,35 @@ export function ConnectionTab() {
         </Card>
 
         {/* Message Statistics */}
-        <Card className="p-6">
-          <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+        <Card className="p-6 bg-slate-900 border-slate-800">
+          <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-slate-200">
             <Activity className="h-4 w-4" /> Message Statistics
           </h3>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-accent/50 p-3 rounded-lg">
-                <div className="text-2xl font-bold">{stats.messagesSent}</div>
-                <div className="text-xs text-muted-foreground">Sent</div>
+              <div className="bg-accent/50 p-3 rounded-lg bg-slate-800">
+                <div className="text-2xl font-bold text-slate-200">
+                  {stats.messagesSent}
+                </div>
+                <div className="text-xs text-slate-400">Sent</div>
               </div>
-              <div className="bg-accent/50 p-3 rounded-lg">
-                <div className="text-2xl font-bold">{stats.messagesReceived}</div>
-                <div className="text-xs text-muted-foreground">Received</div>
+              <div className="bg-accent/50 p-3 rounded-lg bg-slate-800">
+                <div className="text-2xl font-bold text-slate-200">
+                  {stats.messagesReceived}
+                </div>
+                <div className="text-xs text-slate-400">Received</div>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Messages</span>
-                <span className="font-mono">
+                <span className="text-slate-400">Total Messages</span>
+                <span className="font-mono text-slate-200">
                   {stats.messagesSent + stats.messagesReceived}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Current Latency</span>
-                <span className="font-mono">
+                <span className="text-slate-400">Current Latency</span>
+                <span className="font-mono text-slate-200">
                   {currentLatency ? `${currentLatency}ms` : "N/A"}
                 </span>
               </div>
@@ -406,40 +470,56 @@ export function ConnectionTab() {
 
         {/* Add Latency Monitor */}
         {isConnected && (
-          <Card className="md:col-span-2 p-6">
+          <Card className="md:col-span-2 p-6 bg-slate-900 border-slate-800">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium flex items-center gap-2">
+              <h3 className="text-sm font-medium flex items-center gap-2 text-slate-200">
                 <Activity className="h-4 w-4" /> Real-time Latency
               </h3>
-              <span className="text-sm font-mono">
-                {currentLatency ? `${currentLatency}ms` : 'N/A'}
+              <span className="text-sm font-mono text-slate-200">
+                {currentLatency ? `${currentLatency}ms` : "N/A"}
               </span>
             </div>
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={latencyHistory}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    opacity={0.2}
+                    stroke="rgb(51 65 85)"
+                  />
                   <XAxis
                     dataKey="timestamp"
-                    tickFormatter={(value) => new Date(value).toLocaleTimeString()}
-                    stroke="#888888"
+                    tickFormatter={(value) =>
+                      new Date(value).toLocaleTimeString()
+                    }
+                    stroke="#64748b"
                     fontSize={12}
                   />
                   <YAxis
-                    stroke="#888888"
+                    stroke="#64748b"
                     fontSize={12}
                     tickFormatter={(value) => `${value}ms`}
-                    domain={[0, (dataMax: number) => Math.max(50, dataMax * 1.2)]}
+                    domain={[
+                      0,
+                      (dataMax: number) => Math.max(50, dataMax * 1.2),
+                    ]}
                   />
                   <Tooltip
-                    contentStyle={{ background: "white", border: "1px solid #ccc" }}
-                    labelFormatter={(value) => new Date(value).toLocaleTimeString()}
+                    contentStyle={{
+                      backgroundColor: "#0f172a",
+                      border: "1px solid rgb(51 65 85)",
+                      color: "#e2e8f0",
+                    }}
+                    labelFormatter={(value) =>
+                      new Date(value).toLocaleTimeString()
+                    }
                     formatter={(value: number) => [`${value}ms`, "Latency"]}
                   />
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="#2563eb"
+                    stroke="#3b82f6"
                     strokeWidth={2}
                     dot={false}
                     isAnimationActive={false}
@@ -453,32 +533,48 @@ export function ConnectionTab() {
 
       {/* Latency Chart - Only show when connected and has data */}
       {isConnected && latencyHistory.length > 0 && (
-        <Card className="p-6">
+        <Card className="p-6 bg-slate-900 border-slate-800">
           <div>
-            <h3 className="text-sm font-medium mb-4">Connection Latency</h3>
+            <h3 className="text-sm font-medium mb-4 text-slate-200">
+              Connection Latency
+            </h3>
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={latencyHistory}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    opacity={0.2}
+                    stroke="rgb(51 65 85)"
+                  />
                   <XAxis
                     dataKey="timestamp"
-                    tickFormatter={(value) => new Date(value).toLocaleTimeString()}
-                    stroke="#888888"
+                    tickFormatter={(value) =>
+                      new Date(value).toLocaleTimeString()
+                    }
+                    stroke="#64748b"
                     fontSize={12}
                   />
                   <YAxis
-                    stroke="#888888"
+                    stroke="#64748b"
                     fontSize={12}
                     tickFormatter={(value) => `${value}ms`}
                   />
                   <Tooltip
                     formatter={(value) => [`${value}ms`, "Latency"]}
-                    labelFormatter={(label) => new Date(label).toLocaleTimeString()}
+                    labelFormatter={(label) =>
+                      new Date(label).toLocaleTimeString()
+                    }
+                    contentStyle={{
+                      backgroundColor: "#0f172a",
+                      border: "1px solid rgb(51 65 85)",
+                      color: "#e2e8f0",
+                    }}
                   />
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="#2563eb"
+                    stroke="#3b82f6"
                     strokeWidth={2}
                     dot={false}
                     isAnimationActive={false}

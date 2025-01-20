@@ -118,6 +118,15 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     setProtocolHandlers(handlers);
   };
 
+  const isPingPongMessage = (message: string): boolean => {
+    try {
+      const data = JSON.parse(message);
+      return data.type === 'ping' || data.type === 'pong';
+    } catch {
+      return false;
+    }
+  };
+
   const connect = useCallback((protocols?: string[]) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.close();
@@ -134,6 +143,12 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         setIsConnected(true);
         setConnectionStatus("connected");
         setActiveProtocols(protocols || []);
+        // Add connection message
+        setMessages(prev => [...prev, {
+          type: "received",
+          content: `Connected to ${wsUrl}${protocols?.length ? ` with ${protocols.join(', ')}` : ''}`,
+          timestamp: new Date().toISOString()
+        }]);
         toast.success(`Connected successfully${protocols?.length ? ` with ${protocols[0]}` : ''}`);
 
         if (protocols?.length) {
@@ -144,17 +159,48 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
       wsRef.current.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
-          
-          // Handle protocol-specific messages
-          activeProtocols.forEach(protocol => {
-            if (protocolHandlers[protocol]?.handleMessage) {
-              protocolHandlers[protocol].handleMessage(data);
-            }
-          });
+          // Skip ping/pong messages entirely
+          if (isPingPongMessage(event.data)) {
+            // Only handle latency update for pong messages
+            try {
+              const data = JSON.parse(event.data);
+              if (data.type === 'pong' && pingTimestampRef.current) {
+                const latency = Date.now() - pingTimestampRef.current;
+                setLastLatency(latency);
+                setLatencyHistory(prev => {
+                  const newHistory = [...prev, { timestamp: Date.now(), value: latency }];
+                  return newHistory.filter(item => Date.now() - item.timestamp < 120000);
+                });
+              }
+            } catch {}
+            return;
+          }
 
-          // Continue with existing message handling
-          handleWebSocketMessage(event);
+          // Handle protocol-specific messages
+          if (activeProtocols.length > 0) {
+            try {
+              const data = JSON.parse(event.data);
+              activeProtocols.forEach(protocol => {
+                if (protocolHandlers[protocol]?.handleMessage) {
+                  protocolHandlers[protocol].handleMessage(data);
+                }
+              });
+            } catch {}
+          }
+
+          // Add to messages and update stats only for non-ping/pong messages
+          setMessages(prev => [...prev, {
+            type: "received",
+            content: event.data,
+            timestamp: new Date().toISOString()
+          }]);
+
+          setStats(prev => ({
+            ...prev,
+            messagesReceived: prev.messagesReceived + 1,
+            lastMessageTime: Date.now()
+          }));
+
         } catch (error) {
           console.error('Error handling message:', error);
         }
@@ -163,6 +209,12 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       wsRef.current.onclose = () => {
         setIsConnected(false);
         setConnectionStatus("disconnected");
+        // Add disconnection message
+        setMessages(prev => [...prev, {
+          type: "received",
+          content: `Disconnected from ${wsUrl}`,
+          timestamp: new Date().toISOString()
+        }]);
         setStats(prev => ({
           ...prev,
           reconnectAttempts: prev.reconnectAttempts + 1,
@@ -171,12 +223,18 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
       wsRef.current.onerror = () => {
         setConnectionStatus("error");
+        // Add error message
+        setMessages(prev => [...prev, {
+          type: "received",
+          content: `Connection error with ${wsUrl}`,
+          timestamp: new Date().toISOString()
+        }]);
       };
     } catch (error) {
       setConnectionStatus("error");
       toast.error("Connection failed");
     }
-  }, [url]);
+  }, [url, activeProtocols]);
 
   const startPingInterval = () => {
     if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
@@ -236,16 +294,20 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
   const handleWebSocketMessage = useCallback((event: MessageEvent) => {
     try {
-      const data = JSON.parse(event.data);
-      if (data.type === 'pong' && pingTimestampRef.current) {
-        const latency = Date.now() - pingTimestampRef.current;
-        setLastLatency(latency);
-        setLatencyHistory(prev => {
-          const newHistory = [...prev, { timestamp: Date.now(), value: latency }];
-          // Keep last 2 minutes of data
-          return newHistory.filter(item => Date.now() - item.timestamp < 120000);
-        });
-        return;
+      // Check for ping/pong messages first
+      if (isPingPongMessage(event.data)) {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'pong' && pingTimestampRef.current) {
+            const latency = Date.now() - pingTimestampRef.current;
+            setLastLatency(latency);
+            setLatencyHistory(prev => {
+              const newHistory = [...prev, { timestamp: Date.now(), value: latency }];
+              return newHistory.filter(item => Date.now() - item.timestamp < 120000);
+            });
+          }
+        } catch {}
+        return; // Skip UI updates for ping/pong
       }
 
       // Handle regular messages
@@ -254,14 +316,15 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         content: event.data,
         timestamp: new Date().toISOString()
       }]);
+
       setStats(prev => ({
         ...prev,
         messagesReceived: prev.messagesReceived + 1,
         lastMessageTime: Date.now()
       }));
+
     } catch (error) {
-      // Handle non-JSON messages
-      // ... existing error handling ...
+      console.error('Error handling message:', error);
     }
   }, []);
 
@@ -282,31 +345,35 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
   };
 
-  const sendMessage = (content: string) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+  const sendMessage = useCallback((content: string) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      toast.error("WebSocket is not connected");
+      return;
+    }
 
     try {
-      const parsedContent = JSON.parse(content);
-      // Don't process or count ping/pong messages
-      if (parsedContent.type === 'ping' || parsedContent.type === 'pong') {
-        wsRef.current.send(content);
-        return;
-      }
-    } catch {}
+      // Send the message regardless of type
+      wsRef.current.send(content);
 
-    // Send message and update stats
-    wsRef.current.send(content);
-    setMessages(prev => [...prev, {
-      type: "sent",
-      content,
-      timestamp: new Date().toISOString()
-    }]);
-    setStats(prev => ({
-      ...prev,
-      messagesSent: prev.messagesSent + 1,
-      lastMessageTime: Date.now()
-    }));
-  };
+      // Only add to UI and stats if it's not a ping/pong message
+      if (!isPingPongMessage(content)) {
+        setMessages(prev => [...prev, {
+          type: "sent",
+          content,
+          timestamp: new Date().toISOString()
+        }]);
+
+        setStats(prev => ({
+          ...prev,
+          messagesSent: prev.messagesSent + 1,
+          lastMessageTime: Date.now()
+        }));
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error("Failed to send message");
+    }
+  }, []);
 
   const clearMessages = () => {
     setMessages([]);
@@ -324,16 +391,11 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     setUrl(newUrl);
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (pingIntervalRef.current) {
         clearInterval(pingIntervalRef.current);
       }
-      // Don't close the connection on unmount
-      // if (wsRef.current) {
-      //   wsRef.current.close();
-      // }
     };
   }, []);
 
