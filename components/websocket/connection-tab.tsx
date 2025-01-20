@@ -30,6 +30,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useWebSocket } from "./websocket-context";
+import { cn } from "@/lib/utils"; // Add this import
 
 interface StatsPanelProps {
   stats: {
@@ -190,6 +191,36 @@ interface ConnectionStats {
   packetLoss: number;
 }
 
+interface ProtocolConfig {
+  name: string;
+  color: string;
+  defaultUrl?: string;
+  description?: string;
+}
+
+const AVAILABLE_PROTOCOLS: Record<string, ProtocolConfig> = {
+  "websocket": { 
+    name: "WebSocket", 
+    color: "blue",
+    description: "Standard WebSocket Protocol"
+  },
+  "mqtt": { 
+    name: "MQTT", 
+    color: "blue",
+    description: "Message Queue Telemetry Transport"
+  },
+  "graphql-ws": { 
+    name: "GraphQL", 
+    color: "blue",
+    description: "GraphQL over WebSocket"
+  },
+  "socketio": { 
+    name: "Socket.IO", 
+    color: "blue",
+    description: "Socket.IO Protocol"
+  }
+};
+
 export function ConnectionTab() {
   const { 
     isConnected, 
@@ -204,6 +235,16 @@ export function ConnectionTab() {
     currentLatency 
   } = useWebSocket();
 
+  const [selectedProtocol, setSelectedProtocol] = useState<keyof typeof AVAILABLE_PROTOCOLS>("websocket");
+
+  const handleProtocolSelect = (protocol: keyof typeof AVAILABLE_PROTOCOLS) => {
+    setSelectedProtocol(protocol);
+    const config = AVAILABLE_PROTOCOLS[protocol];
+    if (config.defaultUrl) {
+      onUrlChange(config.defaultUrl);
+    }
+  };
+
   const [autoReconnect, setAutoReconnect] = useState(false);
 
   // Auto reconnect effect
@@ -215,29 +256,78 @@ export function ConnectionTab() {
     return () => clearTimeout(reconnectTimer);
   }, [autoReconnect, isConnected, url, connect]);
 
+  const handleConnect = () => {
+    if (isConnected) {
+      disconnect();
+    } else {
+      connect(selectedProtocol !== 'websocket' ? [selectedProtocol] : undefined);
+    }
+  };
+
   return (
-    <div className="h-full overflow-y-auto space-y-4 p-4">
+    <div className="h-full overflow-y-auto space-y-4 p-4 pb-20"> {/* Added pb-20 for bottom spacing */}
       {/* Connection Controls */}
       <div className="sticky top-0 z-10 bg-background pb-2">
         <Card className="p-4">
-          <div className="flex gap-4">
-            <Input
-              value={url}
-              onChange={(e) => onUrlChange(e.target.value)}
-              placeholder="WebSocket URL (ws:// or wss://)"
-              className="flex-1"
-            />
-            <Button
-              onClick={isConnected ? disconnect : () => connect()}
-              variant={isConnected ? "destructive" : "default"}
-              className="gap-2"
-            >
-              {isConnected ? (
-                <><Unplug className="h-4 w-4" /> Disconnect</>
-              ) : (
-                <><PlugZap2 className="h-4 w-4" /> Connect</>
-              )}
-            </Button>
+          <div className="space-y-4">
+            {/* Protocol Selection */}
+            <div className="flex gap-1 md:gap-1.5 flex-wrap">
+              {Object.entries(AVAILABLE_PROTOCOLS).map(([key, protocol]) => (
+                <Button
+                  key={key}
+                  variant={selectedProtocol === key ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleProtocolSelect(key as keyof typeof AVAILABLE_PROTOCOLS)}
+                  className={cn(
+                    "rounded-full text-[10px] md:text-sm py-0.5 md:py-2 px-1.5 md:px-3 h-6 md:h-auto min-w-0",
+                    selectedProtocol === key && "bg-primary text-primary-foreground"
+                  )}
+                >
+                  <div className={`w-1 md:w-2 h-1 md:h-2 rounded-full bg-${protocol.color}-400`} />
+                  {protocol.name}
+                </Button>
+              ))}
+            </div>
+
+            {/* Connection Input */}
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <Input
+                  value={url}
+                  onChange={(e) => onUrlChange(e.target.value)}
+                  placeholder={`${
+                    selectedProtocol === 'websocket' 
+                      ? 'ws' 
+                      : AVAILABLE_PROTOCOLS[selectedProtocol].name.toLowerCase()
+                  }:// URL`}
+                  className="pr-24"
+                />
+                <Badge 
+                  variant="secondary" 
+                  className="absolute right-2 top-1/2 -translate-y-1/2"
+                >
+                  {AVAILABLE_PROTOCOLS[selectedProtocol].name}
+                </Badge>
+              </div>
+              <Button
+                onClick={handleConnect}
+                variant={isConnected ? "destructive" : "default"}
+                className="gap-2 min-w-[120px]"
+                disabled={!url || connectionStatus === 'connecting'}
+              >
+                {connectionStatus === 'connecting' ? (
+                  <span className="animate-pulse">Connecting...</span>
+                ) : isConnected ? (
+                  <>
+                    <Unplug className="h-4 w-4" /> Disconnect
+                  </>
+                ) : (
+                  <>
+                    <PlugZap2 className="h-4 w-4" /> Connect
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
@@ -364,36 +454,38 @@ export function ConnectionTab() {
       {/* Latency Chart - Only show when connected and has data */}
       {isConnected && latencyHistory.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-sm font-medium mb-4">Connection Latency</h3>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={latencyHistory}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
-                <XAxis
-                  dataKey="timestamp"
-                  tickFormatter={(value) => new Date(value).toLocaleTimeString()}
-                  stroke="#888888"
-                  fontSize={12}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickFormatter={(value) => `${value}ms`}
-                />
-                <Tooltip
-                  formatter={(value) => [`${value}ms`, "Latency"]}
-                  labelFormatter={(label) => new Date(label).toLocaleTimeString()}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#2563eb"
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <div>
+            <h3 className="text-sm font-medium mb-4">Connection Latency</h3>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={latencyHistory}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
+                  <XAxis
+                    dataKey="timestamp"
+                    tickFormatter={(value) => new Date(value).toLocaleTimeString()}
+                    stroke="#888888"
+                    fontSize={12}
+                  />
+                  <YAxis
+                    stroke="#888888"
+                    fontSize={12}
+                    tickFormatter={(value) => `${value}ms`}
+                  />
+                  <Tooltip
+                    formatter={(value) => [`${value}ms`, "Latency"]}
+                    labelFormatter={(label) => new Date(label).toLocaleTimeString()}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </Card>
       )}

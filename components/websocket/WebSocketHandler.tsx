@@ -9,11 +9,6 @@ const WebSocketHandler: React.FC = () => {
     ws.onmessage = (event) => {
       console.log("Received:", event.data);
     };
-
-    // Remove ws.close() to keep the connection open
-    return () => {
-      // ws.close(); // Cleans up on unmount
-    };
   }, []);
 
   return null;

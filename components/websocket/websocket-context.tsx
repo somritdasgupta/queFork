@@ -10,6 +10,7 @@ import React, {
   useCallback,
 } from "react";
 import { WebSocketContextType } from "./types";
+import { toast } from "sonner";
 
 interface WebSocketProviderProps {
   children: React.ReactNode;
@@ -58,6 +59,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [lastLatency, setLastLatency] = useState<number | null>(null);
   const latencyCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [activeProtocols, setActiveProtocols] = useState<string[]>([]);
+  const [protocolHandlers, setProtocolHandlers] = useState<Record<string, any>>({});
+
   useEffect(() => {
     // Update connection time every second when connected
     let timer: NodeJS.Timeout;
@@ -69,60 +73,90 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     return () => clearInterval(timer);
   }, [isConnected]);
 
-  const connect = (protocols?: string[]) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+  const initializeProtocolHandlers = (protocols: string[]) => {
+    const handlers: Record<string, any> = {};
+    
+    protocols.forEach(protocol => {
+      switch(protocol) {
+        case 'graphql-ws':
+          handlers[protocol] = {
+            init: () => {
+              sendMessage(JSON.stringify({
+                type: 'connection_init',
+                payload: {}
+              }));
+            },
+            handleMessage: (data: any) => {
+              if (data.type === 'connection_ack') {
+                toast.success('GraphQL Connection Initialized');
+              }
+            }
+          };
+          break;
+          
+        case 'mqtt':
+          handlers[protocol] = {
+            init: () => {
+              sendMessage(JSON.stringify({
+                type: 'mqtt_connect',
+                clientId: `mqtt_${Math.random().toString(16).slice(2)}`,
+                keepalive: 60
+              }));
+            },
+            handleMessage: (data: any) => {
+              if (data.type === 'connack') {
+                toast.success('MQTT Connection Established');
+              }
+            }
+          };
+          break;
+
+        // Add other protocol handlers
+      }
+    });
+
+    setProtocolHandlers(handlers);
+  };
+
+  const connect = useCallback((protocols?: string[]) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.close();
+    }
 
     try {
       setConnectionStatus("connecting");
-      wsRef.current = new WebSocket(url, protocols);
+      const wsUrl = url.startsWith('ws://') || url.startsWith('wss://') ? url : `ws://${url}`;
+      
+      wsRef.current = new WebSocket(wsUrl, protocols);
       connectionStartTimeRef.current = Date.now();
 
       wsRef.current.onopen = () => {
         setIsConnected(true);
         setConnectionStatus("connected");
-        connectionStartTimeRef.current = Date.now();
+        setActiveProtocols(protocols || []);
+        toast.success(`Connected successfully${protocols?.length ? ` with ${protocols[0]}` : ''}`);
+
+        if (protocols?.length) {
+          initializeProtocolHandlers(protocols);
+        }
         startPingInterval();
       };
 
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'pong' && pingTimestampRef.current) {
-            const latency = Date.now() - pingTimestampRef.current;
-            setLatencyHistory(prev => {
-              const newHistory = [...prev, { timestamp: Date.now(), value: latency }];
-              // Keep last 60 seconds of data
-              return newHistory.filter(item => Date.now() - item.timestamp < 60000);
-            });
-            setStats(prev => ({ ...prev, pongCount: prev.pongCount + 1 }));
-            return; // Don't process ping/pong as regular messages
-          }
           
-          // Only store and count non-ping/pong messages
-          if (data.type !== 'ping' && data.type !== 'pong') {
-            setMessages(prev => [...prev, {
-              type: "received",
-              content: event.data,
-              timestamp: new Date().toISOString()
-            }]);
-            setStats(prev => ({
-              ...prev,
-              messagesReceived: prev.messagesReceived + 1,
-              lastMessageTime: Date.now()
-            }));
-          }
-        } catch {
-          // Handle non-JSON message
-          setMessages(prev => [...prev, {
-            type: "received",
-            content: event.data,
-            timestamp: new Date().toISOString()
-          }]);
-          setStats(prev => ({
-            ...prev,
-            messagesReceived: prev.messagesReceived + 1,
-            lastMessageTime: Date.now()
-          }));
+          // Handle protocol-specific messages
+          activeProtocols.forEach(protocol => {
+            if (protocolHandlers[protocol]?.handleMessage) {
+              protocolHandlers[protocol].handleMessage(data);
+            }
+          });
+
+          // Continue with existing message handling
+          handleWebSocketMessage(event);
+        } catch (error) {
+          console.error('Error handling message:', error);
         }
       };
 
@@ -140,8 +174,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       };
     } catch (error) {
       setConnectionStatus("error");
+      toast.error("Connection failed");
     }
-  };
+  }, [url]);
 
   const startPingInterval = () => {
     if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
@@ -320,6 +355,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     setMessagesBulk,
     currentLatency: latencyHistory[latencyHistory.length - 1]?.value ?? 0,
     lastLatency,
+    activeProtocols,
+    setActiveProtocols,
+    protocolHandlers,
   };
 
   return (

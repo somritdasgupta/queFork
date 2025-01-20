@@ -18,7 +18,6 @@ import {
   Trash2,
   Copy,
   MessageSquare,
-  WifiOff,
   ArrowDown,
   ArrowUp,
   Unplug,
@@ -34,18 +33,15 @@ interface Message {
 }
 
 export function MessagesTab() {
-  const { 
-    isConnected, 
-    messages, 
-    sendMessage, 
+  const {
+    isConnected,
+    messages,
+    sendMessage,
     clearMessages,
-    setMessagesBulk, // Add this from context
-    disconnect 
+    setMessagesBulk,
+    disconnect,
   } = useWebSocket();
-  
-  // Remove handleReceive effect since message handling is now in the context
-  // The context already handles message receiving and updating
-  
+
   const [message, setMessage] = useState("");
   const [messageFormat, setMessageFormat] = useState<"text" | "json">("text");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -62,7 +58,6 @@ export function MessagesTab() {
     try {
       let formattedMessage = message;
       if (messageFormat === "json") {
-        // Validate JSON format
         formattedMessage = JSON.stringify(JSON.parse(message));
       }
 
@@ -83,17 +78,19 @@ export function MessagesTab() {
   };
 
   const exportMessages = () => {
-    const exportData = messages.map(msg => ({
+    const exportData = messages.map((msg) => ({
       ...msg,
-      timestamp: new Date(msg.timestamp).toISOString()
+      timestamp: new Date(msg.timestamp).toISOString(),
     }));
-    
+
     const data = JSON.stringify(exportData, null, 2);
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `websocket-messages-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `websocket-messages-${
+      new Date().toISOString().split("T")[0]
+    }.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -104,15 +101,17 @@ export function MessagesTab() {
   const importMessages = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-  
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const importedMessages = JSON.parse(e.target?.result as string);
-        if (Array.isArray(importedMessages) && importedMessages.every(msg => 
-          msg.type && msg.content && msg.timestamp
-        )) {
-          // Use the new context method to set messages in bulk
+        if (
+          Array.isArray(importedMessages) &&
+          importedMessages.every(
+            (msg) => msg.type && msg.content && msg.timestamp
+          )
+        ) {
           setMessagesBulk(importedMessages);
           toast.success(`Imported ${importedMessages.length} messages`);
         } else {
@@ -123,12 +122,11 @@ export function MessagesTab() {
       }
     };
     reader.readAsText(file);
-    event.target.value = ''; // Reset file input
+    event.target.value = ""; 
   };
 
   return (
-    <div className="relative w-full h-full bg-zinc-50 overflow-hidden font-mono text-sm">
-      {/* Fixed Header - More rounded corners */}
+    <div className="relative w-full h-full min-h-[500px] bg-zinc-50 overflow-hidden font-mono text-sm"> {/* Added min-h-[500px] */}
       <div className="absolute top-0 left-0 right-0 z-50 border-b bg-zinc-100 rounded-t-xl">
         <div className="h-14 px-3 flex items-center gap-2 overflow-x-auto">
           <Select
@@ -143,8 +141,6 @@ export function MessagesTab() {
               <SelectItem value="json">JSON</SelectItem>
             </SelectContent>
           </Select>
-
-    
 
           <Badge
             variant="outline"
@@ -164,7 +160,9 @@ export function MessagesTab() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => document.getElementById('import-messages')?.click()}
+              onClick={() =>
+                document.getElementById("import-messages")?.click()
+              }
               className="h-8 px-2 hover:bg-zinc-200"
             >
               <Upload className="h-4 w-4" />
@@ -200,7 +198,7 @@ export function MessagesTab() {
       </div>
 
       <div
-        className="absolute top-14 bottom-16 left-0 right-0 overflow-y-auto bg-white"
+        className="absolute top-14 bottom-16 left-0 right-0 overflow-y-auto bg-white w-full"
         style={{
           backgroundImage:
             "linear-gradient(to bottom, rgba(228, 228, 231, 0.2) 1px, transparent 1px)",
@@ -248,7 +246,6 @@ export function MessagesTab() {
                   <pre className="whitespace-pre-wrap break-words text-zinc-800 text-xs md:text-sm">
                     {msg.content}
                   </pre>
-                  {/* Mobile copy button */}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -265,73 +262,39 @@ export function MessagesTab() {
         </div>
       </div>
 
-      {/* Fixed Input Area - More rounded corners */}
-    <div className="absolute bottom-0 left-0 right-0 border-t bg-zinc-100 rounded-b-xl">
-      <div className="h-16 p-3 flex items-center gap-2">
-        <div className="flex-1 relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
-          {messageFormat === "json" ? "{...}" : ""}
-        </span>
-        <Input
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder={
-            isConnected 
-            ? messageFormat === "json"
-              ? 'Enter JSON: {"key": "value"}'
-              : "Type a command..."
-            : "Connect to start..."
-          }
-          onKeyDown={(e) =>
-            e.key === "Enter" && !e.shiftKey && handleSend()
-          }
-          disabled={!isConnected}
-          className="pl-8 font-mono bg-white border-zinc-200 rounded-xl"
-        />
-        </div>
-        <Button
-        onClick={handleSend}
-        disabled={!isConnected || !message.trim()}
-        size="icon"
-        className="shrink-0 bg-zinc-800 hover:bg-zinc-900 rounded-xl"
-        >
-        <Send className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-    <div className="absolute bottom-0 left-0 right-0 border-t bg-zinc-100 rounded-b-xl">
+      <div className="absolute bottom-0 left-0 right-0 border-t bg-zinc-100 rounded-b-xl">
         <div className="h-16 p-3 flex items-center gap-2">
-            <div className="flex-1 relative">
-                <Input
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder={
-                        isConnected 
-                            ? messageFormat === "json"
-                                ? 'Enter JSON: {"key": "value"}'
-                                : "Type a command..."
-                            : "Connect to start..."
-                    }
-                    onKeyDown={(e) =>
-                        e.key === "Enter" && !e.shiftKey && handleSend()
-                    }
-                    disabled={!isConnected}
-                    className="font-mono bg-white border-zinc-200 rounded-xl pr-16"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-zinc-200 px-2 py-0.5 rounded-full text-xs font-medium text-zinc-700">
-                    {messageFormat.toUpperCase()}
-                </span>
-            </div>
-            <Button
-                onClick={handleSend}
-                disabled={!isConnected || !message.trim()}
-                size="icon"
-                className="shrink-0 bg-zinc-800 hover:bg-zinc-900 rounded-xl"
-            >
-                <Send className="h-4 w-4" />
-            </Button>
+          <div className="flex-1 relative">
+            <Input
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={
+                isConnected
+                  ? messageFormat === "json"
+                    ? 'Enter JSON: {"key": "value"}'
+                    : "Type a command..."
+                  : "Connect to start..."
+              }
+              onKeyDown={(e) =>
+                e.key === "Enter" && !e.shiftKey && handleSend()
+              }
+              disabled={!isConnected}
+              className="font-mono bg-white border-zinc-200 rounded-xl pr-16"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-zinc-200 px-2 py-0.5 rounded-full text-xs font-medium text-zinc-700">
+              {messageFormat.toUpperCase()}
+            </span>
+          </div>
+          <Button
+            onClick={handleSend}
+            disabled={!isConnected || !message.trim()}
+            size="icon"
+            className="shrink-0 bg-zinc-800 hover:bg-zinc-900 rounded-xl"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
-    </div>
+      </div>
     </div>
   );
 }

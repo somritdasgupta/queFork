@@ -29,4 +29,10 @@ export interface WebSocketContextType {
     content: string;
     timestamp: string;
   }>) => void;
+  activeProtocols: string[];
+  setActiveProtocols: (protocols: string[]) => void;
+  protocolHandlers: Record<string, {
+    init: () => void;
+    handleMessage: (data: any) => void;
+  }>;
 }
