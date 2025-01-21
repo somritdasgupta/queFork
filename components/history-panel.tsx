@@ -136,6 +136,14 @@ export function HistoryPanel({
       (item.method?.toLowerCase() || "ws").includes(search.toLowerCase())
   );
 
+  const getConnectionType = (item: HistoryItem) => {
+    if (item.type === "websocket") {
+      const isSocketIO = item.wsStats?.protocols?.some(p => p === "socketio");
+      return isSocketIO ? "IO" : "WS";
+    }
+    return item.method;
+  };
+
   function getMethodColor(method: string | undefined): string {
     if (!method) return "border-gray-200 bg-gray-50 text-gray-700";
     switch (method.toUpperCase()) {
@@ -150,9 +158,11 @@ export function HistoryPanel({
       case "PATCH":
         return "border-orange-200 bg-orange-50 text-orange-700";
       case "WS":
-        return "border-grey-300 bg-grey-200 text-grey-700";
+        return "border-purple-200 bg-purple-50 text-purple-700";
       case "WSS":
         return "border-rose-200 bg-rose-50 text-rose-700";
+      case "IO":
+        return "border-indigo-200 bg-indigo-50 text-indigo-700";
       default:
         return "border-slate-200 bg-slate-50 text-slate-700";
     }
@@ -275,12 +285,11 @@ export function HistoryPanel({
                     <span
                       className={cn(
                         "px-2 py-0.5 text-xs font-mono border-2 rounded-full",
-                        getMethodColor(item.method)
+                        getMethodColor(getConnectionType(item))
                       )}
                     >
-                      {item.type === "websocket" ? "WS" : item.method}
+                      {getConnectionType(item)}
                     </span>
-                    {/* Show WebSocket stats if available */}
                     {item.type === "websocket" && item.wsStats && (
                       <>
                         <span className="text-xs text-gray-500">
@@ -317,20 +326,6 @@ export function HistoryPanel({
                   <div className="text-sm font-mono text-gray-900 break-all">
                     {item.url}
                   </div>
-                  {item.type === "websocket" &&
-                    item.wsStats?.protocols &&
-                    item.wsStats.protocols.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {item.wsStats?.protocols.map((protocol) => (
-                          <span
-                            key={protocol}
-                            className="text-xs bg-gray-100 px-2 py-0.5 rounded"
-                          >
-                            {protocol}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                 </button>
                 <Button
                   variant="ghost"
