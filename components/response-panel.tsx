@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import React, { useState, useMemo, useEffect } from "react";
 import hljs from "highlight.js";
@@ -215,7 +215,11 @@ export function ResponsePanel({
       <div className="min-h-[200px] flex items-center justify-center p-4 mt-2">
         <div className="text-center space-y-6 max-w-md mx-auto">
           <div className="pt-4">
-            <span className="inline-flex px-4 rounded-md text-sm bg-gray-100 border-2 border-gray-200 text-blue-600 duration-9000 animate-pulse">
+            <span className="inline-flex items-center gap-2 px-4 py-0 rounded-lg text-sm bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-500 border border-blue-500/20">
+              <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              </span>
               waiting for request
             </span>
           </div>
@@ -518,7 +522,9 @@ export function ResponsePanel({
                     }}
                     dangerouslySetInnerHTML={{
                       __html: highlightCode(
-                        JSON.stringify(JSON.parse(getContentForTab()), null, 2),
+                        typeof getContentForTab() === 'string' && getContentForTab().trim().startsWith('{')
+                          ? JSON.stringify(JSON.parse(getContentForTab()), null, 2)
+                          : getContentForTab(),
                         "json"
                       ),
                     }}

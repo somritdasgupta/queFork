@@ -14,7 +14,7 @@ const ResizablePanel = React.forwardRef<
   React.ComponentProps<typeof ResizablePrimitive.Panel> & ResponsePanelProps
 >(({ response, className, ...props }, ref) => (
   <ResizablePrimitive.Panel
-    className={`${className} ${response?.error ? 'max-h-[30vh]' : ''}`}
+    className={`${className} ${response?.error ? 'max-h-auto' : ''}`}
     {...props}
     ref={ref}
   />
@@ -33,9 +33,7 @@ const ResizableHandle = ({
     {...props}
   >
     {withHandle && (
-      <div className="z-10 flex h-8 w-8 shadow-inner items-center justify-center rounded-lg">
-        <FaDraftingCompass className="h-6 w-6 text-blue-400 stroke-3" />
-      </div>
+      <div className="z-10 flex h-2 w-[20%] mx-auto bg-blue-500 rounded-full" />
     )}
   </ResizablePrimitive.PanelResizeHandle>
 );

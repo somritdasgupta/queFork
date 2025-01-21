@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,91 +38,75 @@ export function RequestPanel({
 }: RequestPanelProps) {
   return (
     <div className="h-full flex flex-col">
-      <Tabs defaultValue="params" className="flex-1 px-2 mt-2">
-        <TabsList className="grid grid-cols-4 overflow-x-auto whitespace-nowrap h-auto min-h-[3rem] items-center rounded-lg border-2 border-blue-100 bg-blue-50 px-1 text-gray-700 shadow-inner w-full">
-          <TabsTrigger
-            value="params"
-            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
-          >
-            Parameters
-          </TabsTrigger>
-          <TabsTrigger
-            value="headers"
-            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
-          >
-            Headers
-          </TabsTrigger>
-          <TabsTrigger
-            value="body"
-            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
-          >
-            Body
-          </TabsTrigger>
-          <TabsTrigger
-            value="auth"
-            className="flex-1 inline-flex items-center justify-center gap-0.5 sm:gap-1 rounded-md px-1 sm:px-2 py-2 text-[12px] xs:text-xs sm:text-sm font-medium transition-all hover:bg-gray-100 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-50 data-[state=active]:shadow-sm"
-          >
-            Auth
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="params" className="mt-2">
-          <Card>
-            <CardContent className="p-4 bg-slate-50 border-2 rounded-lg border-blue-100">
-              <ScrollArea className="max-h-[calc(100vh-280px)]">
-                <KeyValueEditor
-                  pairs={
-                    params.length === 0
-                      ? [
-                          {
-                            key: "",
-                            value: "",
-                            type: "text",
-                            showSecrets: false,
-                          },
-                        ]
-                      : params
-                  }
-                  onChange={onParamsChange}
-                  addButtonText="Add Parameter"
-                />
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="headers" className="mt-2">
-          <Card>
-            <CardContent className="p-4 bg-slate-50 border-2 rounded-lg border-blue-100">
-              <ScrollArea className="max-h-[calc(100vh-280px)]">
-                <KeyValueEditor
-                  pairs={
-                    params.length === 0
-                      ? [
-                          {
-                            key: "",
-                            value: "",
-                            type: "text",
-                            showSecrets: false,
-                          },
-                        ]
-                      : params
-                  }
-                  onChange={onParamsChange}
-                  addButtonText="Add Parameter"
-                />
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="body" className="mt-2">
-          <RequestBodyEditor body={body} onChange={onBodyChange} />
-        </TabsContent>
-
-        <TabsContent value="auth" className="mt-2">
-          <AuthSection auth={auth} onChange={onAuthChange} />
-        </TabsContent>
+      <Tabs defaultValue="params" className="flex-1 px-2 py-3 rounded-md">
+        <div className="rounded-lg border-2 border-slate-200 bg-slate-100 shadow-inner">
+          <TabsList className="w-full justify-center items-center rounded-md border-b border-transparent bg-transparent p-0 overflow-x-auto flex-nowrap">
+            <TabsTrigger
+              value="params"
+              className="w-full rounded-md border-2 border-transparent px-4 py-2 font-medium text-gray-500 hover:text-gray-700 data-[state=active]:bg-slate-900 data-[state=active]:border-violet-600 data-[state=active]:text-slate-400 whitespace-nowrap"
+            >
+              Parameters
+            </TabsTrigger>
+            <TabsTrigger
+              value="headers"
+              className="w-full rounded-md border-2 border-transparent px-4 py-2 font-medium text-gray-500 hover:text-gray-700 data-[state=active]:bg-slate-900 data-[state=active]:border-violet-600 data-[state=active]:text-slate-400 whitespace-nowrap"
+            >
+              Headers
+            </TabsTrigger>
+            <TabsTrigger
+              value="body"
+              className="w-full rounded-md border-2 border-transparent px-4 py-2 font-medium text-gray-500 hover:text-gray-700 data-[state=active]:bg-slate-900 data-[state=active]:border-violet-600 data-[state=active]:text-slate-400 whitespace-nowrap"
+            >
+              Body
+            </TabsTrigger>
+            <TabsTrigger
+              value="auth"
+              className="w-full rounded-md border-2 border-transparent px-4 py-2 font-medium text-gray-500 hover:text-gray-700 data-[state=active]:bg-slate-900 data-[state=active]:border-violet-600 data-[state=active]:text-slate-400 whitespace-nowrap"
+            >
+              Auth
+            </TabsTrigger>
+          </TabsList>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="py-4">
+            <TabsContent value="params" className="m-0 min-h-0">
+              <Card className="min-h-0">
+                <CardContent className="p-4 space-y-2">
+                  <KeyValueEditor
+                    pairs={params}
+                    onChange={onParamsChange}
+                    addButtonText="Add Query Parameter"
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="headers" className="m-0 min-h-0">
+              <Card className="min-h-0">
+                <CardContent className="p-4 space-y-2">
+                  <KeyValueEditor
+                    pairs={headers}
+                    onChange={onHeadersChange}
+                    addButtonText="Add Header"
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="body" className="m-0 min-h-0">
+              <Card className="min-h-0">
+                <CardContent className="p-4 space-y-2">
+                  <RequestBodyEditor body={body} onChange={onBodyChange} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="auth" className="m-0 min-h-0">
+              <Card className="min-h-0">
+                <CardContent className="p-4 space-y-2">
+                  <AuthSection auth={auth} onChange={onAuthChange} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </div>
+        </ScrollArea>
       </Tabs>
     </div>
   );

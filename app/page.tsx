@@ -648,13 +648,13 @@ export default function Page() {
                   </SelectContent>
                 </Select>
                 <Input
-                  className="flex-1 font-mono border-2 border-blue-200 bg-blue-50 shadow-inner focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 border-2 border-blue-200 bg-blue-50 shadow-inner focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter API endpoint"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                 />
                 <Button
-                  className="bg-slate-900 hover:bg-slate-800 text-white transition-colors"
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-400 transition-colors"
                   onClick={handleSendRequest}
                   disabled={isLoading}
                 >
@@ -681,7 +681,7 @@ export default function Page() {
                     className={`w-4 h-4 transition-colors ${
                       wsConnected
                         ? "text-green-400 animate-pulse"
-                        : "text-white"
+                        : "text-slate-400"
                     }`}
                   />
                   {wsConnected}
@@ -716,7 +716,7 @@ export default function Page() {
               />
 
               <div className="flex items-center gap-2 bg-blue-100 border-2 border-blue-300 rounded-md px-2">
-                <div className="w-6 h-6 bg-violet-600 rounded-md flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-6 h-6 bg-violet-600 rounded-md flex items-center justify-center text-slate-50 text-xs font-bold">
                   {method.charAt(0)}
                 </div>
                 <Select value={method} onValueChange={setMethod}>
@@ -766,7 +766,7 @@ export default function Page() {
                   onChange={(e) => setUrl(e.target.value)}
                 />
                 <Button
-                  className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-lg"
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-400 px-6 py-2 rounded-lg"
                   onClick={handleSendRequest}
                   disabled={isLoading}
                 >
@@ -790,7 +790,7 @@ export default function Page() {
                       className={`w-4 h-4 transition-colors ${
                         wsConnected
                           ? "text-green-400 animate-pulse"
-                          : "text-white"
+                          : "text-slate-400"
                       }`}
                     />
                     {wsConnected}
@@ -868,13 +868,12 @@ export default function Page() {
 
               <ResizableHandle
                 withHandle
-                className="bg-gray-200 hover:bg-gray-300 transition-colors"
               />
 
               <ResizablePanel
-                defaultSize={50}
-                minSize={35}
-                maxSize={!response?.status ? 35 : 70}
+                defaultSize={45}
+                minSize={40}
+                maxSize={!response?.status ? 40 : 90}
                 className="overflow-hidden"
                 response={response}
               >

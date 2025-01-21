@@ -70,7 +70,6 @@ export interface SavedRequest {
   };
   response?: {
     status: number;
-
     body?: any;
   };
 }
@@ -84,17 +83,18 @@ export interface RequestResponse {
   time: string;
   timestamp: string;
   error?: boolean;
-
 }
 
 export interface HistoryItem {
   id: string;
-  type: "rest" | "websocket"; // Add type field
+  type: "rest" | "websocket";
   method: string;
   url: string;
   timestamp: string;
   response?: {
     status: number;
+    time?: string;
+    size?: string;
   };
   request: {
     headers: KeyValuePair[];
@@ -113,8 +113,6 @@ export interface HistoryItem {
     protocols: string[];
   };
 }
-
-
 
 export interface WebSocketHistoryItem extends HistoryItem {
   type: "websocket";

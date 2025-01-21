@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -8,7 +6,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { PanelRightClose } from "lucide-react";
+import { Layers } from "lucide-react";
 import { useState } from "react";
 import { CollectionsPanel } from "./collections-panel";
 import { HistoryPanel } from "./history-panel";
@@ -52,10 +50,10 @@ export function MobileNav({
           size="icon"
           className="bg-slate-900 hover:bg-slate-800 border-1 border-slate-700 md:hidden transition-colors"
         >
-          <PanelRightClose className="h-8 text-slate-100" />
+          <Layers className="h-8 text-slate-400" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[300px] p-0">
+      <SheetContent side="bottom" className="w-[100vw] p-0 h-[90vh] rounded-t-lg">
         <SheetHeader className="px-4 py-2 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-lg font-semibold">
@@ -68,12 +66,12 @@ export function MobileNav({
               onClick={() => setOpen(false)}
             ></Button>
           </div>
-          <div className="flex gap-2 mt-2 bg-blue-50 border-blue-200 border-2 shadow-inner shadow-lg rounded-lg p-1">
+          <div className="flex gap-2 mt-2 bg-slate-50 border-slate-200 border-2 rounded-lg p-1">
             <Button
               variant={activePanel === "collections" ? "default" : "ghost"}
               size="sm"
               onClick={() => setActivePanel("collections")}
-              className="flex-1"
+              className="flex-1 text-slate-400"
             >
               Collections
             </Button>
@@ -81,7 +79,7 @@ export function MobileNav({
               variant={activePanel === "history" ? "default" : "ghost"}
               size="sm"
               onClick={() => setActivePanel("history")}
-              className="flex-1"
+              className="flex-1 text-slate-400"
             >
               History
             </Button>

@@ -301,6 +301,7 @@ export function CollectionsPanel({
                       !newCollection.name.trim() ||
                       !newCollection.apiVersion.trim()
                     }
+                    className="text-slate-400"
                   >
                     Create Collection
                   </Button>

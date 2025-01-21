@@ -1,3 +1,5 @@
+"use client";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,7 +140,7 @@ export function HistoryPanel({
 
   const getConnectionType = (item: HistoryItem) => {
     if (item.type === "websocket") {
-      const isSocketIO = item.wsStats?.protocols?.some(p => p === "socketio");
+      const isSocketIO = item.wsStats?.protocols?.some((p) => p === "socketio");
       return isSocketIO ? "IO" : "WS";
     }
     return item.method;
@@ -284,7 +286,7 @@ export function HistoryPanel({
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span
                       className={cn(
-                        "px-2 py-0.5 text-xs font-mono border-2 rounded-full",
+                        "px-2 py-0.5 text-xs border-2 rounded-full",
                         getMethodColor(getConnectionType(item))
                       )}
                     >
@@ -301,7 +303,7 @@ export function HistoryPanel({
                     {item.type !== "websocket" && (
                       <span
                         className={cn(
-                          "px-2 py-0.5 text-xs font-mono border-2 rounded-full",
+                          "px-2 py-0.5 text-xs border-2 rounded-full",
                           item.response?.status
                             ? getStatusColor(item.response.status)
                             : "border-red-200 bg-red-50 text-red-700"
@@ -323,8 +325,22 @@ export function HistoryPanel({
                       })}
                     </span>
                   </div>
-                  <div className="text-sm font-mono text-gray-900 break-all">
+                  <div className="text-sm text-gray-900 break-all font-mono">
                     {item.url}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {item.response?.time && (
+                      <div className="inline-flex items-center text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-md">
+                        <span className="font-medium mr-1">Time:</span>
+                        {item.response.time}
+                      </div>
+                    )}
+                    {item.response?.size && (
+                      <div className="inline-flex items-center text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-md">
+                        <span className="font-medium mr-1">Size:</span>
+                        {item.response.size}
+                      </div>
+                    )}
                   </div>
                 </button>
                 <Button

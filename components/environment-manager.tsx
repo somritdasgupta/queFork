@@ -82,14 +82,14 @@ const EnvironmentHelp = () => (
       <div className="space-y-4">
         <div>
           <h4 className="font-medium">Usage</h4>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-4000">
             Use{" "}
             <code className="bg-gray-100 px-1.5 py-0.5 rounded">
               {"{{variable_name}}"}
             </code>{" "}
             to reference variables in:
           </p>
-          <ul className="list-disc list-inside text-sm text-gray-500 mt-2 space-y-1">
+          <ul className="list-disc list-inside text-sm text-slate-400 mt-2 space-y-1">
             <li>URL</li>
             <li>Headers</li>
             <li>Query Parameters</li>
@@ -167,7 +167,10 @@ export const EnvironmentManager = forwardRef<
     }));
 
     const handleCreateEnvironment = () => {
-      if (newEnvironmentName.trim() && newEnvironmentName.toLowerCase() !== "default") {
+      if (
+        newEnvironmentName.trim() &&
+        newEnvironmentName.toLowerCase() !== "default"
+      ) {
         const newEnvironment: Environment = {
           id: uuidv4(),
           name: newEnvironmentName.trim(),
@@ -176,10 +179,10 @@ export const EnvironmentManager = forwardRef<
           created: new Date().toISOString(),
           lastModified: new Date().toISOString(),
         };
-        
+
         const updatedEnvironments = [...environments, newEnvironment];
         handleEnvironmentsUpdate(updatedEnvironments);
-        setNewEnvironmentName('');
+        setNewEnvironmentName("");
         setIsOpen(false);
       }
     };
@@ -241,20 +244,23 @@ export const EnvironmentManager = forwardRef<
 
     const handleDeleteEnvironment = (envId: string) => {
       if (!confirm("Are you sure you want to delete this environment?")) return;
-      
-      const updatedEnvironments = environments.filter(e => e.id !== envId);
+
+      const updatedEnvironments = environments.filter((e) => e.id !== envId);
       onEnvironmentsUpdate(updatedEnvironments);
-      
+
       if (currentEnvironment?.id === envId) {
         onEnvironmentChange(updatedEnvironments[0]?.id || "");
       }
-      
+
       toast.success("Environment deleted");
     };
 
     const handleEnvironmentsUpdate = (updatedEnvironments: Environment[]) => {
       // Save to localStorage first
-      localStorage.setItem('que-environments', JSON.stringify(updatedEnvironments));
+      localStorage.setItem(
+        "que-environments",
+        JSON.stringify(updatedEnvironments)
+      );
       // Then update state through callback
       onEnvironmentsUpdate(updatedEnvironments);
     };
@@ -266,7 +272,9 @@ export const EnvironmentManager = forwardRef<
             ? {
                 ...editingEnvironment,
                 lastModified: new Date().toISOString(),
-                variables: editingEnvironment.variables.filter(v => v.key.trim() !== '')
+                variables: editingEnvironment.variables.filter(
+                  (v) => v.key.trim() !== ""
+                ),
               }
             : env
         );
@@ -300,7 +308,7 @@ export const EnvironmentManager = forwardRef<
           <DialogTrigger asChild>
             <Button
               size="icon"
-              className="h-10 w-12 flex-shrink-0 bg-black hover:bg-gray-800 text-white"
+              className="h-10 w-12 flex-shrink-0 bg-slate-900 hover:bg-gray-800 text-slate-400"
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -338,7 +346,7 @@ export const EnvironmentManager = forwardRef<
                               <p className="text-sm font-medium text-gray-700">
                                 Default (Global) Environment
                               </p>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-slate-4000">
                                 • Variables defined here are available across
                                 all environments
                                 <br />
@@ -351,7 +359,7 @@ export const EnvironmentManager = forwardRef<
                               <p className="text-sm font-medium text-gray-700">
                                 Custom Environments
                               </p>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-slate-4000">
                                 • Environment-specific variables
                                 <br />
                                 • Override global variables if same key exists
@@ -364,7 +372,7 @@ export const EnvironmentManager = forwardRef<
 
                         <div>
                           <h4 className="font-medium">Import Format</h4>
-                          <p className="text-sm text-gray-500 mb-2">
+                          <p className="text-sm text-slate-4000 mb-2">
                             JSON structure for importing environments:
                           </p>
                           <pre className="bg-gray-100 p-2 rounded text-sm">
@@ -391,14 +399,14 @@ export const EnvironmentManager = forwardRef<
 
                         <div>
                           <h4 className="font-medium">Usage</h4>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-slate-4000">
                             Use{" "}
                             <code className="bg-gray-100 px-1.5 py-0.5 rounded">
                               {"{{variable_name}}"}
                             </code>{" "}
                             to reference variables in:
                           </p>
-                          <ul className="list-disc list-inside text-sm text-gray-500 mt-2 space-y-1">
+                          <ul className="list-disc list-inside text-sm text-slate-4000 mt-2 space-y-1">
                             <li>URL</li>
                             <li>Headers</li>
                             <li>Query Parameters</li>
@@ -409,7 +417,7 @@ export const EnvironmentManager = forwardRef<
                           <h4 className="font-medium">Examples</h4>
                           <div className="space-y-3 mt-2">
                             <div>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-slate-4000">
                                 URL with base URL and version:
                               </p>
                               <pre className="bg-gray-100 p-2 rounded text-sm">
@@ -420,7 +428,7 @@ export const EnvironmentManager = forwardRef<
                               </pre>
                             </div>
                             <div>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-slate-4000">
                                 Headers with authentication:
                               </p>
                               <pre className="bg-gray-100 p-2 rounded text-sm">
@@ -430,7 +438,7 @@ export const EnvironmentManager = forwardRef<
                               </pre>
                             </div>
                             <div>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-slate-4000">
                                 Query parameters:
                               </p>
                               <pre className="bg-gray-100 p-2 rounded text-sm">
@@ -441,7 +449,7 @@ export const EnvironmentManager = forwardRef<
                               </pre>
                             </div>
                             <div>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-slate-4000">
                                 Request body:
                               </p>
                               <pre className="bg-gray-100 p-2 rounded text-sm">
@@ -475,7 +483,7 @@ export const EnvironmentManager = forwardRef<
                   onClick={handleCreateEnvironment}
                   disabled={!newEnvironmentName.trim()}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4 text-slate-400" />
                 </Button>
               </div>
 
@@ -586,11 +594,7 @@ export const EnvironmentManager = forwardRef<
               </div>
 
               <DialogFooter>
-                <Button
-                  onClick={handleSaveEnvironment}
-                >
-                  Save changes
-                </Button>
+                <Button onClick={handleSaveEnvironment} className="text-slate-400">Save changes</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

@@ -122,7 +122,7 @@
   }
 
   .response-content {
-    @apply font-mono text-sm;
+    @apply text-sm;
   }
 
   /* Collections Panel */

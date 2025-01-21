@@ -5,12 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-  Signal,
-  Activity,
-  Unplug,
-  PlugZap2,
-} from "lucide-react";
+import { Signal, Activity, Unplug, PlugZap2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useWebSocket } from "./websocket-context";
@@ -114,7 +109,8 @@ export function ConnectionTab() {
     if (isConnected) {
       disconnect();
     } else {
-      const protocols = selectedProtocol !== "websocket" ? [selectedProtocol] : [];
+      const protocols =
+        selectedProtocol !== "websocket" ? [selectedProtocol] : [];
       connect(protocols);
     }
   };
@@ -250,11 +246,6 @@ export function ConnectionTab() {
           )}
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-          {isConnected ? (
-            <LockClosedIcon className="w-4 h-4 text-slate-400 bg-slate-100" />
-          ) : (
-            <LockOpen1Icon className="w-4 h-4 text-slate-400 bg-slate-100" />
-          )}
           <Badge variant="secondary" className="bg-slate-100 text-slate-600">
             <AnimatePresence mode="wait">
               <motion.span
@@ -268,6 +259,11 @@ export function ConnectionTab() {
               </motion.span>
             </AnimatePresence>
           </Badge>
+          {isConnected ? (
+            <LockClosedIcon className="w-4 h-4 text-slate-400" />
+          ) : (
+            <LockOpen1Icon className="w-4 h-4 text-slate-400" />
+          )}
         </div>
       </div>
       <Button
@@ -398,9 +394,15 @@ export function ConnectionTab() {
       }
     };
 
-    window.addEventListener("setWebSocketProtocol", handleSetProtocol as EventListener);
+    window.addEventListener(
+      "setWebSocketProtocol",
+      handleSetProtocol as EventListener
+    );
     return () => {
-      window.removeEventListener("setWebSocketProtocol", handleSetProtocol as EventListener);
+      window.removeEventListener(
+        "setWebSocketProtocol",
+        handleSetProtocol as EventListener
+      );
     };
   }, []);
 
