@@ -94,8 +94,10 @@ export default function Page() {
           const parsed = JSON.parse(savedEnvironments);
           envs = parsed.map((env: Environment) => ({
             ...env,
-            variables: Array.isArray(env.variables) ? env.variables.filter(v => v.key.trim() !== '') : [],
-            lastModified: env.lastModified || new Date().toISOString()
+            variables: Array.isArray(env.variables)
+              ? env.variables.filter((v) => v.key.trim() !== "")
+              : [],
+            lastModified: env.lastModified || new Date().toISOString(),
           }));
         }
 
@@ -114,17 +116,18 @@ export default function Page() {
 
         // Save cleaned environments back to localStorage
         localStorage.setItem("que-environments", JSON.stringify(envs));
-        
+
         // Update state
         setEnvironments(envs);
-        
+
         // Set current environment if not set
-        const savedCurrentEnvId = localStorage.getItem("que-current-environment");
-        const currentEnv = savedCurrentEnvId 
-          ? envs.find(env => env.id === savedCurrentEnvId)
+        const savedCurrentEnvId = localStorage.getItem(
+          "que-current-environment"
+        );
+        const currentEnv = savedCurrentEnvId
+          ? envs.find((env) => env.id === savedCurrentEnvId)
           : envs[0];
         setCurrentEnvironment(currentEnv || envs[0]);
-
       } catch (error) {
         console.error("Error loading environments:", error);
         createDefaultEnvironment();
@@ -578,7 +581,8 @@ export default function Page() {
 
   // Add new class for the WebSocket button animation
   const getWebSocketButtonClasses = () => {
-    const baseClasses = "w-10 h-10 rounded-lg transition-all relative overflow-hidden";
+    const baseClasses =
+      "w-10 h-10 rounded-lg transition-all relative overflow-hidden";
     if (wsConnected) {
       return `${baseClasses} bg-slate-900 after:absolute after:inset-0 after:bg-green-500/20 after:animate-ping`;
     }
@@ -666,17 +670,21 @@ export default function Page() {
               <Button
                 className={getWebSocketButtonClasses()}
                 onClick={() => setIsWebSocketOpen(true)}
-                title={wsConnected ? "WebSocket Connected" : "Open WebSocket Connection"}
+                title={
+                  wsConnected
+                    ? "WebSocket Connected"
+                    : "Open WebSocket Connection"
+                }
               >
                 <div className="relative z-10">
                   <GlobeIcon
                     className={`w-4 h-4 transition-colors ${
-                      wsConnected ? "text-green-400 animate-pulse" : "text-white"
+                      wsConnected
+                        ? "text-green-400 animate-pulse"
+                        : "text-white"
                     }`}
                   />
-                  {wsConnected && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  )}
+                  {wsConnected}
                 </div>
               </Button>
               <div className="flex-1">
@@ -781,11 +789,11 @@ export default function Page() {
                     <GlobeIcon
                       className={`w-4 h-4 transition-colors ${
                         wsConnected
-                          ? "text-blue-400 animate-pulse"
+                          ? "text-green-400 animate-pulse"
                           : "text-white"
                       }`}
                     />
-                    {wsConnected }
+                    {wsConnected}
                   </div>
                 </Button>
               </div>

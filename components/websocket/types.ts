@@ -13,8 +13,11 @@ export interface WebSocketContextType {
     messagesReceived: number;
     reconnectAttempts: number;
     lastMessageTime: number | null;
+    minLatency: number;
+    maxLatency: number;
+    averageLatency: number;
+    latencyHistory: Array<{ timestamp: number; value: number }>;
   };
-  latencyHistory: Array<{ timestamp: number; value: number }>;
   currentLatency: number | null;
   connectionTime: number | null;
   messages: Array<{
