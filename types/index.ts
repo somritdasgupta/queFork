@@ -114,6 +114,8 @@ export interface HistoryItem {
   };
 }
 
+
+
 export interface WebSocketHistoryItem extends HistoryItem {
   type: "websocket";
   protocols?: string[];

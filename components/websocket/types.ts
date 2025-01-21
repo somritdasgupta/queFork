@@ -38,4 +38,12 @@ export interface WebSocketContextType {
     init: () => void;
     handleMessage: (data: any) => void;
   }>;
+  protocolConfig: ProtocolConfig;
+  updateProtocolConfig: (config: Partial<ProtocolConfig>) => void;
+  subscribeToTopic: (topic: string) => void;
+  unsubscribeFromTopic: (topic: string) => void;
+}
+
+export interface ProtocolConfig {
+  // Just a base config, no protocol specifics
 }

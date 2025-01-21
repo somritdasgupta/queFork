@@ -1,5 +1,3 @@
-"use client";
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +50,24 @@ export function HistoryPanel({
     }
   }, []);
 
+  useEffect(() => {
+    const handleWebSocketHistoryUpdate = (event: CustomEvent) => {
+      // Component receives history updates through props, no need to set state here
+      console.log("WebSocket history updated:", event.detail.history);
+    };
+
+    window.addEventListener(
+      "websocketHistoryUpdated",
+      handleWebSocketHistoryUpdate as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "websocketHistoryUpdated",
+        handleWebSocketHistoryUpdate as EventListener
+      );
+    };
+  }, []);
+
   const saveSettings = (settings: {
     isEnabled: boolean;
     autoDeleteDays: number;
@@ -78,14 +94,19 @@ export function HistoryPanel({
     if (!isHistoryEnabled) return;
 
     if (item.type === "websocket") {
-      // Dispatching event to open WebSocket modal
-      const event = new CustomEvent("openWebSocket", {
-        detail: {
-          url: item.url,
-          protocols: item.wsStats?.protocols || [],
-        },
-      });
-      window.dispatchEvent(event);
+      const selectedProtocol = item.wsStats?.protocols?.[0] || "websocket";
+      window.dispatchEvent(
+        new CustomEvent("openWebSocket", {
+          detail: {
+            url: item.url,
+            protocols: item.wsStats?.protocols || [],
+            selectedProtocol,
+          },
+        })
+      );
+
+      // Force WebSocket panel to open
+      window.dispatchEvent(new Event("openWebSocketPanel"));
     } else {
       onSelectItem(item);
     }
@@ -129,11 +150,11 @@ export function HistoryPanel({
       case "PATCH":
         return "border-orange-200 bg-orange-50 text-orange-700";
       case "WS":
-        return "border-purple-200 bg-purple-50 text-purple-700";
+        return "border-grey-300 bg-grey-200 text-grey-700";
       case "WSS":
-        return "border-indigo-200 bg-indigo-50 text-indigo-700";
+        return "border-rose-200 bg-rose-50 text-rose-700";
       default:
-        return "border-gray-200 bg-gray-50 text-gray-700";
+        return "border-slate-200 bg-slate-50 text-slate-700";
     }
   }
 
@@ -266,21 +287,18 @@ export function HistoryPanel({
                           ↑{item.wsStats.messagesSent} ↓
                           {item.wsStats.messagesReceived}
                         </span>
-                        {item.wsStats.avgLatency && (
-                          <span className="text-xs text-gray-500">
-                            {Math.round(item.wsStats.avgLatency)}ms
-                          </span>
-                        )}
                       </>
                     )}
-                    {item.response?.status && (
+                    {item.type !== "websocket" && (
                       <span
                         className={cn(
                           "px-2 py-0.5 text-xs font-mono border-2 rounded-full",
-                          getStatusColor(item.response.status)
+                          item.response?.status
+                            ? getStatusColor(item.response.status)
+                            : "border-red-200 bg-red-50 text-red-700"
                         )}
                       >
-                        {item.response.status}
+                        {item.response?.status || "error"}
                       </span>
                     )}
                     <span className="text-xs text-gray-500 flex items-center gap-1">

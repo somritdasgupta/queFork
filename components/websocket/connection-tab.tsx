@@ -8,13 +8,8 @@ import { Label } from "@/components/ui/label";
 import {
   Signal,
   Activity,
-  Gauge,
-  BarChart,
   Unplug,
   PlugZap2,
-  ArrowUpDown,
-  Network,
-  MessageSquare,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +42,11 @@ interface ConnectionStats {
   packetLoss: number;
 }
 
+interface WebSocketConnectionConfig {
+  protocols?: string[];
+  clientId?: string;
+}
+
 interface ProtocolConfig {
   name: string;
   color: string;
@@ -60,28 +60,14 @@ interface ProtocolConfig {
 const AVAILABLE_PROTOCOLS: Record<string, ProtocolConfig> = {
   websocket: {
     name: "WS",
-    color: "yellow",
+    color: "red",
     description: "Standard WebSocket Protocol",
-    urlPattern: /^wss?:\/\/(?!.*(?:mqtt|mosquitto|socket\.io|graphql)).*$/i,
+    urlPattern: /^wss?:\/\/(?!.*(?:socket\.io)).*$/i,
     placeholder: "ws://localhost:8080 or wss://example.com",
-  },
-  mqtt: {
-    name: "MQTT",
-    color: "grey",
-    description: "Message Queue Telemetry Transport",
-    urlPattern: /(?:mqtt|mosquitto)/i,
-    placeholder: "ws://broker.mqtt.com:8080",
-  },
-  "graphql-ws": {
-    name: "GraphQL",
-    color: "violet",
-    description: "GraphQL over WebSocket",
-    urlPattern: /(?:graphql|gql|hasura)/i,
-    placeholder: "wss://your-graphql-endpoint/graphql",
   },
   socketio: {
     name: "Socket.IO",
-    color: "orange",
+    color: "blue",
     description: "Socket.IO Protocol",
     urlPattern: /(?:socket\.io|socketio)/i,
     placeholder: "ws://localhost:3000/socket.io",
@@ -99,6 +85,7 @@ export function ConnectionTab() {
     stats,
     connectionTime,
     currentLatency,
+    sendMessage,
   } = useWebSocket();
 
   const [selectedProtocol, setSelectedProtocol] =
@@ -127,9 +114,8 @@ export function ConnectionTab() {
     if (isConnected) {
       disconnect();
     } else {
-      connect(
-        selectedProtocol !== "websocket" ? [selectedProtocol] : undefined
-      );
+      const protocols = selectedProtocol !== "websocket" ? [selectedProtocol] : [];
+      connect(protocols);
     }
   };
 
@@ -220,10 +206,10 @@ export function ConnectionTab() {
         }
         disabled={isConnected}
         className={cn(
-          "rounded-full text-[10px] md:text-sm py-0.5 md:py-2 px-1.5 md:px-3 h-6 md:h-auto min-w-0 relative",
+          "rounded-full text-[10px] md:text-sm py-0.5 md:py-0.5 px-1.5 md:px-3 h-6 md:h-auto min-w-0 relative",
           selectedProtocol === key
             ? "bg-slate-900 text-white"
-            : "border-slate-200 text-slate-700 hover:bg-slate-100",
+            : "bg-slate-100 border-2 border-slate-200 text-slate-700 hover:bg-slate-100",
           isConnected && "cursor-not-allowed opacity-50"
         )}
       >
@@ -237,9 +223,9 @@ export function ConnectionTab() {
             />
           )}
         </AnimatePresence>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <div
-            className={`w-2 h-2 rounded-full`}
+            className={`w-2 h-2 rounded-full bg-slate-50 border-2 border-slate-200`}
             style={{ backgroundColor: protocol.color }}
           />
           {protocol.name}
@@ -265,9 +251,9 @@ export function ConnectionTab() {
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
           {isConnected ? (
-            <LockClosedIcon className="w-4 h-4 text-slate-400" />
+            <LockClosedIcon className="w-4 h-4 text-slate-400 bg-slate-100" />
           ) : (
-            <LockOpen1Icon className="w-4 h-4 text-slate-400" />
+            <LockOpen1Icon className="w-4 h-4 text-slate-400 bg-slate-100" />
           )}
           <Badge variant="secondary" className="bg-slate-100 text-slate-600">
             <AnimatePresence mode="wait">
@@ -322,7 +308,7 @@ export function ConnectionTab() {
         <span className="text-slate-600">Current Latency</span>
         <span
           className={cn(
-            "font-mono",
+            "font-medium",
             !isConnected
               ? "text-slate-400"
               : currentLatency === null
@@ -346,7 +332,7 @@ export function ConnectionTab() {
         <>
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Min/Max</span>
-            <span className="font-mono">
+            <span className="font-medium">
               {stats.minLatency === Infinity
                 ? "-"
                 : `${Math.round(stats.minLatency)}ms`}{" "}
@@ -358,7 +344,7 @@ export function ConnectionTab() {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Average</span>
-            <span className="font-mono">
+            <span className="font-medium">
               {stats.averageLatency === 0
                 ? "-"
                 : `${Math.round(stats.averageLatency)}ms`}
@@ -371,7 +357,7 @@ export function ConnectionTab() {
 
   const renderMessageStats = () => (
     <Card className="p-6 bg-white border-slate-200">
-      <h3 className="text-sm font-medium mb-4 flex items-center gap-2 text-slate-700">
+      <h3 className="text-lg font-semibold mb-4 text-slate-900 flex items-center gap-2">
         <Activity className="h-4 w-4" /> Message Statistics
       </h3>
       <div className="space-y-4">
@@ -380,13 +366,13 @@ export function ConnectionTab() {
             <div className="text-2xl font-bold text-slate-700">
               {stats.messagesSent}
             </div>
-            <div className="text-xs text-slate-500">Sent</div>
+            <div className="text-sm text-slate-500">Sent</div>
           </div>
           <div className="bg-slate-50 p-3 rounded-lg">
             <div className="text-2xl font-bold text-slate-700">
               {stats.messagesReceived}
             </div>
-            <div className="text-xs text-slate-500">Received</div>
+            <div className="text-sm text-slate-500">Received</div>
           </div>
         </div>
         <div className="space-y-2">
@@ -402,13 +388,30 @@ export function ConnectionTab() {
     </Card>
   );
 
+  // Add effect to handle protocol selection from history
+  useEffect(() => {
+    const handleSetProtocol = (event: CustomEvent) => {
+      const { protocol, url } = event.detail;
+      setSelectedProtocol(protocol as keyof typeof AVAILABLE_PROTOCOLS);
+      if (url) {
+        handleUrlChange(url);
+      }
+    };
+
+    window.addEventListener("setWebSocketProtocol", handleSetProtocol as EventListener);
+    return () => {
+      window.removeEventListener("setWebSocketProtocol", handleSetProtocol as EventListener);
+    };
+  }, []);
+
   return (
     <div className="h-full overflow-y-auto space-y-4 p-4 pb-20 bg-slate-50">
       {/* Connection Controls */}
       <div className="sticky top-0 z-10 bg-slate-50 pb-2">
         <Card className="p-4 bg-white border-slate-200">
+          {/* Protocol Selection */}
           <div className="space-y-4">
-            {/* Protocol Selection */}
+            <div className="text-lg font-semibold text-slate-900">Protocol</div>
             <motion.div layout className="flex gap-1 md:gap-1.5 flex-wrap">
               {Object.entries(AVAILABLE_PROTOCOLS).map(([key, protocol]) =>
                 renderProtocolButton(key, protocol)
@@ -425,7 +428,7 @@ export function ConnectionTab() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="text-xs text-slate-500"
+                  className="text-sm font-medium text-slate-500"
                 >
                   {AVAILABLE_PROTOCOLS[selectedProtocol].description}
                 </motion.div>
@@ -439,10 +442,10 @@ export function ConnectionTab() {
       <div className="grid md:grid-cols-2 gap-4">
         {/* Connection Status */}
         <Card className="p-6 bg-white border-slate-200">
+          <h3 className="text-lg font-semibold mb-4 text-slate-900 flex items-center gap-2">
+            <Signal className="h-4 w-4" /> Connection Status
+          </h3>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium flex items-center gap-2 text-slate-700">
-              <Signal className="h-4 w-4" /> Connection Status
-            </h3>
             <Badge variant={isConnected ? "default" : "destructive"}>
               {connectionStatus.toUpperCase()}
             </Badge>

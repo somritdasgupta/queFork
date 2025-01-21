@@ -9,8 +9,9 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { WebSocketContextType } from "./types";
+import { ProtocolConfig, WebSocketContextType } from "./types";
 import { toast } from "sonner";
+import { HistoryItem } from "@/types";
 
 interface WebSocketProviderProps {
   children: React.ReactNode;
@@ -76,6 +77,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     {}
   );
 
+  const [protocolConfig, setProtocolConfig] = useState<ProtocolConfig>({});
   const [currentLatency, setCurrentLatency] = useState<number | null>(null);
   const lastPingTimestamp = useRef<number | null>(null);
 
@@ -97,47 +99,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
     protocols.forEach((protocol) => {
       switch (protocol) {
-        case "graphql-ws":
-          handlers[protocol] = {
-            init: () => {
-              sendMessage(
-                JSON.stringify({
-                  type: "connection_init",
-                  payload: {},
-                })
-              );
-            },
-            handleMessage: (data: any) => {
-              if (data.type === "connection_ack") {
-                toast.success("GraphQL Connection Initialized");
-              } else if (data.type === "next") {
-                toast.success("Received subscription data");
-              }
-            },
-          };
-          break;
-
-        case "mqtt":
-          handlers[protocol] = {
-            init: () => {
-              sendMessage(
-                JSON.stringify({
-                  type: "mqtt_connect",
-                  clientId: `mqtt_${Math.random().toString(16).slice(2)}`,
-                  keepalive: 60,
-                })
-              );
-            },
-            handleMessage: (data: any) => {
-              if (data.type === "publish") {
-                toast.success(`Received message on topic ${data.topic}`);
-              } else if (data.type === "suback") {
-                toast.success(`Subscribed to topic ${data.topic}`);
-              }
-            },
-          };
-          break;
-
         case "socketio":
           handlers[protocol] = {
             init: () => {
@@ -250,6 +211,129 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     setCurrentLatency(null);
   };
 
+  const updateHistory = useCallback((wsUrl: string, protocols: string[]) => {
+    const historyItem: HistoryItem = {
+      id: Date.now().toString(),
+      type: "websocket",
+      method: "WS",
+      url: wsUrl,
+      timestamp: new Date().toISOString(),
+      wsStats: {
+        protocols: protocols || [],
+        messagesSent: stats.messagesSent,
+        messagesReceived: stats.messagesReceived,
+        avgLatency: stats.averageLatency,
+        connectionDuration: connectionTime || 0,
+      },
+      request: {
+        headers: [],
+        params: [],
+        body: { type: "none", content: "" },
+        auth: { type: "none" },
+      }
+    };
+
+    // Get existing history
+    const existingHistory = JSON.parse(localStorage.getItem("apiHistory") || "[]");
+    const newHistory = [historyItem, ...existingHistory];
+    
+    // Save to localStorage
+    localStorage.setItem("apiHistory", JSON.stringify(newHistory));
+
+    // Dispatch event with updated history
+    window.dispatchEvent(new CustomEvent("websocketHistoryUpdated", {
+      detail: { history: newHistory }
+    }));
+  }, [stats, connectionTime]);
+
+  const updateHistoryOnDisconnect = useCallback(() => {
+    if (!url) return;
+    
+    // Find and update the existing history item
+    const existingHistory = JSON.parse(localStorage.getItem("apiHistory") || "[]");
+    const updatedHistory = existingHistory.map((item: HistoryItem) => {
+      if (item.type === "websocket" && item.url === url && item.id === currentHistoryId.current) {
+        return {
+          ...item,
+          wsStats: {
+            ...item.wsStats,
+            messagesSent: stats.messagesSent,
+            messagesReceived: stats.messagesReceived,
+            avgLatency: stats.averageLatency,
+            connectionDuration: connectionTime || 0,
+            protocols: activeProtocols,
+          }
+        };
+      }
+      return item;
+    });
+
+    localStorage.setItem("apiHistory", JSON.stringify(updatedHistory));
+    window.dispatchEvent(new CustomEvent("websocketHistoryUpdated", {
+      detail: { history: updatedHistory }
+    }));
+  }, [url, stats, connectionTime, activeProtocols]);
+
+  // Add reference to keep track of current history item ID
+  const currentHistoryId = useRef<string | null>(null);
+
+  // Add function to update history periodically
+  const updateHistoryPeriodically = useCallback(() => {
+    if (!url || !currentHistoryId.current) return;
+    
+    const existingHistory = JSON.parse(localStorage.getItem("apiHistory") || "[]");
+    const updatedHistory = existingHistory.map((item: HistoryItem) => {
+      if (item.type === "websocket" && item.url === url && item.id === currentHistoryId.current) {
+        return {
+          ...item,
+          wsStats: {
+            ...item.wsStats,
+            messagesSent: stats.messagesSent,
+            messagesReceived: stats.messagesReceived,
+            avgLatency: stats.averageLatency,
+            connectionDuration: connectionTime || 0,
+            protocols: activeProtocols,
+          }
+        };
+      }
+      return item;
+    });
+
+    localStorage.setItem("apiHistory", JSON.stringify(updatedHistory));
+  }, [url, stats, connectionTime, activeProtocols]);
+
+  // Add periodic update effect
+  useEffect(() => {
+    let updateInterval: NodeJS.Timeout;
+    
+    if (isConnected) {
+      // Update history every 2 seconds while connected
+      updateInterval = setInterval(updateHistoryPeriodically, 2000);
+    }
+
+    return () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        // Final update when cleaning up
+        updateHistoryPeriodically();
+      }
+    };
+  }, [isConnected, updateHistoryPeriodically]);
+
+  // Update window unload handler
+  useEffect(() => {
+    const handleUnload = () => {
+      if (isConnected) {
+        updateHistoryPeriodically();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, [isConnected, updateHistoryPeriodically]);
+
   const connect = useCallback(
     (protocols?: string[], config?: any) => {
       resetStats(); // Reset stats before new connection
@@ -281,21 +365,48 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         wsRef.current.onopen = () => {
           setIsConnected(true);
           setConnectionStatus("connected");
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "received",
-              content: `Connected to ${wsUrl}${
-                protocols?.length ? ` with ${protocols.join(", ")}` : ""
-              }`,
-              timestamp: new Date().toISOString(),
+          
+          const historyItemId = Date.now().toString();
+          currentHistoryId.current = historyItemId; // Store the ID for later use
+
+          // Create history item
+          const historyItem: HistoryItem = {
+            id: historyItemId,
+            type: "websocket",
+            method: "WS",
+            url: wsUrl,
+            timestamp: new Date().toISOString(),
+            wsStats: {
+              protocols: protocols || [],
+              messagesSent: 0,
+              messagesReceived: 0,
+              avgLatency: null,
+              connectionDuration: 0,
             },
-          ]);
-          toast.success(
-            `Connected successfully${
-              protocols?.length ? ` with ${protocols[0]}` : ""
-            }`
-          );
+            request: {
+              headers: [],
+              params: [],
+              body: { type: "none", content: "" },
+              auth: { type: "none" },
+            }
+          };
+
+          // Save to history
+          const existingHistory = JSON.parse(localStorage.getItem("apiHistory") || "[]");
+          const newHistory = [historyItem, ...existingHistory];
+          localStorage.setItem("apiHistory", JSON.stringify(newHistory));
+          window.dispatchEvent(new CustomEvent("websocketHistoryUpdated", {
+            detail: { history: newHistory }
+          }));
+
+          // Rest of onopen code...
+          setMessages((prev) => [...prev, {
+            type: "received",
+            content: `Connected to ${wsUrl}${protocols?.length ? ` with ${protocols.join(", ")}` : ""}`,
+            timestamp: new Date().toISOString(),
+          }]);
+          
+          toast.success(`Connected successfully${protocols?.length ? ` with ${protocols[0]}` : ""}`);
           sendPing();
           const pingInterval = setInterval(sendPing, 1000);
           pingIntervalRef.current = pingInterval;
@@ -304,8 +415,13 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         wsRef.current.onmessage = handleWebSocketMessage;
 
         wsRef.current.onclose = () => {
+          // Final update before disconnecting
+          updateHistoryPeriodically();
+          
           setIsConnected(false);
           setConnectionStatus("disconnected");
+          currentHistoryId.current = null;
+          
           setMessages((prev) => [
             ...prev,
             {
@@ -347,7 +463,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
       return () => clearInterval(pingInterval);
     },
-    [url, sendPing, handleWebSocketMessage]
+    [url, sendPing, handleWebSocketMessage, updateHistoryPeriodically]
   );
 
   const startPingInterval = () => {
@@ -413,13 +529,16 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   }, [isConnected, startLatencyMonitoring]);
 
   const disconnect = () => {
-    if (pingIntervalRef.current) {
-      clearInterval(pingIntervalRef.current);
-    }
     if (wsRef.current) {
+      // Update history with final stats before disconnecting
+      updateHistoryOnDisconnect();
       wsRef.current.close();
       wsRef.current = null;
       connectionStartTimeRef.current = null;
+      currentHistoryId.current = null;
+    }
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
     }
     resetStats();
   };
@@ -485,6 +604,21 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       }
     };
   }, []);
+  const updateProtocolConfig = (config: ProtocolConfig) => {
+    setProtocolConfig(config);
+  };
+
+  const subscribeToTopic = (topic: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      sendMessage(JSON.stringify({ type: 'subscribe', topic }));
+    }
+  };
+
+  const unsubscribeFromTopic = (topic: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      sendMessage(JSON.stringify({ type: 'unsubscribe', topic }));
+    }
+  };
 
   const value = {
     ws: wsRef,
@@ -501,11 +635,15 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     clearMessages,
     connectionTime,
     setMessagesBulk,
-    currentLatency, // Make sure this is included in the context value
+    currentLatency,
     lastLatency,
     activeProtocols,
     setActiveProtocols,
     protocolHandlers,
+    protocolConfig,
+    updateProtocolConfig,
+    subscribeToTopic,
+    unsubscribeFromTopic,
   };
 
   return (

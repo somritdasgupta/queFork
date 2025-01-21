@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -31,9 +29,33 @@ export function WebSocketPanel({
   const [tab, setTab] = useState("connection");
   const { isConnected } = useWebSocket();
 
+  // Add effect to handle websocket history item selection
+  useEffect(() => {
+    const handleWebSocketOpen = (event: CustomEvent) => {
+      const { url, protocols, selectedProtocol } = event.detail;
+      
+      // Force URL update
+      onUrlChange(url);
+      
+      // Set appropriate protocol tab and trigger ConnectionTab update
+      if (selectedProtocol) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("setWebSocketProtocol", {
+            detail: { protocol: selectedProtocol, url }
+          }));
+        }, 100);
+      }
+    };
+
+    window.addEventListener("openWebSocket", handleWebSocketOpen as EventListener);
+    return () => {
+      window.removeEventListener("openWebSocket", handleWebSocketOpen as EventListener);
+    };
+  }, [onUrlChange]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg sm:max-w-[1440px] h-[94vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden gap-0 bg-slate-50 font-sans">
+      <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg sm:max-w-[1500px] h-[86vh] sm:h-[86vh] flex flex-col p-0 overflow-hidden gap-0 bg-slate-50 font-sans">
         <DialogHeader className="p-6 pb-2 shrink-0 bg-white border-b border-slate-200">
           <DialogTitle className="text-slate-700">WebSocket</DialogTitle>
           <DialogDescription className="text-slate-500">

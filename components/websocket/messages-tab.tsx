@@ -254,7 +254,7 @@ export function MessagesTab() {
   };
 
   return (
-    <div className="relative w-full h-full bg-white overflow-hidden font-mono text-sm">
+    <div className="relative w-full h-full bg-white overflow-hidden">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white">
         <div className="h-14 px-3 flex items-center gap-2 overflow-x-auto">
@@ -262,7 +262,7 @@ export function MessagesTab() {
             value={messageFormat}
             onValueChange={(value: "text" | "json") => setMessageFormat(value)}
           >
-            <SelectTrigger className="w-24 h-8 bg-slate-50 border-slate-200 text-slate-700">
+            <SelectTrigger className="w-24 h-8 bg-slate-50 border-slate-200 text-slate-700 font-medium">
               <SelectValue placeholder="Format" />
             </SelectTrigger>
             <SelectContent className="bg-white border-slate-200">
@@ -277,12 +277,12 @@ export function MessagesTab() {
 
           <Badge
             variant="outline"
-            className="h-8 border-slate-200 bg-slate-50 text-slate-600"
+            className="h-8 border-slate-200 bg-slate-50 text-slate-600 font-medium"
           >
             {messages.length}
           </Badge>
 
-          {/* Action Buttons */}
+          {/* Action Buttons */} 
           <div className="flex items-center gap-1 ml-auto">
             <input
               type="file"
@@ -331,7 +331,7 @@ export function MessagesTab() {
         </div>
       </div>
 
-      {/* Messages Area - Updated with inline expanding messages */}
+      {/* Messages Area */}
       <div
         className="absolute top-14 bottom-16 left-0 right-0 overflow-y-auto w-full bg-white text-slate-700 
         [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-slate-200 
@@ -339,10 +339,10 @@ export function MessagesTab() {
       >
         <div className="divide-y divide-slate-200">
           {messages.length === 0 ? (
-            <div className="h-full min-h-[400px] flex items-center justify-center text-slate-400 font-sans">
+            <div className="h-full min-h-[400px] flex items-center justify-center text-slate-400">
               <div className="flex flex-col items-center gap-2">
                 <MessageSquare className="h-8 w-8" />
-                <p className="text-sm">No Messages</p>
+                <p className="font-medium">No Messages</p>
               </div>
             </div>
           ) : (
@@ -382,7 +382,7 @@ export function MessagesTab() {
                       </div>
 
                       {/* Timestamp */}
-                      <div className="hidden md:block text-xs font-mono text-slate-400 tabular-nums min-w-[90px]">
+                      <div className="hidden md:block text-xs text-slate-400 min-w-[90px]">
                         {new Date(msg.timestamp).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -396,11 +396,11 @@ export function MessagesTab() {
                       {/* Message Content */}
                       <div
                         className={cn(
-                          "flex-1 font-mono text-sm overflow-x-auto",
+                          "flex-1 text-sm overflow-x-auto",
                           style.text
                         )}
                       >
-                        <code className="px-1">{msg.content}</code>
+                        <div className="px-1 font-medium">{msg.content}</div>
                       </div>
 
                       {/* Actions */}
@@ -429,14 +429,14 @@ export function MessagesTab() {
                         )}
                       >
                         <div className="flex items-center justify-between text-slate-500">
-                          <div>Type: {msg.type}</div>
-                          <time className="font-mono">
+                          <div className="font-medium">Type: {msg.type}</div>
+                          <time className="text-slate-400">
                             {new Date(msg.timestamp).toLocaleString()}
                           </time>
                         </div>
                         {isJsonString(msg.content) && (
                           <div className="mt-2 bg-white rounded p-2 overflow-x-auto border border-slate-200">
-                            <pre className="text-slate-700">
+                            <pre className="text-sm text-slate-700">
                               {formatJsonMessage(msg.content)}
                             </pre>
                           </div>
@@ -452,11 +452,11 @@ export function MessagesTab() {
         </div>
       </div>
 
-      {/* Input Area - Removed tooltip */}
+      {/* Input Area */}
       <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-white">
-        <div className="h-16 p-3 flex items-center gap-2 font-sans">
+        <div className="h-16 p-3 flex items-center gap-2">
           <div className="flex-1 relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
               $
             </span>
             <Input
@@ -467,9 +467,10 @@ export function MessagesTab() {
                 e.key === "Enter" && !e.shiftKey && handleSend()
               }
               disabled={!isConnected}
-              className="pl-7 font-mono bg-slate-50 border-slate-200 rounded pr-12
-                text-slate-700 placeholder:text-slate-400 focus-visible:ring-1 
-                focus-visible:ring-slate-200 focus-visible:ring-offset-0"
+              className="pl-7 bg-slate-50 border-slate-200 rounded pr-12
+                text-slate-700 font-medium placeholder:text-slate-400 
+                focus-visible:ring-1 focus-visible:ring-slate-200 
+                focus-visible:ring-offset-0"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <span
