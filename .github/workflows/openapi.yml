@@ -1,0 +1,43 @@
+name: OpenAPI Generator
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'api/**'
+      - 'openapi/**'
+      - 'specs/**'
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install OpenAPI Generator
+        run: npm install @openapitools/openapi-generator-cli -g
+
+      - name: Generate Code
+        run: |
+          openapi-generator-cli generate \
+            -i api/openapi.yaml \
+            -g typescript-fetch \
+            -o src/generated/api
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add src/generated/api
+          git commit -m "chore: update generated API code" || exit 0
+          git push
