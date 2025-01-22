@@ -1,46 +1,106 @@
 # queFork
 
-A simple lightweight local web REST API Testing platform.
+A lightweight, and powerful local web REST API testing platform. Built with Next.js and TypeScript.
 
-## Features
+![Node.js Version](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen)
+![Next.js Version](https://img.shields.io/badge/next.js-14.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-- **Send Requests:** Send GET, POST, PUT, DELETE, PATCH, HEAD, and OPTIONS requests.
-- **Request Body:** Support for JSON, Form Data, and Encoded body types.
-- **History:** Store and replay previous requests.
-- **Response View:** View the response in a clear and organized format.
-- **Headers:** View and edit headers.
-- **Authentication:** Support for basic authentication.
-- **Pretty Print:** Format JSON and XML responses for easy reading.
-- **Raw View:** View the raw response data.
+[![OpenAPI Generator](https://github.com/somritdasgupta/queFork/actions/workflows/openapi.yml/badge.svg?branch=main)](https://github.com/somritdasgupta/queFork/actions/workflows/openapi.yml)
 
-## Installation
+## ✨ Features
 
-1. Clone the repository: `git clone https://github.com/somritdasgupta/queFork.git`
-2. Navigate to the project directory: `cd queFork`
-3. Install dependencies: `npm install --force`
+- 🔥 **Modern Interface**: Clean and intuitive UI built with Tailwind CSS
+- 🚀 **Real-time Testing**: Test REST APIs with instant response visualization
+- 🔄 **WebSocket Support**: Test WebSocket connections with live data streaming
+- 🔐 **Environment Management**: Manage multiple environments and variables
+- 📦 **Collections**: Organize and save your API requests
+- 📝 **Request History**: Automatically track your API requests
+- 🎨 **Code Generation**: Generate code snippets in multiple languages
+- 🔍 **Response Formatting**: Auto-format JSON, XML, and other response types
+- 🔒 **Authentication**: Support for Bearer, Basic, and API Key auth
+- 📱 **Responsive Design**: Works seamlessly on desktop and mobile
 
-## Usage
+## 🚀 Quick Start
 
-1. Run the development server: `npm start`
-2. Open your web browser and navigate to `http://localhost:3000`
-3. Enter your request details and click "Send".
+### Prerequisites
 
-Sure! Here are the important tech stack components for queFork in text format:
+- Node.js >= 16.0.0
+- npm or yarn
 
-### Important Tech Stack
+### Installation
 
-- **Framework:** Next.js
-- **Frontend Library:** React
-- **State Management:** React Hook Form
-- **Styling:** Tailwind CSS
-- **UI Components:** Radix UI
-- **Date Handling:** date-fns
-- **Syntax Highlighting:** react-syntax-highlighter
-- **Data Validation:** Zod
-- **UUID Generation:** uuid
+```bash
+# Clone the repository
+git clone https://github.com/somritdasgupta/queFork.git
 
-These dependencies are essential for the functionality and design of the queFork application.
+# Navigate to project directory
+cd queFork
 
-## License
+# Install dependencies
+npm install --force
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+# Start the development server
+npm run dev
+```
+
+## 🛠️ Tech Dependency
+
+- **Framework**: [Next.js 14](https://nextjs.org/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**:
+  - [Tailwind CSS](https://tailwindcss.com/)
+  - [Shadcn/ui](https://ui.shadcn.com/)
+- **State Management**: React Hooks
+- **Code Highlighting**: react-syntax-highlighter
+- **Date Handling**: date-fns
+- **Data Validation**: Zod
+- **Icons**: Lucide React
+- **Utils**:
+  - UUID generation
+  - Environment variables
+  - WebSocket handling
+
+## 🌟 Key Features In Detail
+
+### Environment Management
+
+- Create and manage multiple environments
+- Set environment-specific variables
+- Switch environments on the fly
+- Variable substitution in requests
+
+### Request Features
+
+- Support for all HTTP methods
+- Query parameters
+- Custom headers
+- Request body (JSON, Form Data, Raw)
+- Authentication methods
+- File uploads in JSON
+
+### Response Handling
+
+- Beautiful syntax highlighting
+- Response time tracking
+- Size calculation
+- Status code information
+- Headers viewing
+- Body formatting
+
+### Collections
+
+- Organize requests into collections
+- Import/Export collections
+- Share collections
+- Quick access to saved requests
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📧 Contact
+
+Somrit Dasgupta - [@somritdasgupta](https://github.com/somritdasgupta)
+
+Project Link: [https://github.com/somritdasgupta/queFork](https://github.com/somritdasgupta/queFork)

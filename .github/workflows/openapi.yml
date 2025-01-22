@@ -30,7 +30,7 @@ jobs:
       - name: Generate Code
         run: |
           openapi-generator-cli generate \
-            -i api/openapi.yaml \
+            --input-spec api/openapi.yaml \
             -g typescript-fetch \
             -o src/generated/api
 
