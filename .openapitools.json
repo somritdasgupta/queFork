@@ -1,0 +1,16 @@
+{
+  "generator-cli": {
+    "version": "6.6.0",
+    "generators": {
+      "typescript-fetch": {
+        "generatorName": "typescript-fetch",
+        "output": "./src/generated/api",
+        "inputSpec": "./api/openapi.yaml",
+        "additionalProperties": {
+          "supportsES6": true,
+          "npmVersion": "1.0.0"
+        }
+      }
+    }
+  }
+}
