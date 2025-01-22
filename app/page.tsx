@@ -268,107 +268,9 @@ export default function Page() {
       };
 
       setResponse(finalResponse);
-      toast.success(`${method} request successful`);
-    } catch (error) {
-      console.error("Request failed:", error);
-      toast.error("Request failed. Please check the console for details.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleSendRequest = async () => {
-    if (!url) {
-      toast.error("Please enter a URL");
-      return;
-    }
-
-    // Don't proceed with history saving if disabled
-    if (!isHistorySavingEnabled) {
-      await executeRequest();
-      return;
-    }
-
-    setIsLoading(true);
-    const startTime = Date.now();
-
-    try {
-      const queryString = params
-        .filter((p) => p.key && p.value && p.enabled)
-        .map(
-          (p) =>
-            `${encodeURIComponent(p.key)}=${encodeURIComponent(
-              replaceEnvironmentVariables(p.value)
-            )}`
-        )
-        .join("&");
-
-      const requestHeaders: Record<string, string> = {};
-      headers
-        .filter((h) => h.key && h.value && h.enabled)
-        .forEach((h) => {
-          requestHeaders[h.key] = replaceEnvironmentVariables(h.value);
-        });
-
-      if (auth.type === "bearer" && auth.token) {
-        requestHeaders["Authorization"] = `Bearer ${replaceEnvironmentVariables(
-          auth.token
-        )}`;
-      } else if (auth.type === "basic" && auth.username && auth.password) {
-        requestHeaders["Authorization"] = `Basic ${btoa(
-          `${replaceEnvironmentVariables(
-            auth.username
-          )}:${replaceEnvironmentVariables(auth.password)}`
-        )}`;
-      } else if (auth.type === "apiKey" && auth.key) {
-        requestHeaders["X-API-Key"] = replaceEnvironmentVariables(auth.key);
-      }
-
-      const fullUrl = `${replaceEnvironmentVariables(url)}${
-        queryString ? `?${queryString}` : ""
-      }`;
-      const response = await fetch("/api/proxy", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          method,
-          url: fullUrl,
-          headers: requestHeaders,
-          body:
-            body.type !== "none"
-              ? replaceEnvironmentVariables(body.content as string)
-              : undefined,
-        }),
-      });
-
-      const responseData = await response.json();
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-
-      const responseSize = new Blob([JSON.stringify(responseData.body)]).size;
-      const formattedSize =
-        responseSize > 1024
-          ? `${(responseSize / 1024).toFixed(1)} KB`
-          : `${responseSize} B`;
-
-      const finalResponse = {
-        ...responseData,
-        time: `${duration}ms`,
-        size: formattedSize,
-        timestamp: new Date().toISOString(),
-      };
-
-      setResponse(finalResponse);
-
-      // Only save successful responses to history if enabled
-      if (
-        isHistorySavingEnabled &&
-        finalResponse.status &&
-        finalResponse.status >= 200 &&
-        finalResponse.status < 300
-      ) {
+      // Add history saving logic here
+      if (isHistorySavingEnabled) {
         const historyItem: HistoryItem = {
           id: Date.now().toString(),
           timestamp: new Date().toISOString(),
@@ -398,6 +300,15 @@ export default function Page() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSendRequest = async () => {
+    if (!url) {
+      toast.error("Please enter a URL");
+      return;
+    }
+
+    await executeRequest();
   };
 
   const handleClearHistory = () => {
@@ -647,21 +558,38 @@ export default function Page() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+                <div className="relative">
                 <Input
-                  className="flex-1 border-2 border-blue-200 bg-blue-50 shadow-inner focus:ring-2 focus:ring-blue-500"
+                  className={`flex-1 font-mono border-2 shadow-inner focus:ring-2 transition-all ${
+                    url
+                    ? url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/)
+                      ? 'border-green-200 bg-green-50 focus:ring-green-500'
+                      : 'border-red-200 bg-red-50 focus:ring-red-500'
+                    : 'border-blue-200 bg-blue-50 focus:ring-blue-500'
+                  }`}
                   placeholder="Enter API endpoint"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                />
-                <Button
-                  className="bg-slate-900 hover:bg-slate-800 text-slate-400 transition-colors"
+                  />
+                  {url && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/) ? (
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    ) : (
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    )}
+                  </div>
+                  )}
+                  </div>
+                  <Button
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-400 px-6 py-2 rounded-lg"
                   onClick={handleSendRequest}
-                  disabled={isLoading}
+                  disabled={isLoading || !url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/)}
                 >
                   {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4" />
                   )}
                 </Button>
               </div>
@@ -758,45 +686,62 @@ export default function Page() {
                 </Select>
               </div>
 
-              <div className="flex-1 flex items-center gap-3">
-                <Input
-                  className="flex-1 font-mono border-2 border-blue-200 bg-blue-50 shadow-inner focus:ring-2 focus:ring-blue-500 transition-all"
+                <div className="flex-1 flex items-center gap-3">
+                <div className="flex-1 relative">
+                  <Input
+                  className={`flex-1 font-mono border-2 shadow-inner focus:ring-2 transition-all w-full ${
+                    url
+                    ? url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/)
+                      ? 'border-green-200 bg-green-50 focus:ring-green-500'
+                      : 'border-red-200 bg-red-50 focus:ring-red-500'
+                    : 'border-blue-200 bg-blue-50 focus:ring-blue-500'
+                  }`}
                   placeholder="Enter API endpoint"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                />
+                  />
+                  {url && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/) ? (
+                    <div className="w-2 h-2 rounded-full bg-green-500 shadow-lg border-2 border-red-400" />
+                    ) : (
+                    <div className="w-2 h-2 rounded-full bg-red-500 shadow-lg border-2 border-green-400" />
+                    )}
+                  </div>
+                  )}
+                </div>
                 <Button
                   className="bg-slate-900 hover:bg-slate-800 text-slate-400 px-6 py-2 rounded-lg"
                   onClick={handleSendRequest}
-                  disabled={isLoading}
+                  disabled={isLoading || !url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/)}
                 >
                   {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4" />
                   )}
                 </Button>
                 <Button
                   className={getWebSocketButtonClasses()}
                   onClick={() => setIsWebSocketOpen(true)}
                   title={
-                    wsConnected
-                      ? "WebSocket Connected"
-                      : "Open WebSocket Connection"
+                  wsConnected
+                    ? "WebSocket Connected"
+                    : "Open WebSocket Connection"
                   }
                 >
                   <div className="relative z-10">
-                    <GlobeIcon
-                      className={`w-4 h-4 transition-colors ${
-                        wsConnected
-                          ? "text-green-400 animate-pulse"
-                          : "text-slate-400"
-                      }`}
-                    />
-                    {wsConnected}
+                  <GlobeIcon
+                    className={`w-4 h-4 transition-colors ${
+                    wsConnected
+                      ? "text-green-400 animate-pulse"
+                      : "text-slate-400"
+                    }`}
+                  />
+                  {wsConnected}
                   </div>
                 </Button>
-              </div>
+                </div>
 
               <EnvironmentManager
                 ref={environmentManagerRef}

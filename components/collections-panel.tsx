@@ -101,7 +101,6 @@ export function CollectionsPanel({
           </span>
           {collection.apiVersion && (
             <Badge
-              variant="secondary"
               className="text-xs bg-blue-100 text-blue-800"
             >
               v{collection.apiVersion}

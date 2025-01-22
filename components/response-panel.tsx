@@ -3,27 +3,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import hljs from "highlight.js";
 import "highlight.js/styles/tokyo-night-dark.css";
-
-const highlightCode = (code: string, language: string): string => {
-  try {
-    return hljs.highlight(code, { language }).value;
-  } catch {
-    return code;
-  }
-};
-
-const getLanguage = (contentType: string): string => {
-  switch (contentType) {
-    case "json":
-      return "json";
-    case "html":
-      return "html";
-    case "xml":
-      return "xml";
-    default:
-      return "text";
-  }
-};
+import { languageConfigs, type CodeGenLanguage } from "@/utils/code-generators";
+import { CodeGenerationTab } from './code-generation-tab';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +43,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collection, SavedRequest } from "@/types";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+
+const highlightCode = (code: string, language: string): string => {
+  try {
+    return hljs.highlight(code, { language }).value;
+  } catch {
+    return code;
+  }
+};
+
+const getLanguage = (contentType: string): string => {
+  switch (contentType) {
+    case "json":
+      return "json";
+    case "html":
+      return "html";
+    case "xml":
+      return "xml";
+    default:
+      return "text";
+  }
+};
 
 interface RequestResponse {
   status: number;
@@ -120,6 +129,7 @@ export function ResponsePanel({
   const [selectedCollection, setSelectedCollection] = useState("");
   const [requestName, setRequestName] = useState("");
   const [isOnline, setIsOnline] = useState(true);
+  const [selectedLanguage, setSelectedLanguage] = useState<CodeGenLanguage>("curl");
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -164,7 +174,15 @@ export function ResponsePanel({
 
   const copyToClipboard = async () => {
     try {
-      const content = getContentForTab();
+      let content = '';
+      
+      // Handle code tab differently
+      if (activeTab === 'code') {
+        content = getGeneratedCode();
+      } else {
+        content = getContentForTab();
+      }
+
       await navigator.clipboard.writeText(content);
       setCopyStatus((prev) => ({ ...prev, [activeTab]: true }));
       toast.success("Copied to clipboard");
@@ -197,6 +215,24 @@ export function ResponsePanel({
     setSelectedCollection("");
     setRequestName("");
     toast.success("Request saved to collection");
+  };
+
+  const getGeneratedCode = () => {
+    if (!response) return "";
+    
+    const options = {
+      url,
+      method,
+      headers: response.headers || {},
+      body: response.body ? JSON.stringify(response.body, null, 2) : undefined
+    };
+
+    try {
+      return languageConfigs[selectedLanguage].generator(options);
+    } catch (error) {
+      console.error('Code generation error:', error);
+      return '// Error generating code';
+    }
   };
 
   if (isLoading) {
@@ -423,6 +459,46 @@ export function ResponsePanel({
           >
             Headers
           </TabsTrigger>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <TabsTrigger
+                value="code"
+                className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800 group flex items-center gap-2"
+              >
+                <span>Code</span>
+                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-700/50 group-hover:bg-slate-700">
+                  {languageConfigs[selectedLanguage].icon({ 
+                    className: "h-3.5 w-3.5 text-blue-400" 
+                  })}
+                </div>
+              </TabsTrigger>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="start" 
+              className="bg-slate-800 border-slate-600 max-h-[400px] overflow-y-auto rounded-lg shadow-lg backdrop-blur-sm"
+            >
+              {Object.entries(languageConfigs).map(([key, config]) => (
+                <DropdownMenuItem
+                  key={key}
+                  onClick={() => setSelectedLanguage(key as CodeGenLanguage)}
+                  className={cn(
+                    "flex items-center gap-3 py-2.5 px-3 cursor-pointer transition-colors hover:bg-slate-700",
+                    selectedLanguage === key && "bg-blue-500/10 text-blue-400"
+                  )}
+                >
+                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-700/50">
+                    {config.icon({ className: "h-4 w-4 text-blue-300" })}
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-slate-400">{config.name}</span>
+                  </div>
+                  {selectedLanguage === key && (
+                    <Check className="h-4 w-4 ml-auto text-blue-400" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <div className="ml-auto flex items-center pr-2">
             <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
@@ -512,52 +588,63 @@ export function ResponsePanel({
           <TabsContent value="pretty" className="absolute inset-0 m-0">
             <ScrollArea className="h-full">
               <div className="p-4">
-                {contentType === "json" ? (
+                <div className="max-w-full overflow-hidden">
                   <pre
-                    className="font-mono text-sm"
+                    className="font-mono text-sm whitespace-pre-wrap break-all"
                     style={{
-                      tabSize: 2,
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
+                      maxWidth: '100%',
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word'
                     }}
-                    dangerouslySetInnerHTML={{
-                      __html: highlightCode(
-                        typeof getContentForTab() === 'string' && getContentForTab().trim().startsWith('{')
-                          ? JSON.stringify(JSON.parse(getContentForTab()), null, 2)
-                          : getContentForTab(),
-                        "json"
-                      ),
-                    }}
-                  />
-                ) : contentType === "html" ? (
-                  <pre
-                    className="font-mono text-sm"
-                    style={{
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                    }}
-                    dangerouslySetInnerHTML={{
-                      __html: highlightCode(
-                        getContentForTab().replace(/></g, ">\n<"),
-                        "html"
-                      ),
-                    }}
-                  />
-                ) : (
-                  <pre
-                    className="font-mono text-sm"
-                    style={{
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                    }}
-                    dangerouslySetInnerHTML={{
-                      __html: highlightCode(
-                        getContentForTab(),
-                        getLanguage(contentType)
-                      ),
-                    }}
-                  />
-                )}
+                  >
+                    {contentType === "json" ? (
+                      <pre
+                        className="font-mono text-sm"
+                        style={{
+                          tabSize: 2,
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                        }}
+                        dangerouslySetInnerHTML={{
+                          __html: highlightCode(
+                            typeof getContentForTab() === 'string' && getContentForTab().trim().startsWith('{')
+                              ? JSON.stringify(JSON.parse(getContentForTab()), null, 2)
+                              : getContentForTab(),
+                            "json"
+                          ),
+                        }}
+                      />
+                    ) : contentType === "html" ? (
+                      <pre
+                        className="font-mono text-sm"
+                        style={{
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                        }}
+                        dangerouslySetInnerHTML={{
+                          __html: highlightCode(
+                            getContentForTab().replace(/></g, ">\n<"),
+                            "html"
+                          ),
+                        }}
+                      />
+                    ) : (
+                      <pre
+                        className="font-mono text-sm"
+                        style={{
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                        }}
+                        dangerouslySetInnerHTML={{
+                          __html: highlightCode(
+                            getContentForTab(),
+                            getLanguage(contentType)
+                          ),
+                        }}
+                      />
+                    )}
+                  </pre>
+                </div>
               </div>
             </ScrollArea>
           </TabsContent>
@@ -600,6 +687,15 @@ export function ResponsePanel({
                   </div>
                 )}
               </div>
+            </ScrollArea>
+          </TabsContent>
+          <TabsContent value="code" className="absolute inset-0 m-0">
+            <ScrollArea className="h-full">
+              <CodeGenerationTab
+                getGeneratedCode={getGeneratedCode}
+                selectedLanguage={selectedLanguage}
+                setSelectedLanguage={setSelectedLanguage}
+              />
             </ScrollArea>
           </TabsContent>
         </div>

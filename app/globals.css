@@ -1,0 +1,100 @@
+/* Add these at the end of the file */
+pre {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+code {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Syntax highlighting customizations */
+.syntax-highlight {
+  position: relative !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, Consolas, monospace;
+}
+
+.syntax-highlight code {
+  tab-size: 2 !important;
+}
+
+/* Fix word breaking */
+.syntax-highlight code[class*="language-"] {
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  hyphens: none !important;
+  white-space: pre !important;
+  word-wrap: normal !important;
+  word-break: normal !important;
+}
+
+/* Line number separator */
+.syntax-highlight pre {
+  position: relative !important;
+  font-variant-ligatures: none !important;
+  font-feature-settings: "calt" 0 !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+/* Horizontal scrolling for long lines */
+.syntax-highlight pre > code {
+  display: inline-block !important;
+  min-width: 100% !important;
+  white-space: pre !important;
+}
+
+/* Slim line numbers */
+.syntax-highlight .linenumber {
+  opacity: 0.4 !important;
+  font-size: 12px !important;
+  min-width: 2em !important;
+  padding: 0 0.5em !important;
+}
+
+/* Improve dropdown styling */
+[cmdk-overlay] {
+  background: rgb(0 0 0 / 0.4) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+[cmdk-list] {
+  max-height: min(400px, calc(100vh - 100px)) !important;
+  overflow: auto !important;
+  overscroll-behavior: contain !important;
+  transition: 100ms ease !important;
+  transition-property: height !important;
+}
+
+[cmdk-item] {
+  cursor: pointer !important;
+  height: 40px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 0 12px !important;
+  color: rgb(226 232 240) !important;
+  user-select: none !important;
+  will-change: background, color !important;
+  transition: all 150ms ease !important;
+  transition-property: none !important;
+}
+
+[cmdk-item][data-selected="true"] {
+  background: rgb(59 130 246 / 0.1) !important;
+  color: rgb(96 165 250) !important;
+}
+
+[cmdk-item]:hover {
+  background: rgb(51 65 85 / 0.5) !important;
+}
+
+[cmdk-item] svg {
+  width: 16px !important;
+  height: 16px !important;
+}
