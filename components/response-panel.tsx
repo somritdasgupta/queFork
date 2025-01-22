@@ -176,7 +176,6 @@ export function ResponsePanel({
     try {
       let content = '';
       
-      // Handle code tab differently
       if (activeTab === 'code') {
         content = getGeneratedCode();
       } else {
