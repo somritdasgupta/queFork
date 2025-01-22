@@ -55,7 +55,7 @@ export function WebSocketPanel({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg sm:max-w-[1500px] h-[90vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden gap-0 bg-slate-50 font-sans">
+      <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg sm:max-w-[1500px] h-[92vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden gap-0 bg-slate-50 font-sans">
         <DialogHeader className="p-6 pb-2 shrink-0 bg-white border-b border-slate-200">
           <DialogTitle className="text-slate-700">WebSocket</DialogTitle>
           <DialogDescription className="text-slate-500">

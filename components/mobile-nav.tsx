@@ -53,8 +53,8 @@ export function MobileNav({
           <Layers className="h-8 text-slate-400" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="w-[100vw] p-0 h-[90vh] rounded-t-lg">
-        <SheetHeader className="px-4 py-2 border-b border-gray-200">
+      <SheetContent side="bottom" className="w-[100vw] p-0 h-[92vh] rounded-t-lg">
+        <SheetHeader className="px-4 py-2 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-lg font-semibold">
               {activePanel === "collections" ? "Collections" : "History"}
@@ -85,7 +85,7 @@ export function MobileNav({
             </Button>
           </div>
         </SheetHeader>
-        <div className="h-[calc(100vh-5rem)]">
+        <div className="h-[calc(100%-120px)] mb-8 overflow-y-auto">
           {activePanel === "collections" ? (
             <CollectionsPanel
               collections={collections}

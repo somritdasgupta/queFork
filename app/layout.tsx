@@ -1,6 +1,8 @@
 import '@/styles/globals.css'
 import { Inter } from 'next/font/google'
 import { WebSocketWrapper } from '@/components/websocket/websocket-wrapper'
+import { Preloader } from '@/components/preloader'
+import { Favicon } from '@/components/favicon'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -13,12 +15,15 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <title>queFork • REST API Testing</title>
-        <link rel="icon" href="/favicon.ico" />
+        <Favicon />
       </head>
       <body className={inter.className}>
-        <WebSocketWrapper>
-          {children}
-        </WebSocketWrapper>
+        <Preloader />
+        <div className="contents animate-unblur">
+          <WebSocketWrapper>
+            {children}
+          </WebSocketWrapper>
+        </div>
       </body>
     </html>
   )

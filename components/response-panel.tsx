@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import hljs from "highlight.js";
-import "highlight.js/styles/tokyo-night-dark.css";
+import "highlight.js/styles/github-dark.css"; // Change to a more stable theme
 import { languageConfigs, type CodeGenLanguage } from "@/utils/code-generators";
 import { CodeGenerationTab } from './code-generation-tab';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -248,7 +248,7 @@ export function ResponsePanel({
 
   if (!response) {
     return (
-      <div className="min-h-[200px] flex items-center justify-center p-4 mt-2">
+      <div className="min-h-[200px] flex items-center justify-center p-4">
         <div className="text-center space-y-6 max-w-md mx-auto">
           <div className="pt-4">
             <span className="inline-flex items-center gap-2 px-4 py-0 rounded-lg text-sm bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-500 border border-blue-500/20">
