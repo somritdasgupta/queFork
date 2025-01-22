@@ -54,7 +54,6 @@ export function HistoryPanel({
 
   useEffect(() => {
     const handleWebSocketHistoryUpdate = (event: CustomEvent) => {
-      // Component receives history updates through props, no need to set state here
       console.log("WebSocket history updated:", event.detail.history);
     };
 
@@ -107,7 +106,6 @@ export function HistoryPanel({
         })
       );
 
-      // Force WebSocket panel to open
       window.dispatchEvent(new Event("openWebSocketPanel"));
     } else {
       onSelectItem(item);
@@ -186,10 +184,10 @@ export function HistoryPanel({
 
   return (
     <div className="h-full flex flex-col bg-white">
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-30 h-5 text-sm p-2 font-medium rounded-full bg-gray-100">
+            <span className="inline-flex items-center justify-center w-30 h-6 text-sm p-2 font-medium rounded-lg bg-gray-100 border-2">
               {history.length} Logs
             </span>
           </div>
@@ -199,7 +197,7 @@ export function HistoryPanel({
               size="icon"
               onClick={handleClearHistory}
               disabled={!isHistoryEnabled}
-              className="h-8 w-8 text-gray-500 hover:text-gray-900"
+              className="h-8 w-8 text-gray-500 hover:text-gray-900 border-slate-200 border-2 shadow-inner"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -208,7 +206,7 @@ export function HistoryPanel({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-gray-500 hover:text-gray-900"
+                  className="h-8 w-8 text-gray-500 hover:text-gray-900 border-slate-200 border-2 shadow-inner"
                 >
                   <Settings2 className="h-4 w-4" />
                 </Button>
@@ -247,7 +245,7 @@ export function HistoryPanel({
             placeholder="Search history"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-8 bg-gray-100"
+            className="pl-10 h-8 bg-gray-100 shadow-inner"
           />
         </div>
       </div>

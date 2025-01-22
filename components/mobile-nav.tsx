@@ -54,9 +54,9 @@ export function MobileNav({
         </Button>
       </SheetTrigger>
       <SheetContent side="bottom" className="w-[100vw] p-0 h-[92vh] rounded-t-lg">
-        <SheetHeader className="px-4 py-2 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-lg font-semibold">
+        <SheetHeader className="px-4 py-2 border-b border-gray-200 sticky top-0 bg-white z-10 rounded-t-lg">
+          <div className="flex items-center justify-between rounded-lg">
+            <SheetTitle className="text-lg font-semibold rounded-lg">
               {activePanel === "collections" ? "Collections" : "History"}
             </SheetTitle>
             <Button

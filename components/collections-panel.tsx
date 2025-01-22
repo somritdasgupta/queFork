@@ -179,7 +179,7 @@ export function CollectionsPanel({
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Header Section */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 p-4 space-y-4">
+      <div className="sticky top-0 z-10 bg-white border-b p-4 space-y-4">
         <div className="flex items-center justify-between gap-2">
           <Button
             variant="outline"
