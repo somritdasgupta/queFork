@@ -6,10 +6,13 @@ on:
       - main
       - develop
     paths:
-      - 'api/**'
-      - 'openapi/**'
-      - 'specs/**'
+      - "api/**"
+      - "openapi/**"
+      - "specs/**"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   generate:
@@ -17,12 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install OpenAPI Generator
         run: npm install @openapitools/openapi-generator-cli -g
@@ -41,3 +44,5 @@ jobs:
           git add src/generated/api
           git commit -m "chore: update generated API code" || exit 0
           git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

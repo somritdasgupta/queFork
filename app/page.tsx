@@ -816,9 +816,9 @@ export default function Page() {
               />
 
               <ResizablePanel
-                defaultSize={45}
-                minSize={40}
-                maxSize={!response?.status ? 40 : 90}
+                defaultSize={50}
+                minSize={12}
+                maxSize={!response?.status ? 30 : 90}
                 className="overflow-hidden"
                 response={response}
               >

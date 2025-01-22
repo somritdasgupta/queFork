@@ -25,7 +25,7 @@ A lightweight, and powerful local web REST API testing platform. Built with Next
 
 ### Prerequisites
 
-- Node.js >= 16.0.0
+- Node.js >= 14.0.0
 - npm or yarn
 
 ### Installation

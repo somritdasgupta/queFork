@@ -260,37 +260,10 @@ export function ResponsePanel({
             </span>
           </div>
           <div className="space-y-6">
-            <div className="group hover:scale-105 transition-transform cursor-pointer">
-              <div className="flex items-center justify-center gap-2 text-sm text-blue-500">
-                <div className="px-2 rounded-md font-bold bg-gray-200 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                  1
-                </div>
-                <span className="group-hover:text-blue-500 transition-colors text-center">
-                  Select the type of HTTP method
-                </span>
-              </div>
-            </div>
-
-            <div className="group hover:scale-105 transition-transform cursor-pointer">
-              <div className="flex items-center justify-center gap-3 text-sm text-blue-500">
-                <div className="px-2 rounded-md font-bold bg-gray-200 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                  2
-                </div>
-                <span className="group-hover:text-blue-500 transition-colors text-center">
-                  Enter request URL endpoint
-                </span>
-              </div>
-            </div>
-
-            <div className="group hover:scale-105 transition-transform cursor-pointer">
-              <div className="flex items-center justify-center gap-3 text-sm text-blue-500">
-                <div className="px-2 rounded-md font-bold bg-gray-200 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                  3
-                </div>
-                <span className="group-hover:text-blue-500 transition-colors text-center">
-                  Click send for request
-                </span>
-              </div>
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-slate-400 leading-relaxed">
+              Send your first API request by configuring the method and URL above
+              </p>
             </div>
           </div>
         </div>
