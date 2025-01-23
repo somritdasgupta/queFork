@@ -37,6 +37,7 @@ import { v4 as uuidv4 } from "uuid";
 import Footer from "@/components/footer";
 import { WebSocketPanel } from "@/components/websocket/websocket-panel";
 import { useWebSocket } from "@/components/websocket/websocket-context";
+import saveAs from "file-saver";
 
 export default function Page() {
   const [method, setMethod] = useState("GET");
@@ -490,7 +491,30 @@ export default function Page() {
     setIsHistorySavingEnabled(enabled);
   };
 
-  // Add new class for the WebSocket button animation
+  const handleExportCollections = () => {
+    const data = JSON.stringify(collections, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    saveAs(blob, "collections.json");
+  };
+
+  const handleExportHistory = () => {
+    const data = JSON.stringify(history, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    saveAs(blob, "request-history.json");
+  };
+
+  const handleExportCollection = (collectionId: string) => {
+    const collection = collections.find((c) => c.id === collectionId);
+    if (collection) {
+      const data = JSON.stringify(collection, null, 2);
+      const blob = new Blob([data], { type: "application/json" });
+      saveAs(
+        blob,
+        `${collection.name.toLowerCase().replace(/\s+/g, "-")}.json`
+      );
+    }
+  };
+
   const getWebSocketButtonClasses = () => {
     const baseClasses =
       "w-10 h-10 rounded-lg transition-all relative overflow-hidden";
@@ -501,12 +525,11 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-gray-50 rounded-md">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 rounded-b-lg bg-gray-50 backdrop-blur supports-[backdrop-filter]:bg-gray/50 border-b-2 border-gray-300 shadow-md transition-all duration-200">
+    <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-slate-900/50 text-slate-400">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-slate-800">
         <div className="flex flex-col md:flex-row md:h-16">
           {/* Mobile Layout */}
-          <div className="flex flex-col md:hidden w-full px-2 py-3 space-y-2">
+          <div className="flex flex-col md:hidden w-full px-2 py-3 space-y-3">
             <div className="flex items-center gap-2">
               <MobileNav
                 collections={collections}
@@ -519,84 +542,100 @@ export default function Page() {
                 onDeleteCollection={handleDeleteCollection}
                 onDeleteRequest={handleDeleteRequest}
                 onDeleteHistoryItem={handleDeleteHistoryItem}
+                className="rounded-md border border-slate-700 hover:bg-slate-700/50"
+                isHistorySavingEnabled={isHistorySavingEnabled}
+                onToggleHistorySaving={toggleHistorySaving}
+                onExportCollections={handleExportCollections}
+                onExportHistory={handleExportHistory}
+                onExportCollection={handleExportCollection}
               />
               <div className="flex-1 flex gap-2 items-center">
                 <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger className="w-24 font-semibold bg-blue-50 border-2 border-blue-200 rounded-md">
+                  <SelectTrigger className="w-24 text-xs font-medium bg-slate-900 border border-slate-700 rounded-lg text-slate-400">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-lg border border-slate-700 bg-slate-800">
                     <SelectItem
                       value="GET"
-                      className="font-medium text-green-600"
+                      className="text-xs font-medium text-green-500"
                     >
                       GET
                     </SelectItem>
                     <SelectItem
                       value="POST"
-                      className="font-medium text-blue-600"
+                      className="text-xs font-medium text-blue-500"
                     >
                       POST
                     </SelectItem>
                     <SelectItem
                       value="PUT"
-                      className="font-medium text-yellow-600"
+                      className="text-xs font-medium text-yellow-500"
                     >
                       PUT
                     </SelectItem>
                     <SelectItem
                       value="DELETE"
-                      className="font-medium text-red-600"
+                      className="text-xs font-medium text-red-500"
                     >
                       DELETE
                     </SelectItem>
                     <SelectItem
                       value="PATCH"
-                      className="font-medium text-purple-600"
+                      className="text-xs font-medium text-purple-500"
                     >
                       PATCH
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="relative">
-                <Input
-                  className={`flex-1 font-mono border-2 shadow-inner focus:ring-2 transition-all ${
-                    url
-                    ? url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/)
-                      ? 'border-green-200 bg-green-50 focus:ring-green-500'
-                      : 'border-red-200 bg-red-50 focus:ring-red-500'
-                    : 'border-blue-200 bg-blue-50 focus:ring-blue-500'
-                  }`}
-                  placeholder="Enter API endpoint"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                <div className="relative flex-1">
+                  <Input
+                    className={`w-full text-xs font-medium bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all shadow-none ${
+                      url &&
+                      !url.match(
+                        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
+                      )
+                        ? "border-red-500/50"
+                        : "focus:border-slate-600"
+                    }`}
+                    placeholder="Enter API endpoint"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
                   />
                   {url && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/) ? (
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                    ) : (
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    )}
-                  </div>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          url.match(
+                            /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
+                          )
+                            ? "bg-green-500"
+                            : "bg-red-500"
+                        }`}
+                      />
+                    </div>
                   )}
-                  </div>
-                  <Button
-                  className="bg-slate-900 hover:bg-slate-800 text-slate-400 px-6 py-2 rounded-lg"
+                </div>
+                <Button
+                  className="bg-slate-900 hover:bg-slate-700 text-slate-400 px-4 py-2 h-9 rounded-md border border-slate-700"
                   onClick={handleSendRequest}
-                  disabled={isLoading || !url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/)}
+                  disabled={
+                    isLoading ||
+                    !url.match(
+                      /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
+                    )
+                  }
                 >
                   {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3 h-3 animate-spin" />
                   ) : (
-                  <Send className="w-4 h-4" />
+                    <Send className="w-3 h-3" />
                   )}
                 </Button>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Button
-                className={getWebSocketButtonClasses()}
+                className={`${getWebSocketButtonClasses()} h-9 border border-slate-700`}
                 onClick={() => setIsWebSocketOpen(true)}
                 title={
                   wsConnected
@@ -606,13 +645,12 @@ export default function Page() {
               >
                 <div className="relative z-10">
                   <GlobeIcon
-                    className={`w-4 h-4 transition-colors ${
+                    className={`w-3 h-3 transition-colors ${
                       wsConnected
                         ? "text-green-400 animate-pulse"
                         : "text-slate-400"
                     }`}
                   />
-                  {wsConnected}
                 </div>
               </Button>
               <div className="flex-1">
@@ -622,13 +660,14 @@ export default function Page() {
                   currentEnvironment={currentEnvironment}
                   onEnvironmentChange={handleEnvironmentChange}
                   onEnvironmentsUpdate={handleEnvironmentsUpdate}
+                  className="rounded-md border border-slate-700 bg-slate-900 text-xs"
                 />
               </div>
             </div>
           </div>
 
           {/* Desktop Layout */}
-          <div className="hidden bg-gray-50 md:flex items-center gap-4 p-4 flex-1 max-w-screen-2xl mx-auto">
+          <div className="hidden md:flex items-center gap-4 p-4 max-w-screen-2xl mx-auto w-full">
             <div className="flex items-center gap-4 flex-1">
               <MobileNav
                 collections={collections}
@@ -641,44 +680,50 @@ export default function Page() {
                 onDeleteCollection={handleDeleteCollection}
                 onDeleteRequest={handleDeleteRequest}
                 onDeleteHistoryItem={handleDeleteHistoryItem}
+                className="rounded-md border border-slate-700 hover:bg-slate-700/50"
+                isHistorySavingEnabled={isHistorySavingEnabled}
+                onToggleHistorySaving={toggleHistorySaving}
+                onExportCollections={handleExportCollections}
+                onExportHistory={handleExportHistory}
+                onExportCollection={handleExportCollection}
               />
 
-              <div className="flex items-center gap-2 bg-blue-100 border-2 border-blue-300 rounded-md px-2">
-                <div className="w-6 h-6 bg-violet-600 rounded-md flex items-center justify-center text-slate-50 text-xs font-bold">
+              <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-2">
+                <div className="w-6 h-6 bg-slate-800 rounded-lg flex items-center justify-center text-slate-400 text-xs font-bold">
                   {method.charAt(0)}
                 </div>
                 <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger className="w-[100px] font-bold bg-transparent border-0 rounded-md">
+                  <SelectTrigger className="w-[100px] font-bold bg-transparent border-0 text-slate-400">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="border border-slate-700 bg-slate-800">
                     <SelectItem
                       value="GET"
-                      className="font-semibold text-green-600"
+                      className="font-medium text-green-500"
                     >
                       GET
                     </SelectItem>
                     <SelectItem
                       value="POST"
-                      className="font-medium text-blue-600"
+                      className="font-medium text-blue-500"
                     >
                       POST
                     </SelectItem>
                     <SelectItem
                       value="PUT"
-                      className="font-medium text-yellow-600"
+                      className="font-medium text-yellow-500"
                     >
                       PUT
                     </SelectItem>
                     <SelectItem
                       value="DELETE"
-                      className="font-medium text-red-600"
+                      className="font-medium text-red-500"
                     >
                       DELETE
                     </SelectItem>
                     <SelectItem
                       value="PATCH"
-                      className="font-medium text-purple-600"
+                      className="font-medium text-purple-500"
                     >
                       PATCH
                     </SelectItem>
@@ -686,62 +731,72 @@ export default function Page() {
                 </Select>
               </div>
 
-                <div className="flex-1 flex items-center gap-3">
+              <div className="flex-1 flex items-center gap-3">
                 <div className="flex-1 relative">
                   <Input
-                  className={`flex-1 font-mono border-2 shadow-inner focus:ring-2 transition-all w-full ${
-                    url
-                    ? url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/)
-                      ? 'border-green-200 bg-green-50 focus:ring-green-500'
-                      : 'border-red-200 bg-red-50 focus:ring-red-500'
-                    : 'border-blue-200 bg-blue-50 focus:ring-blue-500'
-                  }`}
-                  placeholder="Enter API endpoint"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                    className={`w-full text-xs font-medium bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all shadow-none ${
+                      url &&
+                      !url.match(
+                        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
+                      )
+                        ? "border-red-500/50"
+                        : "focus:border-slate-600"
+                    }`}
+                    placeholder="Enter API endpoint"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
                   />
                   {url && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/) ? (
-                    <div className="w-2 h-2 rounded-full bg-green-500 shadow-lg border-2 border-red-400" />
-                    ) : (
-                    <div className="w-2 h-2 rounded-full bg-red-500 shadow-lg border-2 border-green-400" />
-                    )}
-                  </div>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          url.match(
+                            /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
+                          )
+                            ? "bg-green-500"
+                            : "bg-red-500"
+                        }`}
+                      />
+                    </div>
                   )}
                 </div>
                 <Button
                   className="bg-slate-900 hover:bg-slate-800 text-slate-400 px-6 py-2 rounded-lg"
                   onClick={handleSendRequest}
-                  disabled={isLoading || !url.match(/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/)}
+                  disabled={
+                    isLoading ||
+                    !url.match(
+                      /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
+                    )
+                  }
                 >
                   {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                  <Send className="w-4 h-4" />
+                    <Send className="w-4 h-4" />
                   )}
                 </Button>
                 <Button
                   className={getWebSocketButtonClasses()}
                   onClick={() => setIsWebSocketOpen(true)}
                   title={
-                  wsConnected
-                    ? "WebSocket Connected"
-                    : "Open WebSocket Connection"
+                    wsConnected
+                      ? "WebSocket Connected"
+                      : "Open WebSocket Connection"
                   }
                 >
                   <div className="relative z-10">
-                  <GlobeIcon
-                    className={`w-4 h-4 transition-colors ${
-                    wsConnected
-                      ? "text-green-400 animate-pulse"
-                      : "text-slate-400"
-                    }`}
-                  />
-                  {wsConnected}
+                    <GlobeIcon
+                      className={`w-4 h-4 transition-colors ${
+                        wsConnected
+                          ? "text-green-400 animate-pulse"
+                          : "text-slate-400"
+                      }`}
+                    />
+                    {wsConnected}
                   </div>
                 </Button>
-                </div>
+              </div>
 
               <EnvironmentManager
                 ref={environmentManagerRef}
@@ -755,18 +810,14 @@ export default function Page() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="pt-28 md:pt-20 h-[calc(100vh-3rem)] overflow-hidden rounded-lg">
-        <ResizablePanelGroup
-          direction="horizontal"
-          className="h-full rounded-lg"
-        >
+      <main className="pt-28 md:pt-16 h-[calc(100vh-3rem)] overflow-hidden bg-slate-800">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* Sidebar */}
           <ResizablePanel
             defaultSize={25}
             minSize={20}
             maxSize={30}
-            className="hidden md:block rounded-lg"
+            className="hidden md:block"
             response={null}
           >
             <DesktopSidePanel
@@ -782,19 +833,22 @@ export default function Page() {
               onDeleteHistoryItem={handleDeleteHistoryItem}
               isHistorySavingEnabled={isHistorySavingEnabled}
               onToggleHistorySaving={toggleHistorySaving}
+              onExportCollections={handleExportCollections}
+              onExportHistory={handleExportHistory}
+              onExportCollection={handleExportCollection}
             />
           </ResizablePanel>
 
           {/* Main Panel */}
           <ResizablePanel
             defaultSize={75}
-            className="bg-gray-50 rounded-lg"
+            className="bg-gray-50"
             response={null}
           >
             <ResizablePanelGroup direction="vertical">
               <ResizablePanel
                 defaultSize={50}
-                className="overflow-hidden rounded-lg"
+                className="overflow-hidden"
                 response={null}
               >
                 <div className="h-full overflow-y-auto">
@@ -811,9 +865,7 @@ export default function Page() {
                 </div>
               </ResizablePanel>
 
-              <ResizableHandle
-                withHandle
-              />
+              <ResizableHandle withHandle />
 
               <ResizablePanel
                 defaultSize={50}
@@ -838,8 +890,7 @@ export default function Page() {
         </ResizablePanelGroup>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-transparent bg-transparent shadow-md backdrop-blur supports-[backdrop-filter]:bg-gray/50">
+      <footer className="border-t border-slate-700 bg-slate-900/50 shadow-md">
         <Footer />
       </footer>
       <WebSocketPanel

@@ -1,5 +1,3 @@
-"use client"
-
 import React, { useState, useMemo, useEffect } from "react";
 import hljs from "highlight.js";
 import "highlight.js/styles/github-dark.css"; // Change to a more stable theme
@@ -258,10 +256,10 @@ export function ResponsePanel({
               waiting for request
             </span>
           </div>
-          <div className="space-y-6">
-            <div className="space-y-4 text-center">
+          <div className="space-y-2">
+            <div className="space-y-2 text-center">
               <p className="text-sm text-slate-400 leading-relaxed">
-              Send your first API request by configuring the method and URL above
+              Send an API request with a HTTP method above
               </p>
             </div>
           </div>
@@ -415,19 +413,19 @@ export function ResponsePanel({
         <TabsList className="w-full justify-start rounded-none bg-slate-800 border-b-2 border-slate-700 p-0">
           <TabsTrigger
             value="pretty"
-            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
+            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
           >
             Pretty
           </TabsTrigger>
           <TabsTrigger
             value="raw"
-            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
+            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
           >
             Raw
           </TabsTrigger>
           <TabsTrigger
             value="headers"
-            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
+            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
           >
             Headers
           </TabsTrigger>
@@ -435,7 +433,7 @@ export function ResponsePanel({
             <DropdownMenuTrigger asChild>
               <TabsTrigger
                 value="code"
-                className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800 group flex items-center gap-2"
+                className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800 group flex items-center gap-2"
               >
                 <span>Code</span>
                 <div className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-700/50 group-hover:bg-slate-700">
@@ -462,7 +460,7 @@ export function ResponsePanel({
                     {config.icon({ className: "h-4 w-4 text-blue-300" })}
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium text-slate-400">{config.name}</span>
+                    <span className="text-xs md:text-sm font-medium text-slate-400">{config.name}</span>
                   </div>
                   {selectedLanguage === key && (
                     <Check className="h-4 w-4 ml-auto text-blue-400" />
@@ -562,7 +560,7 @@ export function ResponsePanel({
               <div className="p-4">
                 <div className="max-w-full overflow-hidden">
                   <pre
-                    className="font-mono text-sm whitespace-pre-wrap break-all"
+                    className="font-mono text-xs md:text-sm whitespace-pre-wrap break-all"
                     style={{
                       maxWidth: '100%',
                       overflowWrap: 'break-word',
@@ -571,7 +569,7 @@ export function ResponsePanel({
                   >
                     {contentType === "json" ? (
                       <pre
-                        className="font-mono text-sm"
+                        className="font-mono text-xs md:text-sm"
                         style={{
                           tabSize: 2,
                           whiteSpace: "pre-wrap",
@@ -588,7 +586,7 @@ export function ResponsePanel({
                       />
                     ) : contentType === "html" ? (
                       <pre
-                        className="font-mono text-sm"
+                        className="font-mono text-xs md:text-sm"
                         style={{
                           whiteSpace: "pre-wrap",
                           wordBreak: "break-word",
@@ -602,7 +600,7 @@ export function ResponsePanel({
                       />
                     ) : (
                       <pre
-                        className="font-mono text-sm"
+                        className="font-mono text-xs md:text-sm"
                         style={{
                           whiteSpace: "pre-wrap",
                           wordBreak: "break-word",
@@ -624,7 +622,7 @@ export function ResponsePanel({
             <ScrollArea className="h-full overflow-auto">
               <div className="p-2">
                 <div
-                  className="font-mono text-sm break-all p-2 overflow-x-auto"
+                  className="font-mono text-xs md:text-sm break-all p-2 overflow-x-auto"
                   dangerouslySetInnerHTML={{
                     __html: highlightCode(
                       getContentForTab(),
@@ -643,10 +641,10 @@ export function ResponsePanel({
                   <div className="w-full table border-separate border-spacing-0">
                     {Object.entries(response.headers).map(([key, value]) => (
                       <div key={key} className="table-row hover:bg-slate-800">
-                        <div className="table-cell py-2 pr-4 text-sm font-semibold text-blue-100 whitespace-nowrap align-top border-b border-slate-700">
+                        <div className="table-cell py-2 pr-4 text-xs md:text-sm font-semibold text-blue-100 whitespace-nowrap align-top border-b border-slate-700">
                           {key}
                         </div>
-                        <div className="table-cell py-2 pl-4 text-sm font-mono break-all text-blue-300 align-top border-b border-slate-700">
+                        <div className="table-cell py-2 pl-4 text-xs md:text-sm font-mono break-all text-blue-300 align-top border-b border-slate-700">
                           {value}
                         </div>
                       </div>
@@ -655,7 +653,7 @@ export function ResponsePanel({
                 ) : (
                   <div className="flex flex-col items-center justify-center h-32 text-slate-400">
                     <Database className="h-8 w-8 mb-2 opacity-50" />
-                    <p>No headers available</p>
+                    <p className="text-xs md:text-sm">No headers available</p>
                   </div>
                 )}
               </div>

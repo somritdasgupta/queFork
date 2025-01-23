@@ -3,73 +3,64 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Home, ArrowLeft } from 'lucide-react';
+import { Terminal, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedLogo } from '@/components/animated-logo';
 
-const quotes = [
-  "Looks like this page took a REST break!",
-  "This endpoint returned a 404",
-  "Even the best APIs have their off days!"
-];
-
 export default function NotFound() {
-  const [randomQuote, setRandomQuote] = useState(quotes[0]);
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    setMounted(true);
-    setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+    document.title = "404 | queFork";
   }, []);
 
-  if (!mounted) return null;
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-lg px-4"
+      >
         {/* Logo */}
-        <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="flex justify-center"
-        >
-          <div className="w-[200px] h-[75px]">
-            <AnimatedLogo animate={false} showSubtitle={false} />
-          </div>
-        </motion.div>
+        <div className="mb-16">
+          <AnimatedLogo animate={false} showSubtitle={false} />
+        </div>
 
-        {/* 404 Text */}
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="relative"
-        >
-          <h1 className="text-9xl font-bold text-gray-200">404</h1>
-        </motion.div>
+        {/* Error Display */}
+        <div className="space-y-6 text-center mb-12">
+          <h1 className="text-[180px] leading-none font-black tracking-tighter text-gray-900">
+            404
+          </h1>
+          <p className="text-2xl font-medium text-gray-500">
+            This page doesn't exist.
+          </p>
+        </div>
 
-        {/* Message */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="space-y-4"
-        >
-          <p className="text-xl text-gray-600">{randomQuote}</p>
-        </motion.div>
-
-        {/* Actions */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="flex justify-center gap-4"
-        >
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-6">
           <Link href="/">
-            <Button variant="default" className="gap-2">
-              <Home className="w-4 h-4" />
+            <Button 
+              variant="secondary"
+              size="lg"
+              className="bg-slate-100 hover:bg-slate-200/80  border-slate-200 border-2 text-slate-600 gap-2 text-base transition-all backdrop-blur-sm"
+            >
+              <Terminal className="w-4 h-4" />
               Home
             </Button>
           </Link>
-        </motion.div>
-      </div>
+          <Link 
+            href="https://github.com/somritdasgupta/quefork" 
+            target="_blank"
+          >
+            <Button 
+              variant="secondary"
+              size="lg"
+              className="bg-slate-100 hover:bg-slate-200/80 border-slate-200 border-2 text-slate-600 gap-2 text-base transition-all backdrop-blur-sm"
+            >
+              <Github className="w-4 h-4" />
+              GitHub
+            </Button>
+          </Link>
+        </div>
+      </motion.div>
     </div>
   );
 }

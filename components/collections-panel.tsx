@@ -1,5 +1,3 @@
-"use client";
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +35,7 @@ import {
   SortAsc,
   Trash2,
   Clock,
+  ArrowDownToLine,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Collection, SavedRequest } from "@/types";
@@ -51,6 +50,8 @@ interface CollectionsPanelProps {
   onDeleteCollection: (collectionId: string) => void;
   onDeleteRequest: (collectionId: string, requestId: string) => void;
   onUpdateCollections?: (collections: Collection[]) => void;
+  onExportCollections: () => void;
+  onExportCollection: (collectionId: string) => void;
 }
 
 export function CollectionsPanel({
@@ -60,6 +61,8 @@ export function CollectionsPanel({
   onCreateCollection,
   onDeleteCollection,
   onDeleteRequest,
+  onExportCollections,
+  onExportCollection,
 }: CollectionsPanelProps) {
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -100,9 +103,7 @@ export function CollectionsPanel({
             {collection.name}
           </span>
           {collection.apiVersion && (
-            <Badge
-              className="text-xs bg-blue-100 text-blue-800"
-            >
+            <Badge className="text-xs bg-blue-100 text-blue-800">
               v{collection.apiVersion}
             </Badge>
           )}
@@ -129,6 +130,10 @@ export function CollectionsPanel({
             <DropdownMenuItem onClick={() => onSaveRequest(collection.id, {})}>
               <Save className="mr-2 h-4 w-4" />
               Save Request
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onExportCollection(collection.id)}>
+              <ArrowDownToLine className="mr-2 h-4 w-4" />
+              Export Collection
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -177,7 +182,7 @@ export function CollectionsPanel({
   }, [collections, search, filterBy, sortBy]);
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col">
       {/* Header Section */}
       <div className="sticky top-0 z-10 bg-white border-b p-4 space-y-4">
         <div className="flex items-center justify-between gap-2">
@@ -189,9 +194,9 @@ export function CollectionsPanel({
                 prev === "name" ? "date" : prev === "date" ? "method" : "name"
               )
             }
-            className="text-xs h-8 w-full border-2 shadow-inner"
+            className="text-xs h-8 w-full rounded-md"
           >
-            <SortAsc className="h-3 w-3" />
+            <SortAsc className="h-4 w-4 mr-2" />
             {sortBy}
           </Button>
 
@@ -200,9 +205,9 @@ export function CollectionsPanel({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs h-8 w-full border-2 shadow-inner"
+                className="text-xs h-8 w-full rounded-md"
               >
-                <Filter className="h-3 w-3" />
+                <Filter className="h-4 w-4 mr-2" />
                 {filterBy || "All"}
               </Button>
             </DropdownMenuTrigger>
@@ -221,109 +226,120 @@ export function CollectionsPanel({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 p-2 border-2 shadow-inner">
-                <Plus className="h-5 w-5" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create New Collection</DialogTitle>
-                <DialogDescription>
-                  Create a new collection to organize your API requests.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Name</label>
-                  <Input
-                    placeholder="Collection Name"
-                    value={newCollection.name}
-                    maxLength={15}
-                    onChange={(e) =>
-                      setNewCollection((prev) => ({
-                        ...prev,
-                        name: e.target.value.slice(0, 15),
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">API Version</label>
-                  <Input
-                    placeholder="e.g., 1.0.0"
-                    value={newCollection.apiVersion}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Allow only numbers and dots, max 3 dots
-                      if (
-                        /^[0-9.]*$/.test(value) &&
-                        (value.match(/\./g) || []).length <= 3
-                      ) {
-                        // Split by dots and validate each group is max 999
-                        const groups = value.split(".");
-                        const isValid = groups.every(
-                          (group) =>
-                            !group ||
-                            (parseInt(group) <= 999 && group.length <= 3)
-                        );
-                        if (isValid) {
-                          setNewCollection((prev) => ({
-                            ...prev,
-                            apiVersion: value,
-                          }));
-                        }
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExportCollections}
+              className="rounded-md"
+            >
+              <ArrowDownToLine className="h-4 w-4" />
+            </Button>
+
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-md">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create New Collection</DialogTitle>
+                  <DialogDescription>
+                    Create a new collection to organize your API requests.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Name</label>
+                    <Input
+                      placeholder="Collection Name"
+                      value={newCollection.name}
+                      maxLength={15}
+                      onChange={(e) =>
+                        setNewCollection((prev) => ({
+                          ...prev,
+                          name: e.target.value.slice(0, 15),
+                        }))
                       }
-                    }}
-                  />
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">API Version</label>
+                    <Input
+                      placeholder="e.g., 1.0.0"
+                      value={newCollection.apiVersion}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow only numbers and dots, max 3 dots
+                        if (
+                          /^[0-9.]*$/.test(value) &&
+                          (value.match(/\./g) || []).length <= 3
+                        ) {
+                          // Split by dots and validate each group is max 999
+                          const groups = value.split(".");
+                          const isValid = groups.every(
+                            (group) =>
+                              !group ||
+                              (parseInt(group) <= 999 && group.length <= 3)
+                          );
+                          if (isValid) {
+                            setNewCollection((prev) => ({
+                              ...prev,
+                              apiVersion: value,
+                            }));
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <Textarea
+                      placeholder="Description (optional)"
+                      value={newCollection.description}
+                      onChange={(e) =>
+                        setNewCollection((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Description</label>
-                  <Textarea
-                    placeholder="Description (optional)"
-                    value={newCollection.description}
-                    onChange={(e) =>
-                      setNewCollection((prev) => ({
-                        ...prev,
-                        description: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <div className="flex flex-col gap-3 justify-end w-full">
-                  <Button
-                    onClick={handleCreateCollection}
-                    disabled={
-                      !newCollection.name.trim() ||
-                      !newCollection.apiVersion.trim()
-                    }
-                    className="text-slate-400"
-                  >
-                    Create Collection
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsCreateOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <div className="flex flex-col gap-3 justify-end w-full">
+                    <Button
+                      onClick={handleCreateCollection}
+                      disabled={
+                        !newCollection.name.trim() ||
+                        !newCollection.apiVersion.trim()
+                      }
+                      className="text-slate-400"
+                    >
+                      Create Collection
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCreateOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search collections"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-8 bg-gray-100 shadow-inner"
+            className="pl-10 h-9 rounded-md"
           />
         </div>
       </div>

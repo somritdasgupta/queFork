@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -6,7 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Layers } from "lucide-react";
+import { Layers, FolderOpen, History } from "lucide-react";
 import { useState } from "react";
 import { CollectionsPanel } from "./collections-panel";
 import { HistoryPanel } from "./history-panel";
@@ -15,6 +17,7 @@ import { Collection, HistoryItem, SavedRequest } from "@/types";
 interface MobileNavProps {
   collections: Collection[];
   history: HistoryItem[];
+  className?: string;
   onSelectRequest: (request: SavedRequest) => void;
   onSelectHistoryItem: (item: HistoryItem) => void;
   onClearHistory: () => void;
@@ -23,24 +26,43 @@ interface MobileNavProps {
   onDeleteCollection: (collectionId: string) => void;
   onDeleteRequest: (collectionId: string, requestId: string) => void;
   onDeleteHistoryItem: (id: string) => void;
+  isHistorySavingEnabled: boolean;
+  onToggleHistorySaving: (enabled: boolean) => void;
+  onExportCollections: () => void;
+  onExportHistory: () => void;
+  onExportCollection: (collectionId: string) => void;
 }
 
-export function MobileNav({
-  collections,
-  history,
-  onSelectRequest,
-  onSelectHistoryItem,
-  onClearHistory,
-  onCreateCollection,
-  onSaveRequest,
-  onDeleteCollection,
-  onDeleteRequest,
-  onDeleteHistoryItem,
-}: MobileNavProps) {
+export function MobileNav({ ...props }: MobileNavProps) {
   const [open, setOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState<"collections" | "history">(
-    "collections"
-  );
+  const [activePanel, setActivePanel] = useState<"collections" | "history">("collections");
+
+  const tabs = [
+    {
+      id: "collections" as const,
+      label: "Collections",
+      icon: <FolderOpen className="h-4 w-4 text-emerald-500" />,
+      content: <CollectionsPanel {...props} onSelectRequest={(req) => {
+        props.onSelectRequest(req);
+        setOpen(false);
+      }} onExportCollection={props.onExportCollection} />
+    },
+    {
+      id: "history" as const,
+      label: "History",
+      content: <HistoryPanel 
+        {...props} 
+        onSelectItem={(item) => {
+          props.onSelectHistoryItem(item);
+          setOpen(false);
+        }}
+        onDeleteItem={props.onDeleteHistoryItem}
+        onToggleHistorySaving={props.onToggleHistorySaving}
+        isHistorySavingEnabled={props.isHistorySavingEnabled}
+        onExportHistory={props.onExportHistory}
+      />
+    }
+  ];
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -53,10 +75,10 @@ export function MobileNav({
           <Layers className="h-8 text-slate-400" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="w-[100vw] p-0 h-[92vh] rounded-t-lg">
-        <SheetHeader className="px-4 py-2 border-b border-gray-200 sticky top-0 bg-white z-10 rounded-t-lg">
+      <SheetContent side="bottom" className="w-[100vw] p-0 h-[92vh] rounded-t-lg glass-panel">
+        <SheetHeader className="panel-header rounded-t-lg">
           <div className="flex items-center justify-between rounded-lg">
-            <SheetTitle className="text-lg font-semibold rounded-lg">
+            <SheetTitle className="text-base md:text-lg font-semibold rounded-lg">
               {activePanel === "collections" ? "Collections" : "History"}
             </SheetTitle>
             <Button
@@ -66,54 +88,23 @@ export function MobileNav({
               onClick={() => setOpen(false)}
             ></Button>
           </div>
-          <div className="flex gap-2 mt-2 bg-slate-50 border-slate-200 border-2 rounded-lg p-1">
-            <Button
-              variant={activePanel === "collections" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActivePanel("collections")}
-              className="flex-1 text-slate-400"
-            >
-              Collections
-            </Button>
-            <Button
-              variant={activePanel === "history" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActivePanel("history")}
-              className="flex-1 text-slate-400"
-            >
-              History
-            </Button>
+          <div className="flex gap-2 mt-2 tab-container">
+            {tabs.map(tab => (
+              <Button
+                key={tab.id}
+                variant={activePanel === tab.id ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setActivePanel(tab.id)}
+                className="flex-1 tab-button mobile-tab-button"
+              >
+                {tab.icon}
+                <span className="ml-1.5">{tab.label}</span>
+              </Button>
+            ))}
           </div>
         </SheetHeader>
-        <div className="h-[calc(100%-120px)] mb-8 overflow-y-auto">
-          {activePanel === "collections" ? (
-            <CollectionsPanel
-              collections={collections}
-              onSelectRequest={(request) => {
-                onSelectRequest(request);
-                setOpen(false);
-              }}
-              onSaveRequest={onSaveRequest}
-              onCreateCollection={onCreateCollection}
-              onDeleteCollection={onDeleteCollection}
-              onDeleteRequest={onDeleteRequest}
-            />
-          ) : (
-            <HistoryPanel
-              history={history}
-              onSelectItem={(item) => {
-                onSelectHistoryItem(item);
-                setOpen(false);
-              }}
-              onClearHistory={onClearHistory}
-              onDeleteItem={onDeleteHistoryItem}
-              isMobile={true}
-              onToggleHistorySaving={function (): void {
-                throw new Error("Function not implemented.");
-              }}
-              isHistorySavingEnabled={false}
-            />
-          )}
+        <div className="h-[calc(100%-120px)] mb-8 overflow-y-auto panel-body">
+          {tabs.find(tab => tab.id === activePanel)?.content}
         </div>
       </SheetContent>
     </Sheet>

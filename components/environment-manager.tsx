@@ -1,6 +1,5 @@
 import React, {
   useState,
-  useEffect,
   forwardRef,
   useImperativeHandle,
 } from "react";
@@ -23,12 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { KeyValueEditor } from "./key-value-editor";
 import {
   Plus,
@@ -59,6 +52,7 @@ interface EnvironmentManagerProps {
   currentEnvironment: Environment | null;
   onEnvironmentChange: (environmentId: string) => void;
   onEnvironmentsUpdate: (environments: Environment[]) => void;
+  className?: string;
 }
 
 export interface EnvironmentManagerRef {

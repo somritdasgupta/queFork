@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CollectionsPanel } from "@/components/collections-panel";
 import { HistoryPanel } from "@/components/history-panel";
-import { Collection, HistoryItem, SavedRequest} from "@/types";
+import { Collection, HistoryItem, SavedRequest } from "@/types";
+import { FolderOpen, History } from "lucide-react";
 
 interface DesktopSidePanelProps {
   collections: Collection[];
@@ -17,68 +18,52 @@ interface DesktopSidePanelProps {
   onDeleteHistoryItem: (id: string) => void;
   isHistorySavingEnabled: boolean;
   onToggleHistorySaving: (enabled: boolean) => void;
+  onExportCollections: () => void;
+  onExportHistory: () => void;
+  onExportCollection: (collectionId: string) => void;
 }
 
-const DesktopSidePanel = ({
-  collections,
-  history,
-  onSelectRequest,
-  onSelectHistoryItem,
-  onClearHistory,
-  onCreateCollection,
-  onSaveRequest,
-  onDeleteCollection,
-  onDeleteRequest,
-  onDeleteHistoryItem,
-  isHistorySavingEnabled,
-  onToggleHistorySaving,
-}: DesktopSidePanelProps) => {
+const DesktopSidePanel = ({ ...props }: DesktopSidePanelProps) => {
   const [activePanel, setActivePanel] = useState<"collections" | "history">(
     "collections"
   );
 
+  const tabs = [
+    {
+      id: "collections" as const,
+      label: "Collections",
+      icon: <FolderOpen className="h-4 w-4 text-emerald-500" />,
+      content: <CollectionsPanel {...props} />,
+    },
+    {
+      id: "history" as const,
+      label: "History",
+      content: <HistoryPanel {...props} onSelectItem={props.onSelectHistoryItem} onDeleteItem={props.onDeleteHistoryItem} onExportHistory={props.onExportHistory} />,
+    },
+  ];
+
   return (
-    <div className="h-full flex flex-col bg-white border-2 rounded-lg">
-      <div className="px-2 py-2">
-        <div className="flex bg-slate-50 border-slate-200 border-2 shadow-inner rounded-lg p-1">
-          <Button
-            variant={activePanel === "collections" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActivePanel("collections")}
-            className="flex-1 text-slate-400"
-          >
-            Collections
-          </Button>
-          <Button
-            variant={activePanel === "history" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActivePanel("history")}
-            className="flex-1 text-slate-400"
-          >
-            History
-          </Button>
+    <div className="h-full flex flex-col glass-panel">
+      <div className="panel-header">
+        <div className="tab-container">
+          <div className="grid grid-cols-2 tab-list">
+            {tabs.map((tab) => (
+              <Button
+                key={tab.id}
+                variant={activePanel === tab.id ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setActivePanel(tab.id)}
+                className="tab-button"
+              >
+                {tab.icon}
+                {tab.label}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden">
-        {activePanel === "collections" ? (
-          <CollectionsPanel
-            collections={collections}
-            onSelectRequest={onSelectRequest}
-            onSaveRequest={onSaveRequest}
-            onCreateCollection={onCreateCollection}
-            onDeleteCollection={onDeleteCollection}
-            onDeleteRequest={onDeleteRequest}
-          />
-        ) : (
-          <HistoryPanel
-            history={history}
-            onSelectItem={onSelectHistoryItem}
-            onClearHistory={onClearHistory}
-            onDeleteItem={onDeleteHistoryItem}
-            onToggleHistorySaving={onToggleHistorySaving}
-            isHistorySavingEnabled={isHistorySavingEnabled}
-          />
-        )}
+      <div className="panel-body">
+        {tabs.find((tab) => tab.id === activePanel)?.content}
       </div>
     </div>
   );

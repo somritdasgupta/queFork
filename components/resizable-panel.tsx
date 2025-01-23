@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import * as ResizablePrimitive from "react-resizable-panels";
-import { FaDraftingCompass } from "react-icons/fa";
 import { RequestResponse } from "@/types";
 
 interface ResponsePanelProps {
@@ -14,7 +13,17 @@ const ResizablePanel = React.forwardRef<
   React.ComponentProps<typeof ResizablePrimitive.Panel> & ResponsePanelProps
 >(({ response, className, ...props }, ref) => (
   <ResizablePrimitive.Panel
-    className={`${className} ${response?.error ? 'max-h-auto' : ''}`}
+    className={`
+      flex flex-col overflow-hidden
+      border border-slate-200/30
+      bg-gradient-to-b from-white/60 via-slate-50/50 to-white/60
+      backdrop-blur-[8px] backdrop-saturate-150
+      shadow-[0_2px_8px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.02)]
+      supports-[backdrop-filter]:bg-white/40
+      transition-all duration-200
+      ${response?.error ? "max-h-auto" : ""}
+      ${className}
+    `}
     {...props}
     ref={ref}
   />
@@ -27,23 +36,44 @@ const ResizableHandle = ({
   ...props
 }: React.ComponentProps<typeof ResizablePrimitive.PanelResizeHandle> & {
   withHandle?: boolean;
-}) => (
-  <ResizablePrimitive.PanelResizeHandle
-    className={`rounded-lg relative flex w-px items-center justify-center after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2 after:rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 data-[panel-group-direction=vertical]:h-px data-[panel-group-direction=vertical]:w-full ${className}`}
-    {...props}
-  >
-    {withHandle && (
-      <div className="z-10 flex h-2 w-[20%] mx-auto bg-blue-500 rounded-full" />
-    )}
-  </ResizablePrimitive.PanelResizeHandle>
-);
+}) => {
+  return (
+    <ResizablePrimitive.PanelResizeHandle
+      className={`
+        group relative flex items-center justify-center
+        data-[panel-group-direction=vertical]:h-1
+        data-[panel-group-direction=vertical]:w-full
+        data-[panel-group-direction=horizontal]:w-1
+        data-[panel-group-direction=horizontal]:h-full
+        bg-transparent
+        hover:bg-slate-200/30
+        active:bg-slate-200/50
+        transition-colors duration-150
+        cursor-row-resize
+        touch-action-none
+        select-none
+        ${className}
+      `}
+      {...props}
+    >
+      {withHandle && <div className="h-0.5 w-24 bg-blue-500" />}
+    </ResizablePrimitive.PanelResizeHandle>
+  );
+};
 
 const ResizablePanelGroup = ({
   className,
   ...props
 }: React.ComponentProps<typeof ResizablePrimitive.PanelGroup>) => (
   <ResizablePrimitive.PanelGroup
-    className={`flex h-full w-full bg-slate-50 rounded-lg data-[panel-group-direction=vertical]:flex-col ${className}`}
+    className={`
+      flex h-full w-full 
+      data-[panel-group-direction=vertical]:flex-col
+      bg-gradient-to-br from-white/30 via-slate-50/30 to-white/30
+      backdrop-blur-xl backdrop-saturate-150
+      supports-[backdrop-filter]:bg-white/30
+      ${className}
+    `}
     {...props}
   />
 );
