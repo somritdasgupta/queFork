@@ -73,7 +73,7 @@ export function WebSocketPanel({
             <div className="flex gap-2 relative px-6 w-full">
               <TabsTrigger
                 value="connection"
-                className="w-full rounded-md data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all hover:bg-slate-100 font-medium flex items-center gap-2 text-slate-600"
+                className="w-full rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all hover:bg-slate-100 font-medium flex items-center gap-2 text-slate-600"
               >
                 <div
                   className={`w-2 h-2 rounded-full ${
@@ -84,7 +84,7 @@ export function WebSocketPanel({
               </TabsTrigger>
               <TabsTrigger
                 value="messages"
-                className="w-full rounded-md data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all hover:bg-slate-100 font-medium flex items-center gap-2 text-slate-600"
+                className="w-full rounded-lg data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all hover:bg-slate-100 font-medium flex items-center gap-2 text-slate-600"
               >
                 <MessageSquare className="w-4 h-4" />
                 Messages

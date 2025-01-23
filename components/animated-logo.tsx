@@ -1,11 +1,23 @@
 interface AnimatedLogoProps {
   animate?: boolean;
   showSubtitle?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  primaryColor?: string;  // Color for 'que'
+  secondaryColor?: string;  // Color for 'Fork'
+  subtitleColor?: string;  // Color for subtitle text
+  subtitlePosition?: 'bottom' | 'right';  // Control subtitle position
+  className?: string;
 }
 
 export function AnimatedLogo({
   animate = true,
   showSubtitle = true,
+  size = 'md',
+  primaryColor = 'text-slate-50',
+  secondaryColor = 'text-blue-500',
+  subtitleColor = 'text-slate-500',
+  subtitlePosition = 'bottom',
+  className = ''
 }: AnimatedLogoProps) {
   const animationClasses = animate
     ? {
@@ -21,29 +33,39 @@ export function AnimatedLogo({
         text: "",
       };
 
+  const sizeClasses = {
+    sm: 'text-lg',
+    md: 'text-2xl',
+    lg: 'text-4xl'
+  };
+
+const containerClasses = subtitlePosition === 'right' 
+    ? 'flex flex-row items-center gap-3' 
+    : 'flex flex-col items-center gap-3';
+
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className={`${containerClasses} ${className}`}>
       <div className="flex items-baseline">
         <span
-          className={`text-4xl font-bold tracking-tight ${animationClasses.title1} text-slate-800`}
+          className={`font-bold tracking-tight ${animationClasses.title1} ${primaryColor} ${sizeClasses[size]}`}
         >
           que
         </span>
         <span
-          className={`text-4xl font-black tracking-tight ${animationClasses.title2} text-blue-600`}
+          className={`font-black tracking-tight ${animationClasses.title2} ${secondaryColor} ${sizeClasses[size]}`}
         >
           Fork
         </span>
       </div>
       {showSubtitle && (
         <div className={`flex items-center gap-3 ${animationClasses.subtitle}`}>
-          <div className="h-[1px] w-12 bg-slate-900" />
+          {subtitlePosition === 'bottom' && <div className="h-[1px] w-12 bg-slate-700/50" />}
           <span
-            className={`text-sm text-slate-900 ${animationClasses.text} tracking-wider font-semibold`}
+            className={`text-sm ${subtitleColor} ${animationClasses.text} tracking-wider font-semibold`}
           >
             by Somrit Dasgupta
           </span>
-          <div className="h-[1px] w-12 bg-slate-900" />
+          {subtitlePosition === 'bottom' && <div className="h-[1px] w-12 bg-slate-700/50" />}
         </div>
       )}
     </div>

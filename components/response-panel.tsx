@@ -304,7 +304,7 @@ export function ResponsePanel({
                 <Send className="h-4 w-4" />
                 Request URL
               </label>
-              <div className="p-2 bg-slate-800/30 rounded-md border border-slate-700/50">
+              <div className="p-2 bg-slate-800/30 rounded-lg border border-slate-700/50">
                 <code className="text-sm text-blue-400 font-mono break-all">
                   {url}
                 </code>
@@ -316,7 +316,7 @@ export function ResponsePanel({
                 <AlertCircle className="h-4 w-4 text-red-400" />
                 Error Details
               </label>
-              <div className="p-2 bg-slate-800/30 rounded-md border border-red-700/30">
+              <div className="p-2 bg-slate-800/30 rounded-lg border border-red-700/30">
                 <pre className="text-sm text-red-400 font-mono whitespace-pre-wrap break-words">
                   {response.error}
                 </pre>
@@ -327,22 +327,22 @@ export function ResponsePanel({
           {/* Right side - Troubleshooting */}
           <div className="lg:w-1/2 p-4 font-mono text-sm bg-slate-800/20 rounded-lg border border-slate-700/50">
             <ul className="space-y-0 text-sm text-slate-400">
-              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-md transition-colors">
+              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-lg transition-colors">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 <span>
                   Check your network connection{" "}
                   {!isOnline && "(Currently Offline)"}
                 </span>
               </li>
-              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-md transition-colors">
+              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-lg transition-colors">
                 <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
                 <span>Verify the API endpoint URL is correct</span>
               </li>
-              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-md transition-colors">
+              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-lg transition-colors">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                 <span>Ensure proper authentication if required</span>
               </li>
-              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-md transition-colors">
+              <li className="flex items-center gap-4 p-2 hover:bg-slate-800/30 rounded-lg transition-colors">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                 <span>Check request headers and parameters</span>
               </li>
@@ -429,46 +429,64 @@ export function ResponsePanel({
           >
             Headers
           </TabsTrigger>
-          <DropdownMenu>
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <TabsTrigger
-                value="code"
-                className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800 group flex items-center gap-2"
+              value="code"
+              className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800 group flex items-center gap-2"
               >
-                <span>Code</span>
-                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-700/50 group-hover:bg-slate-700">
-                  {languageConfigs[selectedLanguage].icon({ 
-                    className: "h-3.5 w-3.5 text-blue-400" 
-                  })}
-                </div>
+              <span>Code</span>
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-900">
+              {languageConfigs[selectedLanguage].icon({ 
+              className: "h-3.5 w-3.5 text-blue-400" 
+              })}
+              </div>
               </TabsTrigger>
             </DropdownMenuTrigger>
             <DropdownMenuContent 
               align="start" 
-              className="bg-slate-800 border-slate-600 max-h-[400px] overflow-y-auto rounded-lg shadow-lg backdrop-blur-sm"
+              className="bg-slate-800 border-slate-600 max-h-[40vh] overflow-hidden rounded-lg shadow-lg backdrop-blur-sm"
             >
+              <div className="p-2 sticky top-0 z-10 bg-slate-800 border-b border-slate-700">
+              <Input
+                type="search"
+                placeholder="Search languages..."
+                className="h-8 bg-slate-900 border-slate-700 text-xs"
+                onChange={(e) => {
+                const searchBox = e.currentTarget;
+                const items = searchBox.closest('[role="menu"]')?.querySelectorAll('[role="menuitem"]');
+                items?.forEach(item => {
+                  const text = item.textContent?.toLowerCase() || '';
+                  const match = text.includes(searchBox.value.toLowerCase());
+                  (item as HTMLElement).style.display = match ? '' : 'none';
+                });
+                }}
+              />
+              </div>
+              <div className="overflow-y-auto scrollbar-none" style={{ maxHeight: "calc(40vh - 60px)" }}>
               {Object.entries(languageConfigs).map(([key, config]) => (
                 <DropdownMenuItem
-                  key={key}
-                  onClick={() => setSelectedLanguage(key as CodeGenLanguage)}
-                  className={cn(
-                    "flex items-center gap-3 py-2.5 px-3 cursor-pointer transition-colors hover:bg-slate-700",
-                    selectedLanguage === key && "bg-blue-500/10 text-blue-400"
-                  )}
+                key={key}
+                onClick={() => setSelectedLanguage(key as CodeGenLanguage)}
+                className={cn(
+                  "flex items-center gap-3 py-2.5 px-3 cursor-pointer transition-colors hover:bg-slate-700 rounded-lg",
+                  selectedLanguage === key && "bg-blue-500/10 text-blue-400"
+                )}
                 >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-700/50">
-                    {config.icon({ className: "h-4 w-4 text-blue-300" })}
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-xs md:text-sm font-medium text-slate-400">{config.name}</span>
-                  </div>
-                  {selectedLanguage === key && (
-                    <Check className="h-4 w-4 ml-auto text-blue-400" />
-                  )}
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900">
+                  {config.icon({ className: "h-4 w-4 text-blue-400" })}
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs md:text-sm font-medium text-blue-400 hover:text-slate-900">{config.name}</span>
+                </div>
+                {selectedLanguage === key && (
+                  <Check className="h-4 w-4 ml-auto text-blue-400" />
+                )}
                 </DropdownMenuItem>
               ))}
+              </div>
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
 
           <div className="ml-auto flex items-center pr-2">
             <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>

@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { KeyValueEditor } from "./key-value-editor";
 import { AuthSection } from "./auth-section";
 import { KeyValuePair, RequestBody } from "@/types";
-import { Search, List, FileJson, FormInput, Link, FileText, KeyRound } from "lucide-react";
-import { SiAuth0 } from "react-icons/si";
+import { SearchCode, List, FileJson, FormInput, Link, FileText, KeyRound, Search } from "lucide-react";
 import { Textarea } from "./ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
@@ -56,7 +55,7 @@ export function RequestPanel({
 
   return (
     <div className="h-full flex flex-col">
-      <Tabs defaultValue="params" className="flex-1 px-2 py-3 rounded-md">
+      <Tabs defaultValue="params" className="flex-1 px-2 py-3 rounded-lg">
         <div className="rounded-lg border border-slate-200/30 bg-gradient-to-b from-white/60 via-slate-50/50 to-white/60 shadow-inner backdrop-blur-[8px]">
           <div className="overflow-x-auto -mx-1 px-1 jelly-scroll rounded-lg">
             <TabsList className="flex md:grid md:grid-cols-7 items-center rounded-lg bg-slate-50 px-1 text-gray-700 shadow-inner w-max md:w-full motion-safe:transform-gpu">
@@ -64,7 +63,7 @@ export function RequestPanel({
                 value="params"
                 className="flex-none md:flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 md:px-2 py-2 text-xs font-semibold transition-all hover:bg-gray-200 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-400 data-[state=active]:shadow-sm min-w-[80px]"
               >
-                <Search className="h-4 w-4 text-emerald-500" />
+                <SearchCode className="h-4 w-4 text-emerald-500" />
                 Query
               </TabsTrigger>
               <TabsTrigger
@@ -112,7 +111,7 @@ export function RequestPanel({
                 <CardHeader className="py-2 px-4 border-b-2 border-slate-200/40 panel-content">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Search className="h-4 w-4 text-emerald-500" />
+                      <SearchCode className="h-4 w-4 text-emerald-500" />
                       <h3 className="text-sm font-medium text-slate-700">Query Parameters</h3>
                     </div>
                     <Badge variant="secondary" className="text-xs bg-slate-100">

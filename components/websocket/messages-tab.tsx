@@ -412,7 +412,7 @@ export function MessagesTab() {
                             e.stopPropagation();
                             copyMessage(msg.content);
                           }}
-                          className="h-7 w-7 p-0 hover:bg-slate-100 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-7 w-7 p-0 hover:bg-slate-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <Copy className="h-4 w-4 text-slate-500" />
                         </Button>

@@ -38,6 +38,7 @@ const DesktopSidePanel = ({ ...props }: DesktopSidePanelProps) => {
     {
       id: "history" as const,
       label: "History",
+      icon: <History className="h-4 w-4 text-blue-500" />,
       content: <HistoryPanel {...props} onSelectItem={props.onSelectHistoryItem} onDeleteItem={props.onDeleteHistoryItem} onExportHistory={props.onExportHistory} />,
     },
   ];
@@ -56,7 +57,7 @@ const DesktopSidePanel = ({ ...props }: DesktopSidePanelProps) => {
                 className="tab-button"
               >
                 {tab.icon}
-                {tab.label}
+                <span className="ml-1.5">{tab.label}</span>
               </Button>
             ))}
           </div>
@@ -70,3 +71,4 @@ const DesktopSidePanel = ({ ...props }: DesktopSidePanelProps) => {
 };
 
 export default DesktopSidePanel;
+

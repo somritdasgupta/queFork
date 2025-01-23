@@ -1,4 +1,5 @@
 import { FaGithub, FaLinkedin } from 'react-icons/fa';
+import { AnimatedLogo } from './animated-logo';
 
 const Footer = () => {
   return (
@@ -6,12 +7,16 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {/* Left section */}
-          <div className="flex items-center space-x-2">
-            <div className="text-lg font-semibold">
-              <span className="text-emerald-500">que</span>
-              <span className="text-slate-300">Fork</span>
-            </div>
-            <span className="text-sm text-slate-500 items-center mt-0.5">by Somrit Dasgupta</span>
+          <div className="flex items-center gap-3">
+            <AnimatedLogo 
+              animate={false} 
+              showSubtitle={true} 
+              size="sm" 
+              subtitlePosition="right"
+              primaryColor="text-slate-50"
+              secondaryColor="text-blue-500"
+              subtitleColor="text-slate-500"
+            />
           </div>
       
           {/* Right section */}

@@ -56,7 +56,8 @@ const ResizableHandle = ({
       `}
       {...props}
     >
-      {withHandle && <div className="h-0.5 w-24 bg-blue-500" />}
+      {withHandle && <div className="h-0.5 w-full animate-pulse bg-blue-500" />}
+     
     </ResizablePrimitive.PanelResizeHandle>
   );
 };

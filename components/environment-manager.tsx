@@ -1,8 +1,4 @@
-import React, {
-  useState,
-  forwardRef,
-  useImperativeHandle,
-} from "react";
+import React, { useState, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -76,14 +72,14 @@ const EnvironmentHelp = () => (
       <div className="space-y-4">
         <div>
           <h4 className="font-medium">Usage</h4>
-          <p className="text-sm text-slate-4000">
+          <p className="text-sm text-slate-500">
             Use{" "}
             <code className="bg-gray-100 px-1.5 py-0.5 rounded">
               {"{{variable_name}}"}
             </code>{" "}
             to reference variables in:
           </p>
-          <ul className="list-disc list-inside text-sm text-slate-400 mt-2 space-y-1">
+          <ul className="list-disc list-inside text-sm text-slate-500 mt-2 space-y-1">
             <li>URL</li>
             <li>Headers</li>
             <li>Query Parameters</li>
@@ -285,10 +281,10 @@ export const EnvironmentManager = forwardRef<
             value={currentEnvironment?.id || ""}
             onValueChange={onEnvironmentChange}
           >
-            <SelectTrigger className="w-full border-2 border-blue-200 bg-blue-50 font-medium text-blue-700 hover:bg-gray-200 hover:border-blue-200">
-              <SelectValue placeholder="Select env" />
+            <SelectTrigger className="w-full bg-slate-900 font-medium text-slate-400 hover:border-slate-700 rounded-lg">
+              <SelectValue placeholder="Environments" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-lg border border-slate-300 bg-slate-50">
               {environments.map((env) => (
                 <SelectItem key={env.id} value={env.id}>
                   {env.name}
@@ -302,7 +298,7 @@ export const EnvironmentManager = forwardRef<
           <DialogTrigger asChild>
             <Button
               size="icon"
-              className="h-10 w-12 flex-shrink-0 bg-slate-900 hover:bg-gray-800 text-slate-400"
+              className="h-10 w-12 flex-shrink-0 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-lg"
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -331,16 +327,16 @@ export const EnvironmentManager = forwardRef<
                         Learn how to use and manage environment on queFork
                       </DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="h-[400px]">
+                    <ScrollArea className="h-[500px]">
                       <div className="space-y-4 pr-4">
                         <div>
                           <h4 className="font-medium">Environment Types</h4>
                           <div className="space-y-2 mt-2">
                             <div>
-                              <p className="text-sm font-medium text-gray-700">
+                              <p className="text-sm font-medium text-slate-700">
                                 Default (Global) Environment
                               </p>
-                              <p className="text-sm text-slate-4000">
+                              <p className="text-sm text-slate-500">
                                 • Variables defined here are available across
                                 all environments
                                 <br />
@@ -350,10 +346,10 @@ export const EnvironmentManager = forwardRef<
                               </p>
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-700">
+                              <p className="text-sm font-medium text-slate-700">
                                 Custom Environments
                               </p>
-                              <p className="text-sm text-slate-4000">
+                              <p className="text-sm text-slate-500">
                                 • Environment-specific variables
                                 <br />
                                 • Override global variables if same key exists
@@ -366,7 +362,7 @@ export const EnvironmentManager = forwardRef<
 
                         <div>
                           <h4 className="font-medium">Import Format</h4>
-                          <p className="text-sm text-slate-4000 mb-2">
+                          <p className="text-sm text-slate-500 mb-2">
                             JSON structure for importing environments:
                           </p>
                           <pre className="bg-gray-100 p-2 rounded text-sm">
@@ -393,14 +389,14 @@ export const EnvironmentManager = forwardRef<
 
                         <div>
                           <h4 className="font-medium">Usage</h4>
-                          <p className="text-sm text-slate-4000">
+                          <p className="text-sm text-slate-500">
                             Use{" "}
                             <code className="bg-gray-100 px-1.5 py-0.5 rounded">
                               {"{{variable_name}}"}
                             </code>{" "}
                             to reference variables in:
                           </p>
-                          <ul className="list-disc list-inside text-sm text-slate-4000 mt-2 space-y-1">
+                          <ul className="list-disc list-inside text-sm text-slate-500 mt-2 space-y-1">
                             <li>URL</li>
                             <li>Headers</li>
                             <li>Query Parameters</li>
@@ -411,7 +407,7 @@ export const EnvironmentManager = forwardRef<
                           <h4 className="font-medium">Examples</h4>
                           <div className="space-y-3 mt-2">
                             <div>
-                              <p className="text-sm text-slate-4000">
+                              <p className="text-sm text-slate-500">
                                 URL with base URL and version:
                               </p>
                               <pre className="bg-gray-100 p-2 rounded text-sm">
@@ -422,7 +418,7 @@ export const EnvironmentManager = forwardRef<
                               </pre>
                             </div>
                             <div>
-                              <p className="text-sm text-slate-4000">
+                              <p className="text-sm text-slate-500">
                                 Headers with authentication:
                               </p>
                               <pre className="bg-gray-100 p-2 rounded text-sm">
@@ -432,7 +428,7 @@ export const EnvironmentManager = forwardRef<
                               </pre>
                             </div>
                             <div>
-                              <p className="text-sm text-slate-4000">
+                              <p className="text-sm text-slate-500">
                                 Query parameters:
                               </p>
                               <pre className="bg-gray-100 p-2 rounded text-sm">
@@ -443,7 +439,7 @@ export const EnvironmentManager = forwardRef<
                               </pre>
                             </div>
                             <div>
-                              <p className="text-sm text-slate-4000">
+                              <p className="text-sm text-slate-500">
                                 Request body:
                               </p>
                               <pre className="bg-gray-100 p-2 rounded text-sm">
@@ -465,6 +461,7 @@ export const EnvironmentManager = forwardRef<
                   variant="outline"
                   size="sm"
                   onClick={handleImportEnvironment}
+                  className="rounded-lg"
                 >
                   <Upload className="h-4 w-4" />
                 </Button>
@@ -472,24 +469,28 @@ export const EnvironmentManager = forwardRef<
                   placeholder="Environment name"
                   value={newEnvironmentName}
                   onChange={(e) => setNewEnvironmentName(e.target.value)}
+                  className="rounded-lg"
                 />
                 <Button
                   onClick={handleCreateEnvironment}
                   disabled={!newEnvironmentName.trim()}
+                  className="rounded-lg"
                 >
                   <Plus className="h-4 w-4 text-slate-400" />
                 </Button>
               </div>
 
-              <ScrollArea className="h-[400px] rounded-md border">
+              <ScrollArea className="h-[400px] rounded-lg border border-slate-300">
                 <div className="p-4 space-y-4">
                   {environments.map((env) => (
                     <div
                       key={env.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border"
+                      className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-300"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{env.name}</span>
+                        <span className="font-medium text-slate-700">
+                          {env.name}
+                        </span>
                         {env.global && (
                           <Badge variant="secondary">Global</Badge>
                         )}
@@ -499,6 +500,7 @@ export const EnvironmentManager = forwardRef<
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDuplicateEnvironment(env)}
+                          className="rounded-lg"
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
@@ -506,6 +508,7 @@ export const EnvironmentManager = forwardRef<
                           variant="ghost"
                           size="sm"
                           onClick={() => handleExportEnvironment(env)}
+                          className="rounded-lg"
                         >
                           <Download className="h-4 w-4" />
                         </Button>
@@ -513,6 +516,7 @@ export const EnvironmentManager = forwardRef<
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditingEnvironment(env)}
+                          className="rounded-lg"
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -520,7 +524,7 @@ export const EnvironmentManager = forwardRef<
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 rounded-lg"
                             onClick={() => handleDeleteEnvironment(env.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -588,7 +592,12 @@ export const EnvironmentManager = forwardRef<
               </div>
 
               <DialogFooter>
-                <Button onClick={handleSaveEnvironment} className="text-slate-400">Save changes</Button>
+                <Button
+                  onClick={handleSaveEnvironment}
+                  className="text-slate-400"
+                >
+                  Save changes
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

@@ -23,6 +23,11 @@ interface HistoryPanelProps {
   onExportHistory: () => void;
 }
 
+const truncateUrl = (url: string, maxLength: number = 30) => {
+  if (url.length <= maxLength) return url;
+  return url.substring(0, maxLength) + '...';
+};
+
 export function HistoryPanel({
   history,
   onSelectItem,
@@ -46,7 +51,7 @@ export function HistoryPanel({
             variant="outline"
             size="sm"
             onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
-            className="text-xs h-8 w-full rounded-md"
+            className="text-xs h-8 w-full rounded-lg"
           >
             <History className="h-4 w-4 mr-2" />
             {isHistorySavingEnabled ? "Saving On" : "Saving Off"}
@@ -57,7 +62,7 @@ export function HistoryPanel({
               variant="outline"
               size="sm"
               onClick={onExportHistory}
-              className="rounded-md"
+              className="rounded-lg"
             >
               <ArrowDownToLine className="h-4 w-4" />
             </Button>
@@ -66,7 +71,7 @@ export function HistoryPanel({
               variant="outline"
               size="sm"
               onClick={onClearHistory}
-              className="rounded-md"
+              className="rounded-lg"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -79,7 +84,7 @@ export function HistoryPanel({
             placeholder="Search history"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-9 rounded-md"
+            className="pl-10 h-9 rounded-lg"
           />
         </div>
       </div>
@@ -100,7 +105,7 @@ export function HistoryPanel({
             {filteredHistory.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-2 p-2 bg-white border rounded-md hover:bg-gray-50 cursor-pointer"
+                className="flex items-center gap-2 p-2 bg-white border rounded-lg hover:bg-gray-50 cursor-pointer group"
                 onClick={() => onSelectItem(item)}
               >
                 <Badge
@@ -110,8 +115,11 @@ export function HistoryPanel({
                   {item.method}
                 </Badge>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-mono text-gray-700 truncate">
-                    {item.url}
+                  <div className="relative">
+                    <div className="text-sm font-mono text-gray-700 truncate pr-6">
+                      {truncateUrl(item.url)}
+                    </div>
+                    <div className="absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white via-white to-transparent" />
                   </div>
                   <div className="text-xs text-gray-500">
                     {formatDistanceToNow(new Date(item.timestamp), {
@@ -124,7 +132,7 @@ export function HistoryPanel({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <MoreVertical className="h-4 w-4" />

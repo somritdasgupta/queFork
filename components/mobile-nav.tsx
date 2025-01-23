@@ -8,7 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Layers, FolderOpen, History } from "lucide-react";
+import { Layers, FolderOpen, History} from "lucide-react";
 import { useState } from "react";
 import { CollectionsPanel } from "./collections-panel";
 import { HistoryPanel } from "./history-panel";
@@ -50,6 +50,7 @@ export function MobileNav({ ...props }: MobileNavProps) {
     {
       id: "history" as const,
       label: "History",
+      icon: <History className="h-4 w-4 text-blue-500" />,
       content: <HistoryPanel 
         {...props} 
         onSelectItem={(item) => {

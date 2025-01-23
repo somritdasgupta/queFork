@@ -34,9 +34,12 @@ export function KeyValueEditor({
   };
 
   const removePair = (index: number) => {
-    const newPairs = [...pairs];
-    newPairs.splice(index, 1);
-    onChange(newPairs);
+    // Only allow removal if there's more than one pair
+    if (pairs.length > 1) {
+      const newPairs = [...pairs];
+      newPairs.splice(index, 1);
+      onChange(newPairs);
+    }
   };
 
   const updatePair = (
@@ -51,7 +54,7 @@ export function KeyValueEditor({
 
   return (
     <div className="space-y-4">
-      <ScrollArea className="h-auto max-h-[210px] overflow-y-auto pr-4">
+      <ScrollArea className="h-auto max-h-[210px] overflow-y-auto">
         <div className="space-y-3">
           {pairs.map((pair, index) => (
             <div key={index} className="group flex items-start gap-2 relative">
@@ -73,7 +76,7 @@ export function KeyValueEditor({
                 }}
               >
                 <div className="relative">
-                  <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                  <Key className="absolute left-2.5 top-3 h-4 w-4 text-slate-400" />
                   <Input
                     placeholder="Key"
                     value={pair.key}
@@ -82,7 +85,7 @@ export function KeyValueEditor({
                   />
                 </div>
                 <div className="relative">
-                  <Type className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                  <Type className="absolute left-2.5 top-3 h-4 w-4 text-slate-400" />
                   <Input
                     placeholder="Value"
                     value={pair.value}
@@ -92,7 +95,7 @@ export function KeyValueEditor({
                 </div>
                 {showDescription && (
                   <div className="relative">
-                    <AlignLeft className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                    <AlignLeft className="absolute left-2.5 top-3 h-4 w-4 text-slate-400" />
                     <Input
                       placeholder="Description"
                       value={pair.description || ""}
@@ -108,7 +111,12 @@ export function KeyValueEditor({
                 variant="ghost"
                 size="icon"
                 onClick={() => removePair(index)}
-                className="h-10 w-10 rounded-lg border-2 border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition-colors"
+                disabled={pairs.length === 1}
+                className={`h-10 w-10 rounded-lg border-2 border-slate-200 transition-colors ${
+                  pairs.length === 1
+                    ? "opacity-50 cursor-not-allowed hover:border-slate-200 hover:bg-transparent"
+                    : "hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+                }`}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

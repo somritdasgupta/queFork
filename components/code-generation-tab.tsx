@@ -1,17 +1,7 @@
-import { useState } from 'react';
-import { Check, Code2 } from 'lucide-react';
-import { languageConfigs, type CodeGenLanguage } from '@/utils/code-generators';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { languageConfigs, type CodeGenLanguage } from "@/utils/code-generators";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 interface CodeGenerationTabProps {
   getGeneratedCode: () => string;
@@ -22,9 +12,8 @@ interface CodeGenerationTabProps {
 export function CodeGenerationTab({
   getGeneratedCode,
   selectedLanguage,
-  setSelectedLanguage,
 }: CodeGenerationTabProps) {
-  const code = getGeneratedCode()?.trim() || '// No code generated yet';
+  const code = getGeneratedCode()?.trim() || "// No code generated yet";
 
   return (
     <div className="h-full w-full">
@@ -39,28 +28,28 @@ export function CodeGenerationTab({
                     ...vscDarkPlus,
                     'pre[class*="language-"]': {
                       margin: 0,
-                      background: 'rgb(15 23 42 / 0.3)',
-                      fontSize: '11px',
-                      lineHeight: '20px',
-                      whiteSpace: 'pre-wrap',
-                      wordWrap: 'break-word'
+                      background: "rgb(15 23 42 / 0.3)",
+                      fontSize: "11px",
+                      lineHeight: "20px",
+                      whiteSpace: "pre-wrap",
+                      wordWrap: "break-word",
                     },
                     'code[class*="language-"]': {
-                      fontFamily: 'var(--font-mono)',
-                      textAlign: 'left',
-                      whiteSpace: 'pre-wrap',
-                      wordSpacing: 'normal',
+                      fontFamily: "var(--font-mono)",
+                      textAlign: "left",
+                      whiteSpace: "pre-wrap",
+                      wordSpacing: "normal",
                       tabSize: 2,
-                      wordBreak: 'break-word',
-                      lineHeight: '20px'
-                    }
+                      wordBreak: "break-word",
+                      lineHeight: "20px",
+                    },
                   }}
                   customStyle={{
                     margin: 0,
-                    padding: '1rem',
-                    background: 'transparent',
-                    fontSize: '11px',
-                    lineHeight: '20px'
+                    padding: "1rem",
+                    background: "transparent",
+                    fontSize: "11px",
+                    lineHeight: "20px",
                   }}
                   showLineNumbers={false}
                   wrapLongLines={true}

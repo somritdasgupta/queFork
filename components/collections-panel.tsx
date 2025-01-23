@@ -113,7 +113,7 @@ export function CollectionsPanel({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 opacity-50 hover:opacity-100 transition-opacity"
+              className="h-8 w-8 p-0 opacity-70 hover:opacity-100 transition-opacity"
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
@@ -194,7 +194,7 @@ export function CollectionsPanel({
                 prev === "name" ? "date" : prev === "date" ? "method" : "name"
               )
             }
-            className="text-xs h-8 w-full rounded-md"
+            className="text-xs h-8 w-full rounded-lg"
           >
             <SortAsc className="h-4 w-4 mr-2" />
             {sortBy}
@@ -205,7 +205,7 @@ export function CollectionsPanel({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs h-8 w-full rounded-md"
+                className="text-xs h-8 w-full rounded-lg"
               >
                 <Filter className="h-4 w-4 mr-2" />
                 {filterBy || "All"}
@@ -231,14 +231,14 @@ export function CollectionsPanel({
               variant="outline"
               size="sm"
               onClick={onExportCollections}
-              className="rounded-md"
+              className="rounded-lg"
             >
               <ArrowDownToLine className="h-4 w-4" />
             </Button>
 
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-md">
+                <Button variant="outline" size="sm" className="rounded-lg">
                   <Plus className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
@@ -339,7 +339,7 @@ export function CollectionsPanel({
             placeholder="Search collections"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-9 rounded-md"
+            className="pl-10 h-9 rounded-lg"
           />
         </div>
       </div>
@@ -348,11 +348,11 @@ export function CollectionsPanel({
       <ScrollArea className="flex-1">
         {collections.length === 0 ? (
           <div className="flex flex-col items-center justify-center mt-12 py-12 px-4">
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 p-6 mb-8 shadow-lg shadow-inner">
+            <div className="bg-white rounded-xl border-2 p-6 mb-8 shadow-inner">
               <Clock className="h-8 w-8 text-gray-400 animate-pulse" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No Collections Found
+              No Collections Yet
             </h3>
             <div className="max-w-sm text-center space-y-2">
               <p className="text-sm text-gray-500">
@@ -368,7 +368,7 @@ export function CollectionsPanel({
                 <AccordionItem
                   key={collection.id}
                   value={collection.id}
-                  className="border-2 rounded-lg hover:border-gray-300 bg-gray-50 transition-colors"
+                  className="border cursor-pointer rounded-lg hover:border-gray-300 bg-white transition-colors"
                 >
                   <AccordionTrigger className="px-4 py-3 hover:no-underline">
                     {renderCollectionHeader(collection)}
@@ -398,7 +398,7 @@ export function CollectionsPanel({
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-7 w-7 p-0 opacity-50 hover:opacity-100 transition-opacity"
+                                    className="h-7 w-7 p-0 opacity-70 hover:opacity-100 transition-opacity"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <MoreVertical className="h-4 w-4" />

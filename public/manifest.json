@@ -1,0 +1,10 @@
+{
+  "name": "queFork",
+  "short_name": "queFork",
+  "theme_color": "#1e293b",
+  "background_color": "#1e293b",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/"
+}

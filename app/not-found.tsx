@@ -1,11 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Terminal, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedLogo } from '@/components/animated-logo';
+
+export const metadata = {
+  title: "Not Found - queFork",
+};
+
+export const viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#1e293b" },
+    { media: "(prefers-color-scheme: dark)", color: "#1e293b" }
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default function NotFound() {
   useEffect(() => {
@@ -13,34 +27,40 @@ export default function NotFound() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-lg px-4"
       >
-        {/* Logo */}
         <div className="mb-16">
-          <AnimatedLogo animate={false} showSubtitle={false} />
+          <AnimatedLogo 
+            animate={true} 
+            showSubtitle={false} 
+            size="lg" 
+            subtitlePosition="bottom"
+            primaryColor="text-slate-900"
+            secondaryColor="text-blue-500"
+            subtitleColor="text-slate-500"
+          />
         </div>
 
         {/* Error Display */}
         <div className="space-y-6 text-center mb-12">
-          <h1 className="text-[180px] leading-none font-black tracking-tighter text-gray-900">
+          <h1 className="text-[180px] leading-none font-black tracking-tighter text-slate-900">
             404
           </h1>
-          <p className="text-2xl font-medium text-gray-500">
+          <p className="text-2xl font-medium text-slate-400">
             This page doesn't exist.
           </p>
         </div>
 
-        {/* Action Buttons */}
         <div className="flex justify-center gap-6">
           <Link href="/">
             <Button 
               variant="secondary"
               size="lg"
-              className="bg-slate-100 hover:bg-slate-200/80  border-slate-200 border-2 text-slate-600 gap-2 text-base transition-all backdrop-blur-sm"
+              className="bg-slate-800 hover:bg-slate-700 border-slate-700 border text-slate-400 gap-2 text-base transition-all backdrop-blur-sm"
             >
               <Terminal className="w-4 h-4" />
               Home
@@ -53,7 +73,7 @@ export default function NotFound() {
             <Button 
               variant="secondary"
               size="lg"
-              className="bg-slate-100 hover:bg-slate-200/80 border-slate-200 border-2 text-slate-600 gap-2 text-base transition-all backdrop-blur-sm"
+              className="bg-slate-800 hover:bg-slate-700 border-slate-700 border text-slate-400 gap-2 text-base transition-all backdrop-blur-sm"
             >
               <Github className="w-4 h-4" />
               GitHub

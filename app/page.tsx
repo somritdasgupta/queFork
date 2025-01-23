@@ -525,7 +525,7 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-slate-900/50 text-slate-400">
+    <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-slate-900/50 text-slate-600">
       <header className="fixed top-0 left-0 right-0 z-50 bg-slate-800">
         <div className="flex flex-col md:flex-row md:h-16">
           {/* Mobile Layout */}
@@ -542,7 +542,7 @@ export default function Page() {
                 onDeleteCollection={handleDeleteCollection}
                 onDeleteRequest={handleDeleteRequest}
                 onDeleteHistoryItem={handleDeleteHistoryItem}
-                className="rounded-md border border-slate-700 hover:bg-slate-700/50"
+                className="rounded-lg border border-slate-700 hover:bg-slate-700/50"
                 isHistorySavingEnabled={isHistorySavingEnabled}
                 onToggleHistorySaving={toggleHistorySaving}
                 onExportCollections={handleExportCollections}
@@ -589,7 +589,7 @@ export default function Page() {
                 </Select>
                 <div className="relative flex-1">
                   <Input
-                    className={`w-full text-xs font-medium bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all shadow-none ${
+                    className={`w-full text-xs font-mono bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all shadow-none ${
                       url &&
                       !url.match(
                         /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
@@ -616,7 +616,7 @@ export default function Page() {
                   )}
                 </div>
                 <Button
-                  className="bg-slate-900 hover:bg-slate-700 text-slate-400 px-4 py-2 h-9 rounded-md border border-slate-700"
+                  className="bg-slate-900 hover:bg-slate-700 text-slate-400 px-4 py-2 h-9 rounded-lg border border-slate-700"
                   onClick={handleSendRequest}
                   disabled={
                     isLoading ||
@@ -660,7 +660,7 @@ export default function Page() {
                   currentEnvironment={currentEnvironment}
                   onEnvironmentChange={handleEnvironmentChange}
                   onEnvironmentsUpdate={handleEnvironmentsUpdate}
-                  className="rounded-md border border-slate-700 bg-slate-900 text-xs"
+                  className="rounded-lg border border-slate-700 bg-slate-900 text-xs"
                 />
               </div>
             </div>
@@ -680,7 +680,7 @@ export default function Page() {
                 onDeleteCollection={handleDeleteCollection}
                 onDeleteRequest={handleDeleteRequest}
                 onDeleteHistoryItem={handleDeleteHistoryItem}
-                className="rounded-md border border-slate-700 hover:bg-slate-700/50"
+                className="rounded-lg border border-slate-700 hover:bg-slate-700/50"
                 isHistorySavingEnabled={isHistorySavingEnabled}
                 onToggleHistorySaving={toggleHistorySaving}
                 onExportCollections={handleExportCollections}
@@ -734,7 +734,7 @@ export default function Page() {
               <div className="flex-1 flex items-center gap-3">
                 <div className="flex-1 relative">
                   <Input
-                    className={`w-full text-xs font-medium bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all shadow-none ${
+                    className={`w-full text-sm font-mono bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all shadow-none ${
                       url &&
                       !url.match(
                         /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/

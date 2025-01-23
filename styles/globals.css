@@ -3,6 +3,15 @@
 @tailwind components;
 @tailwind utilities;
 
+* {
+  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;  /* Internet Explorer and Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, and Opera */
+}
+
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
@@ -23,7 +32,7 @@
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
   --ring: 262 83% 58%;
-  --radius: 0.5rem;
+  --radius: 0.6rem;
 }
 
 .dark {
