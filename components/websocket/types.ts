@@ -1,5 +1,11 @@
 import { MutableRefObject } from "react";
 
+export interface ProtocolConfig {
+  autoReconnect?: boolean;
+  reconnectInterval?: number;
+  maxReconnectAttempts?: number;
+}
+
 export interface WebSocketContextType {
   ws: MutableRefObject<WebSocket | null>;
   isConnected: boolean;
@@ -44,6 +50,3 @@ export interface WebSocketContextType {
   unsubscribeFromTopic: (topic: string) => void;
 }
 
-export interface ProtocolConfig {
-  // Just a base config, no protocol specifics
-}

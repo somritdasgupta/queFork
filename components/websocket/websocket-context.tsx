@@ -1,6 +1,5 @@
 "use client";
 
-// websocket-context.tsx
 import React, {
   createContext,
   useContext,
@@ -619,6 +618,29 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       sendMessage(JSON.stringify({ type: 'unsubscribe', topic }));
     }
   };
+
+  useEffect(() => {
+    const handleHistorySelect = (event: CustomEvent) => {
+      const { url, protocol } = event.detail;
+      if (url) {
+        onUrlChange(url);
+        if (protocol) {
+          connect([protocol]);
+        }
+      }
+    };
+
+    window.addEventListener(
+      "setWebSocketProtocol",
+      handleHistorySelect as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "setWebSocketProtocol",
+        handleHistorySelect as EventListener
+      );
+    };
+  }, [onUrlChange, connect]);
 
   const value = {
     ws: wsRef,

@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { KeyValueEditor } from "./key-value-editor";
 import { AuthSection } from "./auth-section";
 import { KeyValuePair, RequestBody } from "@/types";
-import { SearchCode, List, FileJson, FormInput, Link, FileText, KeyRound, Search } from "lucide-react";
+import { SearchCode, List, FileJson, FormInput, Link, FileText, KeyRound, Search, Network } from "lucide-react";
 import { Textarea } from "./ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { ConnectionTab } from "./websocket/connection-tab";
 
 interface RequestPanelProps {
   headers: KeyValuePair[];
@@ -24,18 +25,19 @@ interface RequestPanelProps {
   onParamsChange: (params: KeyValuePair[]) => void;
   onBodyChange: (body: RequestBody) => void;
   onAuthChange: (auth: any) => void;
+  isWebSocketMode: boolean;
 }
 
-export function RequestPanel({
-  headers,
-  params,
-  body,
-  auth,
-  onHeadersChange,
-  onParamsChange,
-  onBodyChange,
-  onAuthChange,
-}: RequestPanelProps) {
+// Add interface for tab item
+interface TabItem {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  disabled?: boolean;
+  hidden?: boolean;
+}
+
+export function RequestPanel({ isWebSocketMode, ...props }: RequestPanelProps) {
   const bodyTabs = ["json", "form-data", "x-www-form-urlencoded", "raw"];
 
   const getBodyIcon = (type: string) => {
@@ -53,162 +55,178 @@ export function RequestPanel({
     }
   };
 
+  const tabs: TabItem[] = [
+    {
+      id: "params",
+      label: "Query",
+      icon: <SearchCode className="h-4 w-4 text-emerald-500" />,
+      disabled: isWebSocketMode
+    },
+    {
+      id: "headers",
+      label: "Headers",
+      icon: <List className="h-4 w-4 text-blue-500" />,
+      disabled: isWebSocketMode
+    },
+    {
+      id: "auth",
+      label: "Auth",
+      icon: <KeyRound className="h-4 w-4 text-red-500" />,
+      disabled: isWebSocketMode
+    },
+    ...bodyTabs.map(type => ({
+      id: `body-${type}`,
+      label: type === "form-data" ? "Form" : 
+             type === "x-www-form-urlencoded" ? "URL" :
+             type.charAt(0).toUpperCase() + type.slice(1),
+      icon: getBodyIcon(type),
+      disabled: isWebSocketMode
+    })),
+    {
+      id: "connection",
+      label: "Connection",
+      icon: <Network className="h-4 w-4 text-purple-500" />,
+      hidden: !isWebSocketMode
+    }
+  ];
+
   return (
     <div className="h-full flex flex-col">
-      <Tabs defaultValue="params" className="flex-1 px-2 py-3 rounded-lg">
-        <div className="rounded-lg border border-slate-200/30 bg-gradient-to-b from-white/60 via-slate-50/50 to-white/60 shadow-inner backdrop-blur-[8px]">
-          <div className="overflow-x-auto -mx-1 px-1 jelly-scroll rounded-lg">
-            <TabsList className="flex md:grid md:grid-cols-7 items-center rounded-lg bg-slate-50 px-1 text-gray-700 shadow-inner w-max md:w-full motion-safe:transform-gpu">
-              <TabsTrigger
-                value="params"
-                className="flex-none md:flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 md:px-2 py-2 text-xs font-semibold transition-all hover:bg-gray-200 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-400 data-[state=active]:shadow-sm min-w-[80px]"
-              >
-                <SearchCode className="h-4 w-4 text-emerald-500" />
-                Query
-              </TabsTrigger>
-              <TabsTrigger
-                value="headers"
-                className="flex-none md:flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 md:px-2 py-2 text-xs font-semibold transition-all hover:bg-gray-200 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-400 data-[state=active]:shadow-sm min-w-[80px]"
-              >
-                <List className="h-4 w-4 text-blue-500" />
-                Headers
-              </TabsTrigger>
-              {bodyTabs.map((type) => (
-                <TabsTrigger
-                  key={type}
-                  value={`body-${type}`}
-                  className="flex-none md:flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 md:px-2 py-2 text-xs font-semibold transition-all hover:bg-gray-200 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-400 data-[state=active]:shadow-sm min-w-[80px]"
-                  onClick={() => onBodyChange({ type: type as RequestBody['type'], content: "" })}
-                >
-                  <span className={
-                    type === 'json' ? 'text-yellow-500' :
-                    type === 'form-data' ? 'text-purple-500' :
-                    type === 'x-www-form-urlencoded' ? 'text-cyan-500' :
-                    'text-gray-500'
-                  }>
-                    {getBodyIcon(type)}
-                  </span>
-                  {type === "form-data" ? "Form" : 
-                   type === "x-www-form-urlencoded" ? "URL" :
-                   type.charAt(0).toUpperCase() + type.slice(1)}
-                </TabsTrigger>
-              ))}
-              <TabsTrigger
-                value="auth"
-                className="flex-none md:flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 md:px-2 py-2 text-xs font-semibold transition-all hover:bg-gray-200 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-400 data-[state=active]:shadow-sm min-w-[80px]"
-              >
-                <KeyRound className="h-4 w-4 text-red-500" />
-                Auth
-              </TabsTrigger>
-            </TabsList>
+      {!isWebSocketMode ? (
+        <Tabs defaultValue="params" className="flex-1 px-2 py-3 rounded-lg">
+          <div className="rounded-lg border border-slate-200/30 bg-gradient-to-b from-white/60 via-slate-50/50 to-white/60 shadow-inner backdrop-blur-[8px]">
+            <div className="overflow-x-auto -mx-1 px-1 jelly-scroll rounded-lg">
+              <TabsList className="flex gap-2 md:grid md:grid-cols-7 items-center rounded-lg bg-slate-50 px-1 text-gray-700 shadow-inner w-max md:w-full motion-safe:transform-gpu">
+                {tabs.map(tab => (
+                  !tab.hidden && (
+                    <TabsTrigger
+                      key={tab.id}
+                      value={tab.id}
+                      className="flex-none md:flex-1 inline-flex items-center justify-center gap-2 rounded-lg px-3 md:px-2 py-2 text-xs font-semibold transition-all hover:bg-gray-200 data-[state=active]:bg-slate-900 data-[state=active]:text-slate-400 data-[state=active]:shadow-sm min-w-[80px]"
+                      disabled={tab.disabled}
+                    >
+                      {tab.icon}
+                      {tab.label}
+                    </TabsTrigger>
+                  )
+                ))}
+              </TabsList>
+            </div>
           </div>
-        </div>
 
-        <ScrollArea className="flex-1">
-          <div className="py-4">
-            <TabsContent value="params" className="m-0 min-h-0">
-              <Card className="min-h-0 vercel-panel">
-                <CardHeader className="py-2 px-4 border-b-2 border-slate-200/40 panel-content">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <SearchCode className="h-4 w-4 text-emerald-500" />
-                      <h3 className="text-sm font-medium text-slate-700">Query Parameters</h3>
-                    </div>
-                    <Badge variant="secondary" className="text-xs bg-slate-100">
-                      {params.filter(p => p.enabled && p.key).length} Active
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2 panel-content">
-                  <KeyValueEditor
-                    pairs={params}
-                    onChange={onParamsChange}
-                    addButtonText="Add Query Parameter"
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="headers" className="m-0 min-h-0">
-              <Card className="min-h-0 vercel-panel">
-                <CardHeader className="py-2 px-4 border-b-2 border-slate-200/40 panel-content">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <List className="h-4 w-4 text-blue-500" />
-                      <h3 className="text-sm font-medium text-slate-700">Request Headers</h3>
-                    </div>
-                    <Badge variant="secondary" className="text-xs bg-slate-100">
-                      {headers.filter(h => h.enabled && h.key).length} Active
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2 panel-content">
-                  <KeyValueEditor
-                    pairs={headers}
-                    onChange={onHeadersChange}
-                    addButtonText="Add Header"
-                    presetKeys={commonHeaders}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            {bodyTabs.map((type) => (
-              <TabsContent key={type} value={`body-${type}`} className="m-0 min-h-0">
+          <ScrollArea className="flex-1">
+            <div className="py-4">
+              <TabsContent value="params" className="m-0 min-h-0">
                 <Card className="min-h-0 vercel-panel">
                   <CardHeader className="py-2 px-4 border-b-2 border-slate-200/40 panel-content">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className={
-                          type === 'json' ? 'text-yellow-500' :
-                          type === 'form-data' ? 'text-purple-500' :
-                          type === 'x-www-form-urlencoded' ? 'text-cyan-500' :
-                          'text-gray-500'
-                        }>
-                          {getBodyIcon(type)}
-                        </span>
-                        <h3 className="text-sm font-medium text-slate-700">
-                          {type === "form-data" ? "Form Data" :
-                           type === "x-www-form-urlencoded" ? "URL Encoded" :
-                           type.charAt(0).toUpperCase() + type.slice(1)} Body
-                        </h3>
+                        <SearchCode className="h-4 w-4 text-emerald-500" />
+                        <h3 className="text-sm font-medium text-slate-700">Query Parameters</h3>
                       </div>
-                      {(type === "form-data" || type === "x-www-form-urlencoded") && (
-                        <Badge variant="secondary" className="text-xs bg-slate-100">
-                          {(body.content as KeyValuePair[])?.filter?.(p => p.enabled && p.key)?.length || 0} Fields
-                        </Badge>
-                      )}
+                      <Badge variant="secondary" className="text-xs bg-slate-100">
+                        {props.params.filter(p => p.enabled && p.key).length} Active
+                      </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 space-y-2 panel-content">
-                    <RequestBodyContent 
-                      type={type as RequestBody['type']}
-                      body={body}
-                      onChange={onBodyChange}
+                    <KeyValueEditor
+                      pairs={props.params}
+                      onChange={props.onParamsChange}
+                      addButtonText="Add Query Parameter"
                     />
                   </CardContent>
                 </Card>
               </TabsContent>
-            ))}
-            <TabsContent value="auth" className="m-0 min-h-0">
-              <Card className="min-h-0 vercel-panel">
-                <CardHeader className="py-2 px-4 border-b-2 border-slate-200/40 panel-content">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <KeyRound className="h-4 w-4 text-red-500" />
-                      <h3 className="text-sm font-medium text-slate-700">Authentication</h3>
+              <TabsContent value="headers" className="m-0 min-h-0">
+                <Card className="min-h-0 vercel-panel">
+                  <CardHeader className="py-2 px-4 border-b-2 border-slate-200/40 panel-content">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <List className="h-4 w-4 text-blue-500" />
+                        <h3 className="text-sm font-medium text-slate-700">Request Headers</h3>
+                      </div>
+                      <Badge variant="secondary" className="text-xs bg-slate-100">
+                        {props.headers.filter(h => h.enabled && h.key).length} Active
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-xs bg-slate-100">
-                      {auth.type !== 'none' ? auth.type.toUpperCase() : 'NONE'}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2 panel-content">
-                  <AuthSection auth={auth} onChange={onAuthChange} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </div>
-        </ScrollArea>
-      </Tabs>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-2 panel-content">
+                    <KeyValueEditor
+                      pairs={props.headers}
+                      onChange={props.onHeadersChange}
+                      addButtonText="Add Header"
+                      presetKeys={commonHeaders}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              {bodyTabs.map((type) => (
+                <TabsContent key={type} value={`body-${type}`} className="m-0 min-h-0">
+                  <Card className="min-h-0 vercel-panel">
+                    <CardHeader className="py-2 px-4 border-b-2 border-slate-200/40 panel-content">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={
+                            type === 'json' ? 'text-yellow-500' :
+                            type === 'form-data' ? 'text-purple-500' :
+                            type === 'x-www-form-urlencoded' ? 'text-cyan-500' :
+                            'text-gray-500'
+                          }>
+                            {getBodyIcon(type)}
+                          </span>
+                          <h3 className="text-sm font-medium text-slate-700">
+                            {type === "form-data" ? "Form Data" :
+                             type === "x-www-form-urlencoded" ? "URL Encoded" :
+                             type.charAt(0).toUpperCase() + type.slice(1)} Body
+                          </h3>
+                        </div>
+                        {(type === "form-data" || type === "x-www-form-urlencoded") && (
+                          <Badge variant="secondary" className="text-xs bg-slate-100">
+                            {(props.body.content as KeyValuePair[])?.filter?.(p => p.enabled && p.key)?.length || 0} Fields
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-2 panel-content">
+                      <RequestBodyContent 
+                        type={type as RequestBody['type']}
+                        body={props.body}
+                        onChange={props.onBodyChange}
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              ))}
+              <TabsContent value="auth" className="m-0 min-h-0">
+                <Card className="min-h-0 vercel-panel">
+                  <CardHeader className="py-2 px-4 border-b-2 border-slate-200/40 panel-content">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <KeyRound className="h-4 w-4 text-red-500" />
+                        <h3 className="text-sm font-medium text-slate-700">Authentication</h3>
+                      </div>
+                      <Badge variant="secondary" className="text-xs bg-slate-100">
+                        {props.auth.type !== 'none' ? props.auth.type.toUpperCase() : 'NONE'}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-2 panel-content">
+                    <AuthSection auth={props.auth} onChange={props.onAuthChange} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="connection" className="m-0 min-h-0">
+                <ConnectionTab />
+              </TabsContent>
+            </div>
+          </ScrollArea>
+        </Tabs>
+      ) : (
+        <div className="flex-1 px-2 py-3">
+          <ConnectionTab />
+        </div>
+      )}
     </div>
   );
 }

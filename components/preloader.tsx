@@ -48,15 +48,15 @@ export function Preloader() {
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-8 bg-slate-300/30 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-8 bg-slate-800/90 backdrop-blur-sm">
       <AnimatedLogo
         animate={true}
         showSubtitle={true}
         size="lg"
         subtitlePosition="bottom"
-        primaryColor="text-slate-900"
+        primaryColor="text-slate-50"
         secondaryColor="text-blue-500"
-        subtitleColor="text-slate-700"
+        subtitleColor="text-slate-200"
       />
       <div className="flex flex-col items-center gap-2">
         <div className="w-48 h-1 bg-slate-200 rounded-full overflow-hidden">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +35,6 @@ import {
 } from "@/components/environment-manager";
 import { v4 as uuidv4 } from "uuid";
 import Footer from "@/components/footer";
-import { WebSocketPanel } from "@/components/websocket/websocket-panel";
 import { useWebSocket } from "@/components/websocket/websocket-context";
 import saveAs from "file-saver";
 
@@ -83,7 +82,8 @@ export default function Page() {
   const [wsUrl, setWsUrl] = useState("");
   const [webSocketUrl, setWebSocketUrl] = useState("");
   const [webSocketProtocols, setWebSocketProtocols] = useState<string[]>([]);
-  const { isConnected: wsConnected } = useWebSocket();
+  const { isConnected: wsConnected, disconnect } = useWebSocket();
+  const [isWebSocketMode, setIsWebSocketMode] = useState(false);
 
   useEffect(() => {
     const loadSavedEnvironments = () => {
@@ -351,35 +351,50 @@ export default function Page() {
   };
 
   const handleLoadHistoryItem = (item: HistoryItem) => {
-    setMethod(item.method);
-    setUrl(item.url);
-    setHeaders(item.request.headers);
-    setParams(item.request.params);
-    setBody(item.request.body);
-    if (item.request.auth) {
-      const auth = item.request.auth;
-      switch (auth.type) {
-        case "bearer":
-          if (auth.token) setAuth({ type: "bearer", token: auth.token });
-          break;
-        case "basic":
-          if (auth.username && auth.password)
-            setAuth({
-              type: "basic",
-              username: auth.username,
-              password: auth.password,
-            });
-          break;
-        case "apiKey":
-          if (auth.key) setAuth({ type: "apiKey", key: auth.key });
-          break;
-        case "none":
-          setAuth({ type: "none" });
-          break;
+    if (item.type === "websocket") {
+      // Switch to WebSocket mode
+      setIsWebSocketMode(true);
+      if (item.url) {
+        // Dispatch event to set WebSocket URL and protocol
+        window.dispatchEvent(
+          new CustomEvent("setWebSocketProtocol", {
+            detail: {
+              url: item.url,
+              protocol: item.wsStats?.protocols?.[0] || "websocket",
+            },
+          })
+        );
       }
-    }
-    if (item.response) {
-      setResponse(item.response);
+    } else {
+      // Switch to REST mode
+      setIsWebSocketMode(false);
+      setMethod(item.method);
+      setUrl(item.url);
+      setHeaders(item.request.headers);
+      setParams(item.request.params);
+      setBody(item.request.body);
+      if (item.request.auth) {
+        const auth = item.request.auth;
+        switch (auth.type) {
+          case "bearer":
+            if ("token" in auth) setAuth({ type: "bearer", token: auth.token });
+            break;
+          case "basic":
+            if ("username" in auth && "password" in auth) {
+              setAuth({ type: "basic", username: auth.username, password: auth.password });
+            }
+            break;
+          case "apiKey":
+            if ("key" in auth) setAuth({ type: "apiKey", key: auth.key });
+            break;
+          case "none":
+            setAuth({ type: "none" });
+            break;
+        }
+      }
+      if (item.response) {
+        setResponse(item.response);
+      }
     }
   };
 
@@ -524,6 +539,26 @@ export default function Page() {
     return `${baseClasses} bg-slate-900 hover:bg-slate-800`;
   };
 
+  const handleWebSocketToggle = () => {
+    setIsWebSocketMode(!isWebSocketMode);
+    if (!isWebSocketMode) {
+      // Clear REST-specific state when switching to WebSocket
+      setResponse(null);
+      setMethod("GET");
+      // Reset all REST-related states
+      setHeaders([{ key: "", value: "", enabled: true, showSecrets: false, type: "" }]);
+      setParams([{ key: "", value: "", enabled: true, showSecrets: false, type: "" }]);
+      setBody({ type: "none", content: "" });
+      setAuth({ type: "none" });
+    } else {
+      // Clean up WebSocket state when switching back to REST
+      if (wsConnected) {
+        // Disconnect WebSocket if connected
+        disconnect();
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-slate-900/50 text-slate-600">
       <header className="fixed top-0 left-0 right-0 z-50 bg-slate-800">
@@ -585,7 +620,7 @@ export default function Page() {
                     >
                       PATCH
                     </SelectItem>
-                  </SelectContent>
+                    </SelectContent>
                 </Select>
                 <div className="relative flex-1">
                   <Input
@@ -636,7 +671,7 @@ export default function Page() {
             <div className="flex items-center gap-2">
               <Button
                 className={`${getWebSocketButtonClasses()} h-9 border border-slate-700`}
-                onClick={() => setIsWebSocketOpen(true)}
+                onClick={handleWebSocketToggle}
                 title={
                   wsConnected
                     ? "WebSocket Connected"
@@ -778,7 +813,7 @@ export default function Page() {
                 </Button>
                 <Button
                   className={getWebSocketButtonClasses()}
-                  onClick={() => setIsWebSocketOpen(true)}
+                  onClick={handleWebSocketToggle}
                   title={
                     wsConnected
                       ? "WebSocket Connected"
@@ -861,6 +896,7 @@ export default function Page() {
                     onParamsChange={setParams}
                     onBodyChange={setBody}
                     onAuthChange={setAuth}
+                    isWebSocketMode={isWebSocketMode}
                   />
                 </div>
               </ResizablePanel>
@@ -869,8 +905,8 @@ export default function Page() {
 
               <ResizablePanel
                 defaultSize={50}
-                minSize={12}
-                maxSize={!response?.status ? 30 : 90}
+                minSize={15}
+                maxSize={!response?.status ? 90 : 90}
                 className="overflow-hidden"
                 response={response}
               >
@@ -882,6 +918,7 @@ export default function Page() {
                     onSaveToCollection={handleSaveRequest}
                     method={method}
                     url={url}
+                    isWebSocketMode={isWebSocketMode}
                   />
                 </div>
               </ResizablePanel>
@@ -893,12 +930,6 @@ export default function Page() {
       <footer className="border-t border-slate-700 bg-slate-900/50 shadow-md">
         <Footer />
       </footer>
-      <WebSocketPanel
-        url={wsUrl}
-        onUrlChange={setWsUrl}
-        isOpen={isWebSocketOpen}
-        onClose={() => setIsWebSocketOpen(false)}
-      />
     </div>
   );
 }

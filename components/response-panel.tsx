@@ -19,6 +19,7 @@ import {
   FileJson,
   FileText,
   Send,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +49,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { MessagesTab } from "./websocket/messages-tab";
 
 const highlightCode = (code: string, language: string): string => {
   try {
@@ -90,6 +92,7 @@ interface ResponsePanelProps {
   ) => void;
   method: string;
   url: string;
+  isWebSocketMode: boolean;
 }
 
 const formatContent = (content: any, contentType: string): string => {
@@ -113,14 +116,7 @@ const getContentType = (headers: Record<string, string>): string => {
   return "text";
 };
 
-export function ResponsePanel({
-  response,
-  isLoading,
-  collections,
-  onSaveToCollection,
-  method,
-  url,
-}: ResponsePanelProps) {
+export function ResponsePanel({ response, isWebSocketMode, ...props }: ResponsePanelProps) {
   const [copyStatus, setCopyStatus] = useState<{ [key: string]: boolean }>({});
   const [activeTab, setActiveTab] = useState("pretty");
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
@@ -142,6 +138,11 @@ export function ResponsePanel({
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
+
+  useEffect(() => {
+    // Reset active tab when switching modes
+    setActiveTab(isWebSocketMode ? "messages" : "pretty");
+  }, [isWebSocketMode]);
 
   const contentType = useMemo(() => {
     if (!response?.headers) return "text";
@@ -200,14 +201,14 @@ export function ResponsePanel({
 
     const request: Partial<SavedRequest> = {
       name: requestName,
-      method,
-      url,
+      method: props.method,
+      url: props.url,
       headers: [],
       params: [],
       body: { type: "none", content: "" },
     };
 
-    onSaveToCollection(selectedCollection, request);
+    props.onSaveToCollection(selectedCollection, request);
     setIsSaveDialogOpen(false);
     setSelectedCollection("");
     setRequestName("");
@@ -218,8 +219,8 @@ export function ResponsePanel({
     if (!response) return "";
     
     const options = {
-      url,
-      method,
+      url: props.url,
+      method: props.method,
       headers: response.headers || {},
       body: response.body ? JSON.stringify(response.body, null, 2) : undefined
     };
@@ -232,7 +233,61 @@ export function ResponsePanel({
     }
   };
 
-  if (isLoading) {
+  const renderStatusBar = () => (
+    !isWebSocketMode ? (
+    <div className="sticky top-0 w-full px-4 py-3 border-b border-slate-800 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between">
+      <>
+        <div className="flex items-center space-x-3">
+        <div className={cn(
+          "px-3 py-1 rounded-full text-xs font-medium border flex items-center",
+          (response?.status || 0) >= 200 && (response?.status || 0) < 300
+          ? "bg-green-500/10 text-green-400 border-green-500/20"
+          : "bg-red-500/10 text-red-400 border-red-500/20"
+        )}>
+          <span>{response?.status || "---"}</span>
+        </div>
+        <Badge className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-cyan-400 border-cyan-500/30">
+          {props.method}
+        </Badge>
+        </div>
+
+        <div className="flex items-center space-x-4">
+        {response?.time && (
+          <div className="flex items-center text-slate-400">
+          <Clock className="h-4 w-4 mr-1.5 opacity-70" />
+          <span className="text-xs font-medium">{response.time}</span>
+          </div>
+        )}
+        {response?.size && (
+          <div className="flex items-center text-slate-400">
+          <Database className="h-4 w-4 mr-1.5 opacity-70" />
+          <span className="text-xs font-medium">{response.size}</span>
+          </div>
+        )}
+        {!isOnline && (
+          <div className="flex items-center text-amber-400">
+          <AlertCircle className="h-4 w-4 mr-1.5" />
+          <span className="text-xs font-medium">Offline</span>
+          </div>
+        )}
+        </div>
+      </>
+      </div>
+    ) : null
+  );
+
+  if (isWebSocketMode) {
+    return (
+      <div className="bg-slate-950 h-full flex flex-col">
+        {renderStatusBar()}
+        <div className="flex-1 relative bg-slate-900/90">
+          <MessagesTab />
+        </div>
+      </div>
+    );
+  }
+
+  if (props.isLoading) {
     return (
       <div className="min-h-[200px] flex items-center justify-center p-6 mt-8">
         <div className="flex items-center gap-2 text-gray-500">
@@ -271,31 +326,7 @@ export function ResponsePanel({
   if (response.error) {
     return (
       <div className="bg-slate-950 h-auto w-full flex flex-col">
-        <div className="sticky top-0 w-full px-4 py-3 border-b border-slate-800 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="animate-pulse bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-xs font-medium border border-red-500/20 flex items-center">
-              <XCircle className="h-3 w-3 mr-1.5" />
-              Error
-            </div>
-            <Badge className="inline-flex items-center px-2.5 rounded-full bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-cyan-400 text-xs font-medium tracking-wide border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.15)] backdrop-blur-sm transform transition-all hover:scale-105 hover:shadow-[0_0_25px_rgba(34,211,238,0.25)] hover:border-cyan-400/40 hover:text-cyan-200">
-              {method.toUpperCase()}
-            </Badge>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center text-slate-400">
-              <Clock className="h-4 w-4 mr-1.5 opacity-70" />
-              <span className="text-xs font-medium">{response.time}</span>
-            </div>
-            {!isOnline && (
-              <div className="flex items-center text-amber-400">
-                <AlertCircle className="h-4 w-4 mr-1.5" />
-                <span className="text-xs font-medium">Offline</span>
-              </div>
-            )}
-          </div>
-        </div>
-
+        {renderStatusBar()}
         <div className="flex-1 w-full flex flex-col lg:flex-row gap-4 p-4 bg-gradient-to-b from-slate-900 to-slate-950">
           {/* Left side - Error details */}
           <div className="flex-1 lg:w-1/2 space-y-4">
@@ -306,7 +337,7 @@ export function ResponsePanel({
               </label>
               <div className="p-2 bg-slate-800/30 rounded-lg border border-slate-700/50">
                 <code className="text-sm text-blue-400 font-mono break-all">
-                  {url}
+                  {props.url}
                 </code>
               </div>
             </div>
@@ -355,139 +386,99 @@ export function ResponsePanel({
 
   return (
     <div className="bg-slate-950 h-full flex flex-col">
-      <div className="px-4 py-2 border-b-2 border-slate-700 backdrop-blur-lg bg-slate-800/50 flex flex-row gap-2 justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Status Badge */}
-          <div
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full font-medium text-xs
-            ${
-              response.status >= 200 && response.status < 300
-                ? "bg-gradient-to-r from-green-600/40 to-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30 border-2 border-green-700"
-                : "bg-gradient-to-r from-red-600/40 to-rose-500/20 text-red-400 ring-1 ring-red-500/30 border-2 border-red-700"
-            }`}
-          >
-            {response.status >= 200 && response.status < 300 ? (
-              <CheckCircle className="h-3 w-3" />
-            ) : (
-              <XCircle className="h-3 w-3" />
-            )}
-            <span>{response.status}</span>
-          </div>
-
-          {/* Content Type Chip */}
-          <div className="inline-flex justify-items-end px-2 py-1 rounded-full border-2 border-slate-600 bg-slate-600/40 text-xs font-medium text-slate-300 ring-1 ring-emerald-500/30  transition-colors hover:bg-slate-700">
-            {contentType === "json" ? (
-              <FileJson className="h-3.5 w-3.5 mr-1.5 text-blue-400" />
-            ) : (
-              <FileText className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-            )}
-            {contentType.toLowerCase()}
-          </div>
-        </div>
-
-        {/* Metrics */}
-        <div className="flex items-center divide-x divide-slate-600">
-          <div className="flex items-center px-3 text-xs font-medium text-slate-300">
-            <Clock className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-            <span className="tabular-nums">{response.time}</span>
-          </div>
-          <div className="flex items-center px-3 text-xs font-medium text-slate-300">
-            <Database className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-            <span className="tabular-nums">{response.size}</span>
-          </div>
-          {!isOnline && (
-            <div className="flex items-center px-3 text-xs font-medium text-amber-400">
-              <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
-              Offline
-            </div>
-          )}
-        </div>
-      </div>
-
+      {renderStatusBar()}
       <Tabs
-        defaultValue="pretty"
+        defaultValue={isWebSocketMode ? "messages" : "pretty"}
         className="flex-1 flex flex-col"
         value={activeTab}
         onValueChange={setActiveTab}
       >
         <TabsList className="w-full justify-start rounded-none bg-slate-800 border-b-2 border-slate-700 p-0">
-          <TabsTrigger
-            value="pretty"
-            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
-          >
-            Pretty
-          </TabsTrigger>
-          <TabsTrigger
-            value="raw"
-            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
-          >
-            Raw
-          </TabsTrigger>
-          <TabsTrigger
-            value="headers"
-            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
-          >
-            Headers
-          </TabsTrigger>
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          {!isWebSocketMode ? (
+            <>
               <TabsTrigger
-              value="code"
-              className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800 group flex items-center gap-2"
+                value="pretty"
+                className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
               >
-              <span>Code</span>
-              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-900">
-              {languageConfigs[selectedLanguage].icon({ 
-              className: "h-3.5 w-3.5 text-blue-400" 
-              })}
-              </div>
+                Pretty
               </TabsTrigger>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent 
-              align="start" 
-              className="bg-slate-800 border-slate-600 max-h-[40vh] overflow-hidden rounded-lg shadow-lg backdrop-blur-sm"
-            >
-              <div className="p-2 sticky top-0 z-10 bg-slate-800 border-b border-slate-700">
-              <Input
-                type="search"
-                placeholder="Search languages..."
-                className="h-8 bg-slate-900 border-slate-700 text-xs"
-                onChange={(e) => {
-                const searchBox = e.currentTarget;
-                const items = searchBox.closest('[role="menu"]')?.querySelectorAll('[role="menuitem"]');
-                items?.forEach(item => {
-                  const text = item.textContent?.toLowerCase() || '';
-                  const match = text.includes(searchBox.value.toLowerCase());
-                  (item as HTMLElement).style.display = match ? '' : 'none';
-                });
-                }}
-              />
-              </div>
-              <div className="overflow-y-auto scrollbar-none" style={{ maxHeight: "calc(40vh - 60px)" }}>
-              {Object.entries(languageConfigs).map(([key, config]) => (
-                <DropdownMenuItem
-                key={key}
-                onClick={() => setSelectedLanguage(key as CodeGenLanguage)}
-                className={cn(
-                  "flex items-center gap-3 py-2.5 px-3 cursor-pointer transition-colors hover:bg-slate-700 rounded-lg",
-                  selectedLanguage === key && "bg-blue-500/10 text-blue-400"
-                )}
+              <TabsTrigger
+                value="raw"
+                className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
+              >
+                Raw
+              </TabsTrigger>
+              <TabsTrigger
+                value="headers"
+                className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
+              >
+                Headers
+              </TabsTrigger>
+                <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <TabsTrigger
+                  value="code"
+                  className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800 group flex items-center gap-2"
+                  >
+                  <span>Code</span>
+                  <div className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-900">
+                  {languageConfigs[selectedLanguage].icon({ 
+                  className: "h-3.5 w-3.5 text-blue-400" 
+                  })}
+                  </div>
+                  </TabsTrigger>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  align="start" 
+                  className="bg-slate-800 border-slate-600 max-h-[40vh] overflow-hidden rounded-lg shadow-lg backdrop-blur-sm"
                 >
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900">
-                  {config.icon({ className: "h-4 w-4 text-blue-400" })}
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs md:text-sm font-medium text-blue-400 hover:text-slate-900">{config.name}</span>
-                </div>
-                {selectedLanguage === key && (
-                  <Check className="h-4 w-4 ml-auto text-blue-400" />
-                )}
-                </DropdownMenuItem>
-              ))}
-              </div>
-            </DropdownMenuContent>
-            </DropdownMenu>
-
+                  <div className="p-2 sticky top-0 z-10 bg-slate-800">
+                  <Input
+                    type="search"
+                    placeholder="Search languages..."
+                    className="h-8 bg-slate-900 border-slate-700 text-xs"
+                    onChange={(e) => {
+                    const searchBox = e.currentTarget;
+                    const items = searchBox.closest('[role="menu"]')?.querySelectorAll('[role="menuitem"]');
+                    items?.forEach(item => {
+                      const text = item.textContent?.toLowerCase() || '';
+                      const match = text.includes(searchBox.value.toLowerCase());
+                      (item as HTMLElement).style.display = match ? '' : 'none';
+                    });
+                    }}
+                  />
+                  </div>
+                  <div className="overflow-y-auto scrollbar-none" style={{ maxHeight: "calc(40vh - 60px)" }}>
+                  {Object.entries(languageConfigs).map(([key, config]) => (
+                    <DropdownMenuItem
+                    key={key}
+                    onClick={() => setSelectedLanguage(key as CodeGenLanguage)}
+                    className={cn(
+                      "flex items-center gap-3 py-2.5 px-3 cursor-pointer transition-colors hover:bg-slate-700 rounded-lg",
+                      selectedLanguage === key && "bg-blue-500/10 text-blue-400"
+                    )}
+                    >
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900">
+                      {config.icon({ className: "h-4 w-4 text-blue-400" })}
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs md:text-sm font-medium text-blue-400 hover:text-slate-900">{config.name}</span>
+                    </div>
+                    {selectedLanguage === key && (
+                      <Check className="h-4 w-4 ml-auto text-blue-400" />
+                    )}
+                    </DropdownMenuItem>
+                  ))}
+                  </div>
+                </DropdownMenuContent>
+                </DropdownMenu>
+            </>
+          ) : (
+            <TabsTrigger value="messages" className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800">
+              <MessageSquare className="h-4 w-4" />
+              Messages
+            </TabsTrigger>
+          )}
           <div className="ml-auto flex items-center pr-2">
             <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
               <DialogTrigger asChild>
@@ -515,7 +506,7 @@ export function ResponsePanel({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          {collections.map((collection) => (
+                          {props.collections.map((collection) => (
                             <SelectItem
                               key={collection.id}
                               value={collection.id}
@@ -573,119 +564,127 @@ export function ResponsePanel({
         </TabsList>
 
         <div className="flex-1 relative bg-slate-900/90 text-blue-300">
-          <TabsContent value="pretty" className="absolute inset-0 m-0">
-            <ScrollArea className="h-full">
-              <div className="p-4">
-                <div className="max-w-full overflow-hidden">
-                  <pre
-                    className="font-mono text-xs md:text-sm whitespace-pre-wrap break-all"
-                    style={{
-                      maxWidth: '100%',
-                      overflowWrap: 'break-word',
-                      wordBreak: 'break-word'
-                    }}
-                  >
-                    {contentType === "json" ? (
+          {!isWebSocketMode ? (
+            <>
+              <TabsContent value="pretty" className="absolute inset-0 m-0">
+                <ScrollArea className="h-full">
+                  <div className="p-4">
+                    <div className="max-w-full overflow-hidden">
                       <pre
-                        className="font-mono text-xs md:text-sm"
+                        className="font-mono text-xs md:text-sm whitespace-pre-wrap break-all"
                         style={{
-                          tabSize: 2,
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
+                          maxWidth: '100%',
+                          overflowWrap: 'break-word',
+                          wordBreak: 'break-word'
                         }}
-                        dangerouslySetInnerHTML={{
-                          __html: highlightCode(
-                            typeof getContentForTab() === 'string' && getContentForTab().trim().startsWith('{')
-                              ? JSON.stringify(JSON.parse(getContentForTab()), null, 2)
-                              : getContentForTab(),
-                            "json"
-                          ),
-                        }}
-                      />
-                    ) : contentType === "html" ? (
-                      <pre
-                        className="font-mono text-xs md:text-sm"
-                        style={{
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
-                        }}
-                        dangerouslySetInnerHTML={{
-                          __html: highlightCode(
-                            getContentForTab().replace(/></g, ">\n<"),
-                            "html"
-                          ),
-                        }}
-                      />
-                    ) : (
-                      <pre
-                        className="font-mono text-xs md:text-sm"
-                        style={{
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
-                        }}
-                        dangerouslySetInnerHTML={{
-                          __html: highlightCode(
-                            getContentForTab(),
-                            getLanguage(contentType)
-                          ),
-                        }}
-                      />
-                    )}
-                  </pre>
-                </div>
-              </div>
-            </ScrollArea>
-          </TabsContent>
-          <TabsContent value="raw" className="absolute inset-0 m-0">
-            <ScrollArea className="h-full overflow-auto">
-              <div className="p-2">
-                <div
-                  className="font-mono text-xs md:text-sm break-all p-2 overflow-x-auto"
-                  dangerouslySetInnerHTML={{
-                    __html: highlightCode(
-                      getContentForTab(),
-                      getLanguage(contentType)
-                    ),
-                  }}
-                />
-              </div>
-            </ScrollArea>
-          </TabsContent>
-          <TabsContent value="headers" className="absolute inset-0 m-0">
-            <ScrollArea className="h-full">
-              <div className="p-4">
-                {response.headers &&
-                Object.keys(response.headers).length > 0 ? (
-                  <div className="w-full table border-separate border-spacing-0">
-                    {Object.entries(response.headers).map(([key, value]) => (
-                      <div key={key} className="table-row hover:bg-slate-800">
-                        <div className="table-cell py-2 pr-4 text-xs md:text-sm font-semibold text-blue-100 whitespace-nowrap align-top border-b border-slate-700">
-                          {key}
-                        </div>
-                        <div className="table-cell py-2 pl-4 text-xs md:text-sm font-mono break-all text-blue-300 align-top border-b border-slate-700">
-                          {value}
-                        </div>
+                      >
+                        {contentType === "json" ? (
+                          <pre
+                            className="font-mono text-xs md:text-sm"
+                            style={{
+                              tabSize: 2,
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                            }}
+                            dangerouslySetInnerHTML={{
+                              __html: highlightCode(
+                                typeof getContentForTab() === 'string' && getContentForTab().trim().startsWith('{')
+                                  ? JSON.stringify(JSON.parse(getContentForTab()), null, 2)
+                                  : getContentForTab(),
+                                "json"
+                              ),
+                            }}
+                          />
+                        ) : contentType === "html" ? (
+                          <pre
+                            className="font-mono text-xs md:text-sm"
+                            style={{
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                            }}
+                            dangerouslySetInnerHTML={{
+                              __html: highlightCode(
+                                getContentForTab().replace(/></g, ">\n<"),
+                                "html"
+                              ),
+                            }}
+                          />
+                        ) : (
+                          <pre
+                            className="font-mono text-xs md:text-sm"
+                            style={{
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                            }}
+                            dangerouslySetInnerHTML={{
+                              __html: highlightCode(
+                                getContentForTab(),
+                                getLanguage(contentType)
+                              ),
+                            }}
+                          />
+                        )}
+                      </pre>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+              <TabsContent value="raw" className="absolute inset-0 m-0">
+                <ScrollArea className="h-full overflow-auto">
+                  <div className="p-2">
+                    <div
+                      className="font-mono text-xs md:text-sm break-all p-2 overflow-x-auto"
+                      dangerouslySetInnerHTML={{
+                        __html: highlightCode(
+                          getContentForTab(),
+                          getLanguage(contentType)
+                        ),
+                      }}
+                    />
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+              <TabsContent value="headers" className="absolute inset-0 m-0">
+                <ScrollArea className="h-full">
+                  <div className="p-4">
+                    {response.headers &&
+                    Object.keys(response.headers).length > 0 ? (
+                      <div className="w-full table border-separate border-spacing-0">
+                        {Object.entries(response.headers).map(([key, value]) => (
+                          <div key={key} className="table-row hover:bg-slate-800">
+                            <div className="table-cell py-2 pr-4 text-xs md:text-sm font-semibold text-blue-100 whitespace-nowrap align-top border-b border-slate-700">
+                              {key}
+                            </div>
+                            <div className="table-cell py-2 pl-4 text-xs md:text-sm font-mono break-all text-blue-300 align-top border-b border-slate-700">
+                              {value}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-32 text-slate-400">
+                        <Database className="h-8 w-8 mb-2 opacity-50" />
+                        <p className="text-xs md:text-sm">No headers available</p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-32 text-slate-400">
-                    <Database className="h-8 w-8 mb-2 opacity-50" />
-                    <p className="text-xs md:text-sm">No headers available</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-          <TabsContent value="code" className="absolute inset-0 m-0">
-            <ScrollArea className="h-full">
-              <CodeGenerationTab
-                getGeneratedCode={getGeneratedCode}
-                selectedLanguage={selectedLanguage}
-                setSelectedLanguage={setSelectedLanguage}
-              />
-            </ScrollArea>
-          </TabsContent>
+                </ScrollArea>
+              </TabsContent>
+              <TabsContent value="code" className="absolute inset-0 m-0">
+                <ScrollArea className="h-full">
+                  <CodeGenerationTab
+                    getGeneratedCode={getGeneratedCode}
+                    selectedLanguage={selectedLanguage}
+                    setSelectedLanguage={setSelectedLanguage}
+                  />
+                </ScrollArea>
+              </TabsContent>
+            </>
+          ) : (
+            <TabsContent value="messages" className="absolute inset-0 m-0">
+              <MessagesTab />
+            </TabsContent>
+          )}
         </div>
       </Tabs>
     </div>

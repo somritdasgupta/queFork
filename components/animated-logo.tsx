@@ -4,8 +4,8 @@ interface AnimatedLogoProps {
   size?: 'sm' | 'md' | 'lg';
   primaryColor?: string;  // Color for 'que'
   secondaryColor?: string;  // Color for 'Fork'
-  subtitleColor?: string;  // Color for subtitle text
-  subtitlePosition?: 'bottom' | 'right';  // Control subtitle position
+  subtitleColor?: string;
+  subtitlePosition?: 'bottom' | 'right';
   className?: string;
 }
 

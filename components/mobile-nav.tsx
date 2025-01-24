@@ -79,9 +79,7 @@ export function MobileNav({ ...props }: MobileNavProps) {
       <SheetContent side="bottom" className="w-[100vw] p-0 h-[92vh] rounded-t-lg glass-panel">
         <SheetHeader className="panel-header rounded-t-lg">
           <div className="flex items-center justify-between rounded-lg">
-            <SheetTitle className="text-base md:text-lg font-semibold rounded-lg">
-              {activePanel === "collections" ? "Collections" : "History"}
-            </SheetTitle>
+            
             <Button
               variant="ghost"
               size="icon"

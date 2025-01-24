@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Signal, Activity, Unplug, PlugZap2 } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Signal, Activity, Unplug, PlugZap2, Network } from "lucide-react";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useWebSocket } from "./websocket-context";
 import { cn } from "@/lib/utils";
@@ -202,11 +202,11 @@ export function ConnectionTab() {
         }
         disabled={isConnected}
         className={cn(
-          "rounded-full text-[10px] md:text-sm py-0.5 md:py-0.5 px-1.5 md:px-3 h-6 md:h-auto min-w-0 relative",
+          "rounded-lg text-xs py-1.5 px-3 h-8 min-w-0 relative",
           selectedProtocol === key
-            ? "bg-slate-900 text-white"
-            : "bg-slate-100 border-2 border-slate-200 text-slate-700 hover:bg-slate-100",
-          isConnected && "cursor-not-allowed opacity-50"
+            ? "bg-slate-900 text-white hover:bg-slate-800"
+            : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100",
+          isConnected && "opacity-50 cursor-not-allowed"
         )}
       >
         <AnimatePresence>
@@ -221,7 +221,7 @@ export function ConnectionTab() {
         </AnimatePresence>
         <div className="flex items-center gap-2">
           <div
-            className={`w-2 h-2 rounded-full bg-slate-50 border-2 border-slate-200`}
+            className={`w-1.5 h-1.5 rounded-full`}
             style={{ backgroundColor: protocol.color }}
           />
           {protocol.name}
@@ -241,12 +241,12 @@ export function ConnectionTab() {
           placeholder={getUrlPlaceholder()}
           disabled={isConnected}
           className={cn(
-            "bg-white border-slate-200 text-slate-700 pr-24",
+            "bg-white border-slate-200 text-slate-700 pr-24 h-9 text-sm",
             isConnected && "cursor-not-allowed opacity-90"
           )}
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-          <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+          <Badge variant="secondary" className="bg-slate-100 text-slate-600 text-xs">
             <AnimatePresence mode="wait">
               <motion.span
                 key={selectedProtocol}
@@ -270,9 +270,9 @@ export function ConnectionTab() {
         onClick={handleConnect}
         variant={isConnected ? "destructive" : "default"}
         className={cn(
-          "gap-2",
+          "gap-2 px-4 h-9",
           isConnected
-            ? "bg-red-500 hover:bg-red-600"
+            ? "bg-red-500 hover:bg-red-600 text-white"
             : "bg-slate-900 hover:bg-slate-800 text-white"
         )}
         disabled={!url || connectionStatus === "connecting"}
@@ -352,35 +352,40 @@ export function ConnectionTab() {
   );
 
   const renderMessageStats = () => (
-    <Card className="p-6 bg-white border-slate-200">
-      <h3 className="text-lg font-semibold mb-4 text-slate-900 flex items-center gap-2">
-        <Activity className="h-4 w-4" /> Message Statistics
-      </h3>
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-slate-50 p-3 rounded-lg">
-            <div className="text-2xl font-bold text-slate-700">
-              {stats.messagesSent}
+    <Card className="bg-white border-slate-200">
+      <CardHeader className="py-3 px-4">
+        <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-slate-500" />
+          <h3 className="text-sm font-medium text-slate-700">Statistics</h3>
+        </div>
+      </CardHeader>
+      <CardContent className="px-4 pb-4">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-50 p-3 rounded-lg">
+              <div className="text-2xl font-bold text-slate-700">
+                {stats.messagesSent}
+              </div>
+              <div className="text-sm text-slate-500">Sent</div>
             </div>
-            <div className="text-sm text-slate-500">Sent</div>
+            <div className="bg-slate-50 p-3 rounded-lg">
+              <div className="text-2xl font-bold text-slate-700">
+                {stats.messagesReceived}
+              </div>
+              <div className="text-sm text-slate-500">Received</div>
+            </div>
           </div>
-          <div className="bg-slate-50 p-3 rounded-lg">
-            <div className="text-2xl font-bold text-slate-700">
-              {stats.messagesReceived}
+          <div className="space-y-2">
+            {renderLatencyStats()}
+            <div className="flex justify-between">
+              <span className="text-slate-600">Total Messages</span>
+              <span className="font-mono text-slate-700">
+                {stats.messagesSent + stats.messagesReceived}
+              </span>
             </div>
-            <div className="text-sm text-slate-500">Received</div>
           </div>
         </div>
-        <div className="space-y-2">
-          {renderLatencyStats()}
-          <div className="flex justify-between">
-            <span className="text-slate-600">Total Messages</span>
-            <span className="font-mono text-slate-700">
-              {stats.messagesSent + stats.messagesReceived}
-            </span>
-          </div>
-        </div>
-      </div>
+      </CardContent>
     </Card>
   );
 
@@ -407,88 +412,103 @@ export function ConnectionTab() {
   }, []);
 
   return (
-    <div className="h-full overflow-y-auto space-y-4 p-4 pb-20 bg-slate-50">
-      {/* Connection Controls */}
-      <div className="sticky top-0 z-10 bg-slate-50 pb-2">
-        <Card className="p-4 bg-white border-slate-200">
+    <div className="h-full overflow-y-auto space-y-4 p-4 bg-white">
+      <Card className="bg-white border-slate-200 shadow-sm">
+        <CardHeader className="py-2 px-4 border-b border-slate-200/40">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Network className="h-4 w-4 text-purple-500" />
+              <h3 className="text-sm font-medium text-slate-700">WebSocket Connection</h3>
+            </div>
+            {isConnected && (
+              <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-600 border-emerald-200">
+                Connected
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+
+        <div className="p-4 space-y-4">
           {/* Protocol Selection */}
-          <div className="space-y-4">
-            <div className="text-lg font-semibold text-slate-900">Protocol</div>
-            <motion.div layout className="flex gap-1 md:gap-1.5 flex-wrap">
-              {Object.entries(AVAILABLE_PROTOCOLS).map(([key, protocol]) =>
-                renderProtocolButton(key, protocol)
-              )}
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-slate-700">Protocol</div>
+            <motion.div layout className="flex gap-1.5 flex-wrap">
+              {Object.entries(AVAILABLE_PROTOCOLS).map(([key, protocol]) => (
+                <motion.div key={key} layout>
+                  <Button
+                    variant={selectedProtocol === key ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => !isConnected && handleProtocolSelect(key as keyof typeof AVAILABLE_PROTOCOLS)}
+                    disabled={isConnected}
+                    className={cn(
+                      "rounded-lg text-xs py-1.5 px-3 h-8 min-w-0 relative",
+                      selectedProtocol === key
+                        ? "bg-slate-900 text-white hover:bg-slate-800"
+                        : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100",
+                      isConnected && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: protocol.color }} />
+                      {protocol.name}
+                    </div>
+                  </Button>
+                </motion.div>
+              ))}
             </motion.div>
 
             {/* Connection Input */}
             {renderConnectionInput()}
-
-            {/* Protocol Description */}
-            <AnimatePresence mode="wait">
-              {url && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-sm font-medium text-slate-500"
-                >
-                  {AVAILABLE_PROTOCOLS[selectedProtocol].description}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </Card>
-      </div>
-
-      {/* Main Stats Cards */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Connection Status */}
-        <Card className="p-6 bg-white border-slate-200">
-          <h3 className="text-lg font-semibold mb-4 text-slate-900 flex items-center gap-2">
-            <Signal className="h-4 w-4" /> Connection Status
-          </h3>
-          <div className="flex items-center justify-between mb-4">
-            <Badge variant={isConnected ? "default" : "destructive"}>
-              {connectionStatus.toUpperCase()}
-            </Badge>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-slate-600">Uptime</span>
-              <span className="font-mono text-slate-700">
-                {(connectionTime ?? 0) > 0
-                  ? `${Math.floor((connectionTime ?? 0) / 60)}m ${
-                      (connectionTime ?? 0) % 60
-                    }s`
-                  : "N/A"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">Reconnections</span>
-              <span className="font-mono text-slate-700">
-                {stats.reconnectAttempts}
-              </span>
-            </div>
-            <div className="pt-4 border-t border-slate-200">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="auto-reconnect" className="text-slate-700">
-                  Auto Reconnect
-                </Label>
-                <Switch
-                  id="auto-reconnect"
-                  checked={autoReconnect}
-                  onCheckedChange={setAutoReconnect}
-                  className="data-[state=checked]:bg-slate-900 data-[state=unchecked]:bg-slate-200"
-                />
-              </div>
-            </div>
-          </div>
-        </Card>
+          {/* Stats Cards */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Connection Status */}
+            <Card className="bg-white border-slate-200">
+              <CardHeader className="py-3 px-4">
+                <div className="flex items-center gap-2">
+                  <Signal className="h-4 w-4 text-slate-500" />
+                  <h3 className="text-sm font-medium text-slate-700">Status</h3>
+                </div>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-slate-600">Status</span>
+                    <Badge variant={isConnected ? "outline" : "destructive"} className="text-xs">
+                      {connectionStatus.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Uptime</span>
+                    <span className="font-mono text-slate-700">
+                      {(connectionTime ?? 0) > 0
+                        ? `${Math.floor((connectionTime ?? 0) / 60)}m ${(connectionTime ?? 0) % 60}s`
+                        : "N/A"}
+                    </span>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="auto-reconnect" className="text-sm text-slate-700">
+                        Auto Reconnect
+                      </Label>
+                      <Switch
+                        id="auto-reconnect"
+                        checked={autoReconnect}
+                        onCheckedChange={setAutoReconnect}
+                        className="data-[state=checked]:bg-slate-900 data-[state=unchecked]:bg-slate-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Message Statistics */}
-        {renderMessageStats()}
-      </div>
+            {/* Message Stats */}
+            {renderMessageStats()}
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

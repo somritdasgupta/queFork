@@ -25,6 +25,8 @@ import {
   Clock,
   PlugZap2,
   XCircle,
+  ArrowUpCircle,
+  ArrowDownCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -35,42 +37,42 @@ interface Message {
   timestamp: string;
 }
 
-// Add message type definitions
+// Update message style definitions to match REST panel theme
 const MESSAGE_STYLES = {
   sent: {
-    bg: "hover:bg-blue-50/50",
-    activeBg: "bg-blue-50/80",
+    bg: "hover:bg-blue-900/20",
+    activeBg: "bg-blue-900/30",
     icon: "text-blue-500",
-    text: "text-blue-600",
-    border: "border-blue-100",
+    text: "text-blue-400",
+    border: "border-blue-800/50",
   },
   received: {
-    bg: "hover:bg-yellow-50/50",
-    activeBg: "bg-yellow-50/80",
-    icon: "text-yellow-500",
-    text: "text-yellow-600",
-    border: "border-yellow-100",
+    bg: "hover:bg-emerald-900/20",
+    activeBg: "bg-emerald-900/30",
+    icon: "text-emerald-500",
+    text: "text-emerald-500",
+    border: "border-emerald-800/50",
   },
   connected: {
-    bg: "hover:bg-emerald-50/50",
-    activeBg: "bg-emerald-50/80",
-    icon: "text-emerald-500",
-    text: "text-emerald-600",
-    border: "border-emerald-100",
+    bg: "hover:bg-yellow-900/20",
+    activeBg: "bg-yellow-900/30",
+    icon: "text-yellow-500",
+    text: "text-yellow-400",
+    border: "border-yellow-800/50",
   },
   disconnected: {
-    bg: "hover:bg-amber-50/50",
-    activeBg: "bg-amber-50/80",
-    icon: "text-amber-500",
-    text: "text-amber-700",
-    border: "border-amber-100",
+    bg: "hover:bg-orange-900/20",
+    activeBg: "bg-orange-900/30",
+    icon: "text-orange-500",
+    text: "text-orange-400",
+    border: "border-orange-800/50",
   },
   error: {
-    bg: "hover:bg-red-50/50",
-    activeBg: "bg-red-50/80",
+    bg: "hover:bg-red-900/20",
+    activeBg: "bg-red-900/30",
     icon: "text-red-500",
-    text: "text-red-700",
-    border: "border-red-100",
+    text: "text-red-400",
+    border: "border-red-800/50",
   },
 };
 
@@ -254,22 +256,22 @@ export function MessagesTab() {
   };
 
   return (
-    <div className="relative w-full h-full bg-white overflow-hidden">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white">
+    <div className="relative w-full h-full bg-slate-900/90 overflow-hidden">
+      {/* Header - Match REST header style */}
+      <div className="absolute top-0 left-0 right-0 z-50 border-b border-slate-700 bg-slate-800/50">
         <div className="h-14 px-3 flex items-center gap-2 overflow-x-auto">
           <Select
             value={messageFormat}
             onValueChange={(value: "text" | "json") => setMessageFormat(value)}
           >
-            <SelectTrigger className="w-24 h-8 bg-slate-50 border-slate-200 text-slate-700 font-medium">
+            <SelectTrigger className="w-24 h-8 bg-slate-900 border-slate-700 text-slate-400 font-medium">
               <SelectValue placeholder="Format" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-slate-200">
-              <SelectItem value="text" className="text-slate-700">
+            <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectItem value="text" className="text-slate-400">
                 Text
               </SelectItem>
-              <SelectItem value="json" className="text-slate-700">
+              <SelectItem value="json" className="text-slate-400">
                 JSON
               </SelectItem>
             </SelectContent>
@@ -277,12 +279,12 @@ export function MessagesTab() {
 
           <Badge
             variant="outline"
-            className="h-8 border-slate-200 bg-slate-50 text-slate-600 font-medium"
+            className="h-8 border-slate-700 bg-slate-900 text-slate-400 font-medium"
           >
             {messages.length}
           </Badge>
 
-          {/* Action Buttons */} 
+          {/* Action Buttons */}
           <div className="flex items-center gap-1 ml-auto">
             <input
               type="file"
@@ -297,7 +299,7 @@ export function MessagesTab() {
               onClick={() =>
                 document.getElementById("import-messages")?.click()
               }
-              className="h-8 px-2 hover:bg-slate-100 text-slate-700"
+              className="h-8 px-2 hover:bg-slate-800 text-slate-400"
             >
               <Upload className="h-4 w-4" />
             </Button>
@@ -305,7 +307,7 @@ export function MessagesTab() {
               variant="ghost"
               size="sm"
               onClick={clearMessages}
-              className="h-8 px-2 hover:bg-slate-100 text-slate-700"
+              className="h-8 px-2 hover:bg-slate-800 text-slate-400"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -313,7 +315,7 @@ export function MessagesTab() {
               variant="ghost"
               size="sm"
               onClick={exportMessages}
-              className="h-8 px-2 hover:bg-slate-100 text-slate-700"
+              className="h-8 px-2 hover:bg-slate-800 text-slate-400"
             >
               <Download className="h-4 w-4" />
             </Button>
@@ -322,7 +324,7 @@ export function MessagesTab() {
                 variant="destructive"
                 size="sm"
                 onClick={disconnect}
-                className="h-8 px-2"
+                className="h-8 px-2 bg-red-500/20 hover:bg-red-500/30 text-red-400"
               >
                 <Unplug className="h-4 w-4" />
               </Button>
@@ -331,22 +333,23 @@ export function MessagesTab() {
         </div>
       </div>
 
-      {/* Messages Area */}
+      {/* Messages Area - Match REST content style */}
       <div
-        className="absolute top-14 bottom-16 left-0 right-0 overflow-y-auto w-full bg-white text-slate-700 
-        [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-slate-200 
-        [&::-webkit-scrollbar-track]:bg-slate-100"
+        className="absolute top-14 bottom-16 left-0 right-0 overflow-y-auto w-full bg-slate-900/90 text-slate-300
+        [&::-webkit-scrollbar]:w-2 
+        [&::-webkit-scrollbar-thumb]:bg-slate-700 
+        [&::-webkit-scrollbar-track]:bg-slate-800/50"
       >
-        <div className="divide-y divide-slate-200">
+        <div className="divide-y divide-slate-700/50">
           {messages.length === 0 ? (
-            <div className="h-full min-h-[400px] flex items-center justify-center text-slate-400">
+            <div className="h-full min-h-[400px] flex items-center justify-center text-slate-500">
               <div className="flex flex-col items-center gap-2">
-                <MessageSquare className="h-8 w-8" />
-                <p className="font-medium">No Messages</p>
+                <MessageSquare className="h-6 w-6 md:h-8 md:w-8" />
+                <p className="text-xs md:text-sm font-medium">No Messages</p>
               </div>
             </div>
           ) : (
-            <div className="divide-y divide-slate-200">
+            <div className="divide-y divide-slate-700/50">
               {messages.map((msg, index) => {
                 const style = getMessageStyle(msg);
                 return (
@@ -357,32 +360,30 @@ export function MessagesTab() {
                       expandedMessage === index ? style.activeBg : style.bg
                     )}
                   >
-                    {/* Message Row */}
                     <div
                       onClick={() =>
                         setExpandedMessage(
                           expandedMessage === index ? null : index
                         )
                       }
-                      className="flex items-center gap-3 px-4 py-2 transition-colors cursor-pointer"
+                      className="flex items-center gap-3 px-3 md:px-4 py-2 transition-colors cursor-pointer"
                     >
-                      {/* Message Direction Indicator */}
                       <div className={cn("shrink-0", style.icon)}>
-                        {msg.content.startsWith("Connected to") ? (
+                        {msg.content.startsWith("Connected") ? (
                           <PlugZap2 className="h-4 w-4" />
-                        ) : msg.content.startsWith("Disconnected from") ? (
+                        ) : msg.content.startsWith("Disconnected") ? (
                           <Unplug className="h-4 w-4" />
-                        ) : msg.content.startsWith("Connection error") ? (
+                        ) : msg.content.startsWith("Connection error") ||
+                          msg.content.startsWith("Failed") ? (
                           <XCircle className="h-4 w-4" />
                         ) : msg.type === "sent" ? (
-                          <ArrowUp className="h-4 w-4" />
+                          <ArrowUpCircle className="h-4 w-4" />
                         ) : (
-                          <ArrowDown className="h-4 w-4" />
+                          <ArrowDownCircle className="h-4 w-4" />
                         )}
                       </div>
 
-                      {/* Timestamp */}
-                      <div className="hidden md:block text-xs text-slate-400 min-w-[90px]">
+                      <div className="hidden md:block text-[11px] md:text-xs text-slate-500 min-w-[90px] font-normal">
                         {new Date(msg.timestamp).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -390,20 +391,14 @@ export function MessagesTab() {
                         })}
                       </div>
 
-                      {/* Mobile timestamp icon */}
-                      <Clock className="md:hidden h-4 w-4 text-slate-400" />
+                      <Clock className="md:hidden h-3.5 w-3.5 text-slate-500" />
 
-                      {/* Message Content */}
-                      <div
-                        className={cn(
-                          "flex-1 text-sm overflow-x-auto",
-                          style.text
-                        )}
-                      >
-                        <div className="px-1 font-medium">{msg.content}</div>
+                      <div className="flex-1 text-xs md:text-sm font-normal">
+                        <div className={cn("px-1", style.text)}>
+                          {msg.content}
+                        </div>
                       </div>
 
-                      {/* Actions */}
                       <div className="flex items-center gap-2 shrink-0">
                         <Button
                           variant="ghost"
@@ -412,31 +407,30 @@ export function MessagesTab() {
                             e.stopPropagation();
                             copyMessage(msg.content);
                           }}
-                          className="h-7 w-7 p-0 hover:bg-slate-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-6 w-6 md:h-7 md:w-7 p-0 hover:bg-slate-700 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <Copy className="h-4 w-4 text-slate-500" />
+                          <Copy className="h-3.5 w-3.5 md:h-4 md:w-4 text-slate-400" />
                         </Button>
                       </div>
                     </div>
 
-                    {/* Expanded Details - Shows inline */}
                     {expandedMessage === index && (
                       <div
                         className={cn(
-                          "px-4 py-2 text-xs space-y-2",
+                          "px-3 md:px-4 py-2 text-[11px] md:text-xs space-y-2",
                           style.activeBg,
                           style.border
                         )}
                       >
-                        <div className="flex items-center justify-between text-slate-500">
+                        <div className="flex items-center justify-between text-slate-400">
                           <div className="font-medium">Type: {msg.type}</div>
-                          <time className="text-slate-400">
+                          <time className="text-slate-500 font-normal">
                             {new Date(msg.timestamp).toLocaleString()}
                           </time>
                         </div>
                         {isJsonString(msg.content) && (
-                          <div className="mt-2 bg-white rounded p-2 overflow-x-auto border border-slate-200">
-                            <pre className="text-sm text-slate-700">
+                          <div className="mt-2 bg-slate-900/50 rounded p-2 overflow-x-auto border border-slate-700/50">
+                            <pre className="text-sm text-blue-400 font-normal">
                               {formatJsonMessage(msg.content)}
                             </pre>
                           </div>
@@ -452,11 +446,10 @@ export function MessagesTab() {
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-white">
+      <div className="absolute bottom-0 left-0 right-0 border-t border-slate-700 bg-slate-800/50">
         <div className="h-16 p-3 flex items-center gap-2">
           <div className="flex-1 relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs md:text-sm font-medium">
               $
             </span>
             <Input
@@ -467,18 +460,18 @@ export function MessagesTab() {
                 e.key === "Enter" && !e.shiftKey && handleSend()
               }
               disabled={!isConnected}
-              className="pl-7 bg-slate-50 border-slate-200 rounded pr-12
-                text-slate-700 font-medium placeholder:text-slate-400 
-                focus-visible:ring-1 focus-visible:ring-slate-200 
+              className="pl-7 bg-slate-900 border-slate-700 rounded pr-12
+                text-xs md:text-sm text-slate-300 font-normal placeholder:text-slate-600 
+                focus-visible:ring-1 focus-visible:ring-slate-700 
                 focus-visible:ring-offset-0"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <span
                 className={cn(
-                  "px-2 py-0.5 rounded-full text-[11px] font-medium",
+                  "px-2 py-0.5 rounded-full text-[10px] md:text-[11px] font-medium",
                   messageFormat === "json"
-                    ? "bg-blue-50 text-blue-600"
-                    : "bg-slate-100 text-slate-600"
+                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                    : "bg-slate-800 text-slate-400 border border-slate-700"
                 )}
               >
                 {messageFormat.toUpperCase()}
@@ -490,7 +483,7 @@ export function MessagesTab() {
             disabled={!isConnected || !message.trim()}
             size="icon"
             className="shrink-0 bg-slate-900 hover:bg-slate-800 rounded 
-              text-white disabled:bg-slate-100 disabled:text-slate-400 border border-slate-200"
+              text-slate-400 disabled:bg-slate-900/50 disabled:text-slate-600 border border-slate-700"
           >
             <Send className="h-4 w-4" />
           </Button>

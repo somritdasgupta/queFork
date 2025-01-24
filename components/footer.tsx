@@ -9,7 +9,7 @@ const Footer = () => {
           {/* Left section */}
           <div className="flex items-center gap-3">
             <AnimatedLogo 
-              animate={false} 
+              animate={true} 
               showSubtitle={true} 
               size="sm" 
               subtitlePosition="right"
