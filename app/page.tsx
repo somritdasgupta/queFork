@@ -37,6 +37,7 @@ import { v4 as uuidv4 } from "uuid";
 import Footer from "@/components/footer";
 import { useWebSocket } from "@/components/websocket/websocket-context";
 import saveAs from "file-saver";
+import { UrlBar } from "@/components/url-bar";
 
 export default function Page() {
   const [method, setMethod] = useState("GET");
@@ -84,6 +85,7 @@ export default function Page() {
   const [webSocketProtocols, setWebSocketProtocols] = useState<string[]>([]);
   const { isConnected: wsConnected, disconnect } = useWebSocket();
   const [isWebSocketMode, setIsWebSocketMode] = useState(false);
+  const [recentUrls, setRecentUrls] = useState<string[]>([]);
 
   useEffect(() => {
     const loadSavedEnvironments = () => {
@@ -189,6 +191,14 @@ export default function Page() {
         handleWebSocketOpen as EventListener
       );
     };
+  }, []);
+
+  useEffect(() => {
+    // Load recent URLs from localStorage
+    const saved = localStorage.getItem("recent-urls");
+    if (saved) {
+      setRecentUrls(JSON.parse(saved));
+    }
   }, []);
 
   const executeRequest = async () => {
@@ -304,8 +314,25 @@ export default function Page() {
   };
 
   const handleSendRequest = async () => {
+    // Remove URL validation from here since it's handled in UrlBar
+    // Just check for existence and unresolved variables
     if (!url) {
       toast.error("Please enter a URL");
+      return;
+    }
+
+    // Check for unresolved variables
+    const unresolvedVars = (url.match(/\{\{([^}]+)\}\}/g) || []).filter(
+      (match) => {
+        const key = match.slice(2, -2);
+        return !mergedEnvVariables.find((v) => v.key === key);
+      }
+    );
+
+    if (unresolvedVars.length > 0) {
+      toast.error(
+        `Missing environment variables: ${unresolvedVars.join(", ")}`
+      );
       return;
     }
 
@@ -381,7 +408,11 @@ export default function Page() {
             break;
           case "basic":
             if ("username" in auth && "password" in auth) {
-              setAuth({ type: "basic", username: auth.username, password: auth.password });
+              setAuth({
+                type: "basic",
+                username: auth.username,
+                password: auth.password,
+              });
             }
             break;
           case "apiKey":
@@ -546,8 +577,12 @@ export default function Page() {
       setResponse(null);
       setMethod("GET");
       // Reset all REST-related states
-      setHeaders([{ key: "", value: "", enabled: true, showSecrets: false, type: "" }]);
-      setParams([{ key: "", value: "", enabled: true, showSecrets: false, type: "" }]);
+      setHeaders([
+        { key: "", value: "", enabled: true, showSecrets: false, type: "" },
+      ]);
+      setParams([
+        { key: "", value: "", enabled: true, showSecrets: false, type: "" },
+      ]);
       setBody({ type: "none", content: "" });
       setAuth({ type: "none" });
     } else {
@@ -559,288 +594,132 @@ export default function Page() {
     }
   };
 
+  const handleUrlChange = (newUrl: string) => {
+    setUrl(newUrl);
+    // Update recent URLs
+    if (newUrl && !recentUrls.includes(newUrl)) {
+      const updated = [newUrl, ...recentUrls].slice(0, 10);
+      setRecentUrls(updated);
+      localStorage.setItem("recent-urls", JSON.stringify(updated));
+    }
+  };
+
   return (
     <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-slate-900/50 text-slate-600">
       <header className="fixed top-0 left-0 right-0 z-50 bg-slate-800">
-        <div className="flex flex-col md:flex-row md:h-16">
-          {/* Mobile Layout */}
-          <div className="flex flex-col md:hidden w-full px-2 py-3 space-y-3">
-            <div className="flex items-center gap-2">
-              <MobileNav
-                collections={collections}
-                history={history}
-                onSelectRequest={handleLoadRequest}
-                onSelectHistoryItem={handleLoadHistoryItem}
-                onClearHistory={handleClearHistory}
-                onCreateCollection={handleCreateCollection}
-                onSaveRequest={handleSaveRequest}
-                onDeleteCollection={handleDeleteCollection}
-                onDeleteRequest={handleDeleteRequest}
-                onDeleteHistoryItem={handleDeleteHistoryItem}
-                className="rounded-lg border border-slate-700 hover:bg-slate-700/50"
-                isHistorySavingEnabled={isHistorySavingEnabled}
-                onToggleHistorySaving={toggleHistorySaving}
-                onExportCollections={handleExportCollections}
-                onExportHistory={handleExportHistory}
-                onExportCollection={handleExportCollection}
-              />
-              <div className="flex-1 flex gap-2 items-center">
-                <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger className="w-24 text-xs font-medium bg-slate-900 border border-slate-700 rounded-lg text-slate-400">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-lg border border-slate-700 bg-slate-800">
-                    <SelectItem
-                      value="GET"
-                      className="text-xs font-medium text-green-500"
-                    >
-                      GET
-                    </SelectItem>
-                    <SelectItem
-                      value="POST"
-                      className="text-xs font-medium text-blue-500"
-                    >
-                      POST
-                    </SelectItem>
-                    <SelectItem
-                      value="PUT"
-                      className="text-xs font-medium text-yellow-500"
-                    >
-                      PUT
-                    </SelectItem>
-                    <SelectItem
-                      value="DELETE"
-                      className="text-xs font-medium text-red-500"
-                    >
-                      DELETE
-                    </SelectItem>
-                    <SelectItem
-                      value="PATCH"
-                      className="text-xs font-medium text-purple-500"
-                    >
-                      PATCH
-                    </SelectItem>
-                    </SelectContent>
-                </Select>
-                <div className="relative flex-1">
-                  <Input
-                    className={`w-full text-xs font-mono bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all shadow-none ${
-                      url &&
-                      !url.match(
-                        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
-                      )
-                        ? "border-red-500/50"
-                        : "focus:border-slate-600"
-                    }`}
-                    placeholder="Enter API endpoint"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                  />
-                  {url && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          url.match(
-                            /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
-                          )
-                            ? "bg-green-500"
-                            : "bg-red-500"
-                        }`}
-                      />
-                    </div>
-                  )}
-                </div>
-                <Button
-                  className="bg-slate-900 hover:bg-slate-700 text-slate-400 px-4 py-2 h-9 rounded-lg border border-slate-700"
-                  onClick={handleSendRequest}
-                  disabled={
-                    isLoading ||
-                    !url.match(
-                      /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
-                    )
-                  }
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Send className="w-3 h-3" />
-                  )}
-                </Button>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                className={`${getWebSocketButtonClasses()} h-9 border border-slate-700`}
-                onClick={handleWebSocketToggle}
-                title={
-                  wsConnected
-                    ? "WebSocket Connected"
-                    : "Open WebSocket Connection"
-                }
-              >
-                <div className="relative z-10">
-                  <GlobeIcon
-                    className={`w-3 h-3 transition-colors ${
-                      wsConnected
-                        ? "text-green-400 animate-pulse"
-                        : "text-slate-400"
-                    }`}
-                  />
-                </div>
-              </Button>
-              <div className="flex-1">
-                <EnvironmentManager
-                  ref={environmentManagerRef}
-                  environments={environments}
-                  currentEnvironment={currentEnvironment}
-                  onEnvironmentChange={handleEnvironmentChange}
-                  onEnvironmentsUpdate={handleEnvironmentsUpdate}
-                  className="rounded-lg border border-slate-700 bg-slate-900 text-xs"
+        {/* Mobile Header */}
+        <div className="md:hidden flex flex-col w-full px-2 py-3 space-y-3">
+          <div className="flex items-center gap-2">
+            <MobileNav
+              collections={collections}
+              history={history}
+              onSelectRequest={handleLoadRequest}
+              onSelectHistoryItem={handleLoadHistoryItem}
+              onClearHistory={handleClearHistory}
+              onCreateCollection={handleCreateCollection}
+              onSaveRequest={handleSaveRequest}
+              onDeleteCollection={handleDeleteCollection}
+              onDeleteRequest={handleDeleteRequest}
+              onDeleteHistoryItem={handleDeleteHistoryItem}
+              className="rounded-lg border border-slate-700 hover:bg-slate-700/50"
+              isHistorySavingEnabled={isHistorySavingEnabled}
+              onToggleHistorySaving={toggleHistorySaving}
+              onExportCollections={handleExportCollections}
+              onExportHistory={handleExportHistory}
+              onExportCollection={handleExportCollection}
+            />
+            <UrlBar
+              method={method}
+              url={url}
+              isLoading={isLoading}
+              wsConnected={wsConnected}
+              isWebSocketMode={isWebSocketMode}
+              onMethodChange={setMethod}
+              onUrlChange={handleUrlChange}
+              onSendRequest={handleSendRequest}
+              onWebSocketToggle={handleWebSocketToggle}
+              isMobile={true}
+              variables={mergedEnvVariables}
+              recentUrls={recentUrls}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              className={`${getWebSocketButtonClasses()} h-9 border border-slate-700`}
+              onClick={handleWebSocketToggle}
+              title={
+                wsConnected
+                  ? "WebSocket Connected"
+                  : "Open WebSocket Connection"
+              }
+            >
+              <div className="relative z-10">
+                <GlobeIcon
+                  className={`w-3 h-3 transition-colors ${
+                    wsConnected
+                      ? "text-green-400 animate-pulse"
+                      : "text-slate-400"
+                  }`}
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Desktop Layout */}
-          <div className="hidden md:flex items-center gap-4 p-4 max-w-screen-2xl mx-auto w-full">
-            <div className="flex items-center gap-4 flex-1">
-              <MobileNav
-                collections={collections}
-                history={history}
-                onSelectRequest={handleLoadRequest}
-                onSelectHistoryItem={handleLoadHistoryItem}
-                onClearHistory={handleClearHistory}
-                onCreateCollection={handleCreateCollection}
-                onSaveRequest={handleSaveRequest}
-                onDeleteCollection={handleDeleteCollection}
-                onDeleteRequest={handleDeleteRequest}
-                onDeleteHistoryItem={handleDeleteHistoryItem}
-                className="rounded-lg border border-slate-700 hover:bg-slate-700/50"
-                isHistorySavingEnabled={isHistorySavingEnabled}
-                onToggleHistorySaving={toggleHistorySaving}
-                onExportCollections={handleExportCollections}
-                onExportHistory={handleExportHistory}
-                onExportCollection={handleExportCollection}
-              />
-
-              <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-2">
-                <div className="w-6 h-6 bg-slate-800 rounded-lg flex items-center justify-center text-slate-400 text-xs font-bold">
-                  {method.charAt(0)}
-                </div>
-                <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger className="w-[100px] font-bold bg-transparent border-0 text-slate-400">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="border border-slate-700 bg-slate-800">
-                    <SelectItem
-                      value="GET"
-                      className="font-medium text-green-500"
-                    >
-                      GET
-                    </SelectItem>
-                    <SelectItem
-                      value="POST"
-                      className="font-medium text-blue-500"
-                    >
-                      POST
-                    </SelectItem>
-                    <SelectItem
-                      value="PUT"
-                      className="font-medium text-yellow-500"
-                    >
-                      PUT
-                    </SelectItem>
-                    <SelectItem
-                      value="DELETE"
-                      className="font-medium text-red-500"
-                    >
-                      DELETE
-                    </SelectItem>
-                    <SelectItem
-                      value="PATCH"
-                      className="font-medium text-purple-500"
-                    >
-                      PATCH
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex-1 flex items-center gap-3">
-                <div className="flex-1 relative">
-                  <Input
-                    className={`w-full text-sm font-mono bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all shadow-none ${
-                      url &&
-                      !url.match(
-                        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
-                      )
-                        ? "border-red-500/50"
-                        : "focus:border-slate-600"
-                    }`}
-                    placeholder="Enter API endpoint"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                  />
-                  {url && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          url.match(
-                            /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
-                          )
-                            ? "bg-green-500"
-                            : "bg-red-500"
-                        }`}
-                      />
-                    </div>
-                  )}
-                </div>
-                <Button
-                  className="bg-slate-900 hover:bg-slate-800 text-slate-400 px-6 py-2 rounded-lg"
-                  onClick={handleSendRequest}
-                  disabled={
-                    isLoading ||
-                    !url.match(
-                      /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
-                    )
-                  }
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </Button>
-                <Button
-                  className={getWebSocketButtonClasses()}
-                  onClick={handleWebSocketToggle}
-                  title={
-                    wsConnected
-                      ? "WebSocket Connected"
-                      : "Open WebSocket Connection"
-                  }
-                >
-                  <div className="relative z-10">
-                    <GlobeIcon
-                      className={`w-4 h-4 transition-colors ${
-                        wsConnected
-                          ? "text-green-400 animate-pulse"
-                          : "text-slate-400"
-                      }`}
-                    />
-                    {wsConnected}
-                  </div>
-                </Button>
-              </div>
-
+            </Button>
+            <div className="flex-1">
               <EnvironmentManager
                 ref={environmentManagerRef}
                 environments={environments}
                 currentEnvironment={currentEnvironment}
                 onEnvironmentChange={handleEnvironmentChange}
                 onEnvironmentsUpdate={handleEnvironmentsUpdate}
+                className="rounded-lg border border-slate-700 bg-slate-900 text-xs"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Desktop Header */}
+        <div className="hidden md:flex h-16 items-center gap-4 p-4 max-w-screen-2xl mx-auto w-full">
+          <MobileNav
+            collections={collections}
+            history={history}
+            onSelectRequest={handleLoadRequest}
+            onSelectHistoryItem={handleLoadHistoryItem}
+            onClearHistory={handleClearHistory}
+            onCreateCollection={handleCreateCollection}
+            onSaveRequest={handleSaveRequest}
+            onDeleteCollection={handleDeleteCollection}
+            onDeleteRequest={handleDeleteRequest}
+            onDeleteHistoryItem={handleDeleteHistoryItem}
+            className="rounded-lg border border-slate-700 hover:bg-slate-700/50"
+            isHistorySavingEnabled={isHistorySavingEnabled}
+            onToggleHistorySaving={toggleHistorySaving}
+            onExportCollections={handleExportCollections}
+            onExportHistory={handleExportHistory}
+            onExportCollection={handleExportCollection}
+          />
+
+          <div className="flex-1 flex items-center gap-3">
+            <UrlBar
+              method={method}
+              url={url}
+              isLoading={isLoading}
+              wsConnected={wsConnected}
+              isWebSocketMode={isWebSocketMode}
+              onMethodChange={setMethod}
+              onUrlChange={handleUrlChange}
+              onSendRequest={handleSendRequest}
+              onWebSocketToggle={handleWebSocketToggle}
+              isMobile={false}
+              variables={mergedEnvVariables}
+              recentUrls={recentUrls}
+            />
+
+            <EnvironmentManager
+              ref={environmentManagerRef}
+              environments={environments}
+              currentEnvironment={currentEnvironment}
+              onEnvironmentChange={handleEnvironmentChange}
+              onEnvironmentsUpdate={handleEnvironmentsUpdate}
+            />
           </div>
         </div>
       </header>

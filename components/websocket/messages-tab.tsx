@@ -37,13 +37,12 @@ interface Message {
   timestamp: string;
 }
 
-// Update message style definitions to match REST panel theme
 const MESSAGE_STYLES = {
   sent: {
     bg: "hover:bg-blue-900/20",
     activeBg: "bg-blue-900/30",
     icon: "text-blue-500",
-    text: "text-blue-400",
+    text: "text-blue-500",
     border: "border-blue-800/50",
   },
   received: {
@@ -57,21 +56,21 @@ const MESSAGE_STYLES = {
     bg: "hover:bg-yellow-900/20",
     activeBg: "bg-yellow-900/30",
     icon: "text-yellow-500",
-    text: "text-yellow-400",
+    text: "text-yellow-500",
     border: "border-yellow-800/50",
   },
   disconnected: {
     bg: "hover:bg-orange-900/20",
     activeBg: "bg-orange-900/30",
     icon: "text-orange-500",
-    text: "text-orange-400",
+    text: "text-orange-500",
     border: "border-orange-800/50",
   },
   error: {
     bg: "hover:bg-red-900/20",
     activeBg: "bg-red-900/30",
     icon: "text-red-500",
-    text: "text-red-400",
+    text: "text-red-500",
     border: "border-red-800/50",
   },
 };
@@ -97,7 +96,6 @@ export function MessagesTab() {
     }
   }, [messages]);
 
-  // Add auto-format detection
   const detectMessageFormat = (content: string) => {
     try {
       JSON.parse(content);
@@ -107,11 +105,9 @@ export function MessagesTab() {
     }
   };
 
-  // Update message change handler
   const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newMessage = e.target.value;
     setMessage(newMessage);
-    // Auto-detect format when typing
     if (newMessage.trim()) {
       setMessageFormat(detectMessageFormat(newMessage));
     }
