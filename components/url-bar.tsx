@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { toast } from "sonner";
+import { HistoryItem } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,9 +35,12 @@ import {
   Variable,
   History,
   Wand,
+  Unplug,
+  PlugZap2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { useWebSocket } from "./websocket/websocket-context";  // Add this import
 
 interface UrlBarProps {
   method: string;
@@ -49,7 +54,7 @@ interface UrlBarProps {
   onMethodChange: (method: string) => void;
   onUrlChange: (url: string) => void;
   onSendRequest: () => void;
-  onWebSocketToggle: () => void;
+  onWebSocketToggle: () => void;  // This will now only handle UI tab visibility
 }
 
 interface SuggestionType {
@@ -58,6 +63,13 @@ interface SuggestionType {
   label: string;
   description?: string;
 }
+
+// Add URL type detection
+const detectUrlType = (url: string) => {
+  if (!url) return 'http';
+  if (url.startsWith('ws://') || url.startsWith('wss://')) return 'websocket';
+  return 'http';
+};
 
 export function UrlBar({
   method,
@@ -69,7 +81,7 @@ export function UrlBar({
   isMobile,
   recentUrls = [],
   onMethodChange,
-  onUrlChange,
+  onUrlChange: propsOnUrlChange,
   onSendRequest,
   onWebSocketToggle,
 }: UrlBarProps) {
@@ -85,6 +97,16 @@ export function UrlBar({
     });
   };
 
+  // Add WebSocket protocol detection
+  const detectWebSocketProtocol = (url: string) => {
+    if (url.includes('socket.io')) return 'socketio';
+    return 'websocket';
+  };
+
+  const urlType = detectUrlType(url);
+  const wsProtocol = detectWebSocketProtocol(url);
+
+  // Modify URL validation to include WebSocket URLs
   const isValidUrl = (urlString: string): boolean => {
     if (!urlString) return false;
 
@@ -112,11 +134,10 @@ export function UrlBar({
       return false;
     }
 
-    const urlPattern = isWebSocketMode
-      ? /^wss?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
-      : /^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+    const httpPattern = /^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+    const wsPattern = /^wss?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
 
-    return urlPattern.test(resolvedUrl);
+    return httpPattern.test(resolvedUrl) || wsPattern.test(resolvedUrl);
   };
 
   const resolvedUrl = useMemo(() => {
@@ -141,7 +162,7 @@ export function UrlBar({
     const newValue = e.target.value;
     const cursorPos = e.target.selectionStart || 0;
 
-    onUrlChange(newValue);
+    handleUrlChange(newValue);
     setCursorPosition(cursorPos);
 
     // Check for variable typing
@@ -171,7 +192,7 @@ export function UrlBar({
     const newUrl =
       beforeCursor.slice(0, varStart) + `{{${varKey}}}` + afterCursor;
 
-    onUrlChange(newUrl);
+    handleUrlChange(newUrl);
     setShowSuggestions(false);
 
     const newPosition = varStart + varKey.length + 4;
@@ -183,10 +204,172 @@ export function UrlBar({
     }, 0);
   };
 
+  // Add WebSocket context
+  const {
+    connect: wsConnect,
+    disconnect: wsDisconnect,
+    isConnected,
+    connectionStatus,
+    onUrlChange: wsUrlChange,
+    url: wsUrl, // Add this
+  } = useWebSocket();
+
+  // Combine URL change handlers
+  const handleUrlChange = (newUrl: string) => {
+    propsOnUrlChange(newUrl);
+    if (detectUrlType(newUrl) === 'websocket') {
+      wsUrlChange(newUrl);
+    }
+  };
+
+  // Handle WebSocket connection
+  const handleWebSocketAction = () => {
+    if (!url) return;
+
+    if (isConnected) {
+      wsDisconnect();
+    } else {
+      try {
+        const formattedUrl = url.startsWith("ws://") || url.startsWith("wss://")
+          ? url
+          : url.startsWith("http://")
+            ? url.replace("http://", "ws://")
+            : url.startsWith("https://")
+              ? url.replace("https://", "wss://")
+              : `ws://${url}`;
+
+        handleUrlChange(formattedUrl);
+        // Connect with detected protocol, but don't toggle tab visibility
+        const protocol = detectWebSocketProtocol(formattedUrl);
+        wsConnect([protocol]);
+        // Note: Removed onWebSocketToggle() from here
+      } catch (error) {
+        console.error("WebSocket setup error:", error);
+        toast.error("Failed to setup WebSocket connection");
+      }
+    }
+  };
+
+  // Update action buttons render
+  const renderActionButtons = () => (
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={urlType === 'websocket' ? handleWebSocketAction : onSendRequest}
+        disabled={!isValidUrl(url) || (urlType === 'websocket' ? connectionStatus === 'connecting' : isLoading)}
+        className={cn(
+          "bg-slate-900 hover:bg-slate-800 text-slate-400",
+          (!isValidUrl(url) || isLoading) && "opacity-50 cursor-not-allowed",
+          isConnected && "bg-green-600 hover:bg-green-700"
+        )}
+      >
+        {connectionStatus === 'connecting' ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : urlType === 'websocket' ? (
+          isConnected ? (
+            <Unplug className="h-4 w-4" />
+          ) : (
+            <PlugZap2 className="h-4 w-4" />
+          )
+        ) : (
+          <Send className="h-4 w-4" />
+        )}
+      </Button>
+    </div>
+  );
+
+  // Update URL input to show protocol badge
+  const renderUrlInput = () => (
+    <div className="relative flex-1">
+      <Input
+        ref={inputRef}
+        value={url}
+        onChange={(e) => handleUrlChange(e.target.value)}
+        placeholder={urlType === 'websocket' ? 'Enter WebSocket URL' : 'Enter API endpoint'}
+        disabled={isConnected}
+        className={cn(
+          "pr-20 font-mono text-sm bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all",
+          `focus:border-${getMethodColor(method)}-500/50`,
+          !isValidUrl(url) && url && "border-red-500/50",
+          isMobile ? "text-xs" : "text-sm",
+          isConnected && "opacity-75 cursor-not-allowed"
+        )}
+      />
+
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+        {urlType === 'websocket' && (
+          <Badge
+            variant="secondary"
+            className="text-xs bg-purple-500/10 text-purple-400"
+          >
+            {wsProtocol}
+          </Badge>
+        )}
+        {variables.length > 0 && (
+          <Badge
+            variant="secondary"
+            className={`text-xs bg-${getMethodColor(
+              method
+            )}-500/10 text-${getMethodColor(method)}-400`}
+          >
+            {variables.length} vars
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+
+  const handleHistoryItemLoad = useCallback((historyItem: HistoryItem) => {
+    if (historyItem.type === "websocket") {
+      handleUrlChange(historyItem.url);
+      
+      // If there was an active connection, disconnect first
+      if (isConnected) {
+        wsDisconnect();
+      }
+
+      onWebSocketToggle();
+      
+      toast.info(
+        `Last session: ${historyItem.wsStats?.messagesSent || 0} sent, ${
+          historyItem.wsStats?.messagesReceived || 0
+        } received`
+      );
+    }
+  }, [isConnected, wsDisconnect, handleUrlChange, onWebSocketToggle]);
+
+  // Update useEffect to handle history events
+  useEffect(() => {
+    const handleHistorySelect = (event: CustomEvent) => {
+      const { item, url: historyUrl } = event.detail;
+      
+      if (isConnected) {
+        toast.error("Please disconnect current WebSocket before loading a new URL");
+        return;
+      }
+
+      if (historyUrl) {
+        handleUrlChange(historyUrl);
+        if (item?.type === "websocket" && !isWebSocketMode) {
+          // Only toggle to WebSocket tab if we're not already in it
+          onWebSocketToggle();
+        }
+      }
+    };
+
+    window.addEventListener("loadHistoryItem", handleHistorySelect as EventListener);
+    return () => {
+      window.removeEventListener("loadHistoryItem", handleHistorySelect as EventListener);
+    };
+  }, [handleUrlChange, onWebSocketToggle, isConnected, isWebSocketMode]);
+
   return (
     <div className="flex-1 flex items-center gap-2">
       <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-0">
-        <Select value={method} onValueChange={onMethodChange}>
+        <Select 
+          value={method} 
+          onValueChange={onMethodChange}
+          disabled={urlType === 'websocket'}
+        >
           <SelectTrigger
             className={cn(
               "w-auto min-w-[70px] max-w-[100px] font-bold bg-transparent border-0 text-slate-400 hover:text-slate-300 gap-2",
@@ -215,106 +398,8 @@ export function UrlBar({
         </Select>
       </div>
 
-      <div className="relative flex-1">
-        <Input
-          ref={inputRef}
-          value={url}
-          onChange={handleInputChange}
-          placeholder="Enter API endpoint"
-          className={cn(
-            "pr-20 font-mono text-sm bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all",
-            `focus:border-${getMethodColor(method)}-500/50`,
-            !isValidUrl(url) && url && "border-red-500/50",
-            isMobile ? "text-xs" : "text-sm"
-          )}
-        />
-
-        {/* Variable count badge */}
-        {variables.length > 0 && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Badge
-              variant="secondary"
-              className={`text-xs bg-${getMethodColor(
-                method
-              )}-500/10 text-${getMethodColor(method)}-400`}
-            >
-              {variables.length} vars
-            </Badge>
-          </div>
-        )}
-
-        {showSuggestions && (
-          <div className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-lg bg-slate-800 border border-slate-700 shadow-lg backdrop-blur-sm">
-            <div className="sticky top-0 bg-slate-800 p-2 border-b border-slate-700">
-              <Input
-                placeholder="Filter variables..."
-                className="h-8 bg-slate-900 border-slate-700 text-xs text-slate-400"
-                onChange={(e) => {}}
-              />
-            </div>
-            <div className="p-1">
-              {variables.map((v) => (
-                <div
-                  key={v.key}
-                  className="px-3 py-2 hover:bg-slate-700 cursor-pointer rounded-md group transition-colors"
-                  onClick={() => insertVariable(v.key)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-1.5 h-1.5 rounded-full bg-${getMethodColor(
-                          method
-                        )}-500`}
-                      />
-                      <span className="font-mono text-sm text-slate-300">
-                        {v.key}
-                      </span>
-                    </div>
-                    <span className="text-xs text-slate-500 group-hover:text-slate-400">
-                      = {v.value}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex items-center gap-2">
-        <Button
-          onClick={onSendRequest}
-          disabled={!isValidUrl(url) || isLoading}
-          className={cn(
-            "bg-slate-900 hover:bg-slate-800 text-slate-400",
-            (!isValidUrl(url) || isLoading) && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
-
-        {!isMobile && (
-          <Button
-            className={getWebSocketClasses(wsConnected)}
-            onClick={onWebSocketToggle}
-            title={
-              wsConnected ? "WebSocket Connected" : "Open WebSocket Connection"
-            }
-          >
-            <GlobeIcon
-              className={cn(
-                "h-4 w-4 transition-colors",
-                wsConnected ? "text-green-400 animate-pulse" : "text-slate-400"
-              )}
-            />
-          </Button>
-        )}
-      </div>
+      {renderUrlInput()}
+      {renderActionButtons()}
     </div>
   );
 }

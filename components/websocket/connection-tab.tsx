@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -74,113 +74,42 @@ export function ConnectionTab() {
     isConnected,
     connectionStatus,
     connect,
-    disconnect,
-    url,
-    onUrlChange,
     stats,
     connectionTime,
     currentLatency,
-    sendMessage,
+    onUrlChange,
   } = useWebSocket();
 
-  const [selectedProtocol, setSelectedProtocol] =
-    useState<keyof typeof AVAILABLE_PROTOCOLS>("websocket");
+  const [selectedProtocol, setSelectedProtocol] = useState<keyof typeof AVAILABLE_PROTOCOLS>("websocket");
+  const [autoReconnect, setAutoReconnect] = useState(false);
+  const [detectedProtocol, setDetectedProtocol] = useState<string | null>(null);
 
-  const handleProtocolSelect = (protocol: keyof typeof AVAILABLE_PROTOCOLS) => {
+  // Add missing function handleProtocolSelect
+  const handleProtocolSelect = useCallback((protocol: keyof typeof AVAILABLE_PROTOCOLS) => {
     setSelectedProtocol(protocol);
     const config = AVAILABLE_PROTOCOLS[protocol];
     if (config.defaultUrl) {
       onUrlChange(config.defaultUrl);
+      connect([protocol]);
     }
-  };
+  }, [connect, onUrlChange]);
 
-  const [autoReconnect, setAutoReconnect] = useState(false);
+  // Add missing function handleUrlChange
+  const handleUrlChange = useCallback((url: string) => {
+    onUrlChange(url);
+    // Detect protocol from URL
+    const detectedProto = Object.entries(AVAILABLE_PROTOCOLS).find(
+      ([_, config]) => config.urlPattern.test(url)
+    )?.[0] as keyof typeof AVAILABLE_PROTOCOLS | undefined;
 
-  // Auto reconnect effect
-  useEffect(() => {
-    let reconnectTimer: NodeJS.Timeout;
-    if (autoReconnect && !isConnected && url) {
-      reconnectTimer = setTimeout(() => connect(), 3000);
-    }
-    return () => clearTimeout(reconnectTimer);
-  }, [autoReconnect, isConnected, url, connect]);
-
-  const handleConnect = () => {
-    if (isConnected) {
-      disconnect();
-    } else {
-      const protocols =
-        selectedProtocol !== "websocket" ? [selectedProtocol] : [];
-      connect(protocols);
-    }
-  };
-
-  // Add URL detection handler
-  const [isProtocolChanging, setIsProtocolChanging] = useState(false);
-  const [detectedProtocol, setDetectedProtocol] = useState<string | null>(null);
-
-  // Add debounce function
-  const debounce = (func: Function, wait: number) => {
-    let timeout: NodeJS.Timeout;
-    return (...args: any[]) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
-  };
-
-  // Update the protocol detection function
-  const detectProtocol = (url: string): keyof typeof AVAILABLE_PROTOCOLS => {
-    // Don't change protocol if no URL
-    if (!url) return selectedProtocol;
-
-    // Check each protocol's pattern against the URL
-    for (const [protocol, config] of Object.entries(AVAILABLE_PROTOCOLS)) {
-      if (config.urlPattern.test(url.toLowerCase())) {
-        return protocol as keyof typeof AVAILABLE_PROTOCOLS;
-      }
-    }
-
-    // Default to websocket if no specific protocol is detected
-    return "websocket";
-  };
-
-  // Update handleUrlChange with immediate protocol detection
-  const handleUrlChange = (newUrl: string) => {
-    if (isConnected) return;
-
-    onUrlChange(newUrl);
-
-    // Detecting protocol immediately here
-    const detectedProtocol = detectProtocol(newUrl);
-
-    if (detectedProtocol !== selectedProtocol) {
-      setDetectedProtocol(detectedProtocol);
-      setIsProtocolChanging(true);
+    if (detectedProto && detectedProto !== selectedProtocol) {
+      setDetectedProtocol(detectedProto);
       setTimeout(() => {
-        setSelectedProtocol(detectedProtocol);
-        setIsProtocolChanging(false);
+        setSelectedProtocol(detectedProto);
         setDetectedProtocol(null);
       }, 300);
     }
-  };
-
-  // Update paste handler with immediate protocol detection
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    if (isConnected) return;
-
-    const pastedUrl = e.clipboardData.getData("text");
-    const detectedProtocol = detectProtocol(pastedUrl);
-
-    if (detectedProtocol !== selectedProtocol) {
-      setSelectedProtocol(detectedProtocol);
-    }
-  };
-  const getUrlPlaceholder = () => {
-    return (
-      AVAILABLE_PROTOCOLS[selectedProtocol]?.placeholder ||
-      "Enter WebSocket URL"
-    );
-  };
+  }, [onUrlChange, selectedProtocol]);
 
   const renderProtocolButton = (key: string, protocol: ProtocolConfig) => (
     <motion.div
@@ -228,68 +157,6 @@ export function ConnectionTab() {
         </div>
       </Button>
     </motion.div>
-  );
-
-  // Update the connection input render function
-  const renderConnectionInput = () => (
-    <div className="flex gap-2">
-      <div className="flex-1 relative">
-        <Input
-          value={url}
-          onChange={(e) => handleUrlChange(e.target.value)}
-          onPaste={handlePaste}
-          placeholder={getUrlPlaceholder()}
-          disabled={isConnected}
-          className={cn(
-            "bg-white border-slate-200 text-slate-700 pr-24 h-9 text-sm",
-            isConnected && "cursor-not-allowed opacity-90"
-          )}
-        />
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-          <Badge variant="secondary" className="bg-slate-100 text-slate-600 text-xs">
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={selectedProtocol}
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -10, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                {AVAILABLE_PROTOCOLS[selectedProtocol].name}
-              </motion.span>
-            </AnimatePresence>
-          </Badge>
-          {isConnected ? (
-            <LockClosedIcon className="w-4 h-4 text-slate-400" />
-          ) : (
-            <LockOpen1Icon className="w-4 h-4 text-slate-400" />
-          )}
-        </div>
-      </div>
-      <Button
-        onClick={handleConnect}
-        variant={isConnected ? "destructive" : "default"}
-        className={cn(
-          "gap-2 px-4 h-9",
-          isConnected
-            ? "bg-red-500 hover:bg-red-600 text-white"
-            : "bg-slate-900 hover:bg-slate-800 text-white"
-        )}
-        disabled={!url || connectionStatus === "connecting"}
-      >
-        {connectionStatus === "connecting" ? (
-          <span className="animate-pulse">...</span>
-        ) : isConnected ? (
-          <>
-            <Unplug className="h-4 w-4" />
-          </>
-        ) : (
-          <>
-            <PlugZap2 className="h-4 w-4" />
-          </>
-        )}
-      </Button>
-    </div>
   );
 
   // function to format latency display...
@@ -393,7 +260,9 @@ export function ConnectionTab() {
   useEffect(() => {
     const handleSetProtocol = (event: CustomEvent) => {
       const { protocol, url } = event.detail;
-      setSelectedProtocol(protocol as keyof typeof AVAILABLE_PROTOCOLS);
+      if (protocol) {
+        handleProtocolSelect(protocol as keyof typeof AVAILABLE_PROTOCOLS);
+      }
       if (url) {
         handleUrlChange(url);
       }
@@ -409,7 +278,7 @@ export function ConnectionTab() {
         handleSetProtocol as EventListener
       );
     };
-  }, []);
+  }, [handleProtocolSelect, handleUrlChange]);
 
   return (
     <div className="h-full overflow-y-auto space-y-4 p-4 bg-white">
@@ -456,12 +325,9 @@ export function ConnectionTab() {
                 </motion.div>
               ))}
             </motion.div>
-
-            {/* Connection Input */}
-            {renderConnectionInput()}
           </div>
 
-          {/* Stats Cards */}
+          {/* Remove URL input section and keep only stats cards */}
           <div className="grid md:grid-cols-2 gap-4">
             {/* Connection Status */}
             <Card className="bg-white border-slate-200">

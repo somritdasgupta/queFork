@@ -12,6 +12,9 @@ import { Search, Trash2, MoreVertical, Clock, History, ArrowDownToLine } from "l
 import { useState } from "react";
 import { HistoryItem } from "@/types";
 import { formatDistanceToNow } from "date-fns";
+import { useWebSocket } from "./websocket/websocket-context";
+import { cn } from "@/lib/utils"; // Import cn utility
+import { toast } from "sonner";
 
 interface HistoryPanelProps {
   history: HistoryItem[];
@@ -39,9 +42,61 @@ export function HistoryPanel({
 }: HistoryPanelProps) {
   const [search, setSearch] = useState("");
 
+  const { isConnected } = useWebSocket(); // Add isConnected from WebSocket context
+
   const filteredHistory = history.filter((item) =>
     item.url.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleHistoryClick = (item: HistoryItem) => {
+    if (isConnected) {
+      toast.error("Please disconnect current WebSocket before loading a new URL");
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("loadHistoryItem", {
+        detail: { 
+          item,
+          url: item.url
+        }
+      })
+    );
+    onSelectItem(item);
+  };
+
+  const renderHistoryItem = (item: HistoryItem) => {
+    if (item.type === "websocket") {
+      return (
+        <div
+          key={item.id}
+          className={cn(
+            "flex items-center gap-2 p-2 border rounded-lg",
+            !isConnected 
+              ? "hover:bg-slate-50 cursor-pointer" 
+              : "opacity-50 cursor-not-allowed bg-slate-50"
+          )}
+          onClick={() => handleHistoryClick(item)}
+        >
+          <Badge variant="outline" className="text-purple-500">WS</Badge>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-mono truncate">{item.url}</div>
+            <div className="text-xs text-slate-500 flex gap-2">
+              <span>{formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}</span>
+              {item.wsStats && (
+                <span className="text-slate-400">
+                  {item.wsStats.messagesSent}↑ {item.wsStats.messagesReceived}↓
+                </span>
+              )}
+            </div>
+          </div>
+          {/* ... rest of item UI ... */}
+        </div>
+      );
+    }
+    
+    // ... render other history item types ...
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -106,7 +161,7 @@ export function HistoryPanel({
               <div
                 key={item.id}
                 className="flex items-center gap-2 p-2 bg-white border rounded-lg hover:bg-gray-50 cursor-pointer group"
-                onClick={() => onSelectItem(item)}
+                onClick={() => handleHistoryClick(item)}
               >
                 <Badge
                   variant="outline"

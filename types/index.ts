@@ -105,13 +105,17 @@ export interface HistoryItem {
 
     auth: { type: string } & Record<string, any>;
   };
-  wsStats?: {
-    messagesSent: number;
-    messagesReceived: number;
-    avgLatency: number | null;
-    connectionDuration: number;
-    protocols: string[];
-  };
+  wsStats?: WebSocketStats;
+}
+
+export interface WebSocketStats {
+  messagesSent: number;
+  messagesReceived: number;
+  avgLatency: number | null;
+  connectionDuration: number;
+  protocols: string[];
+  messages?: WebSocketMessage[];
+  lastConnected?: string;
 }
 
 export interface WebSocketHistoryItem extends HistoryItem {

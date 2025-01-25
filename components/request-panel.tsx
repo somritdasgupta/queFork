@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { KeyValueEditor } from "./key-value-editor";
 import { AuthSection } from "./auth-section";
 import { KeyValuePair, RequestBody } from "@/types";
-import { SearchCode, List, FileJson, FormInput, Link, FileText, KeyRound, Search, Network } from "lucide-react";
+import { SearchCode, List, FileJson, FormInput, Link, FileText, KeyRound, Search, Network, MessageSquare } from "lucide-react";
 import { Textarea } from "./ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ConnectionTab } from "./websocket/connection-tab";
@@ -57,6 +57,12 @@ export function RequestPanel({ isWebSocketMode, ...props }: RequestPanelProps) {
 
   const tabs: TabItem[] = [
     {
+      id: "messages",
+      label: "Messages",
+      icon: <MessageSquare className="h-4 w-4" />,
+      hidden: !isWebSocketMode
+    },
+    {
       id: "params",
       label: "Query",
       icon: <SearchCode className="h-4 w-4 text-emerald-500" />,
@@ -81,13 +87,7 @@ export function RequestPanel({ isWebSocketMode, ...props }: RequestPanelProps) {
              type.charAt(0).toUpperCase() + type.slice(1),
       icon: getBodyIcon(type),
       disabled: isWebSocketMode
-    })),
-    {
-      id: "connection",
-      label: "Connection",
-      icon: <Network className="h-4 w-4 text-purple-500" />,
-      hidden: !isWebSocketMode
-    }
+    }))
   ];
 
   return (
@@ -215,9 +215,6 @@ export function RequestPanel({ isWebSocketMode, ...props }: RequestPanelProps) {
                     <AuthSection auth={props.auth} onChange={props.onAuthChange} />
                   </CardContent>
                 </Card>
-              </TabsContent>
-              <TabsContent value="connection" className="m-0 min-h-0">
-                <ConnectionTab />
               </TabsContent>
             </div>
           </ScrollArea>
