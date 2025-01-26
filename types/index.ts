@@ -116,6 +116,8 @@ export interface WebSocketStats {
   protocols: string[];
   messages?: WebSocketMessage[];
   lastConnected?: string;
+  totalBytes?: number;
+  status?: 'connected' | 'closed' | 'connecting';
 }
 
 export interface WebSocketHistoryItem extends HistoryItem {

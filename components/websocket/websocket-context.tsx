@@ -18,6 +18,17 @@ interface WebSocketProviderProps {
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
+// Update initial state with required properties
+const initialProtocolConfig: ProtocolConfig = {
+  name: "Default",
+  color: "#000000",
+  urlPattern: /^wss?:\/\//,
+  placeholder: "ws://",
+  autoReconnect: false,
+  reconnectInterval: 3000,
+  maxReconnectAttempts: 5
+};
+
 export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<
@@ -76,7 +87,8 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     {}
   );
 
-  const [protocolConfig, setProtocolConfig] = useState<ProtocolConfig>({});
+  // Update protocolConfig state with proper initial value
+  const [protocolConfig, setProtocolConfig] = useState<ProtocolConfig>(initialProtocolConfig);
   const [currentLatency, setCurrentLatency] = useState<number | null>(null);
   const lastPingTimestamp = useRef<number | null>(null);
 
@@ -262,7 +274,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       messagesReceived: stats.messagesReceived,
       avgLatency: stats.averageLatency,
       connectionDuration: connectionTime || 0,
-      messages: messages,
+      messages: messages, // Save messages in history
       lastConnected: new Date().toISOString(),
     };
 
@@ -367,19 +379,16 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
       if (latencyCheckIntervalRef.current) clearInterval(latencyCheckIntervalRef.current);
 
-      // Reset all refs
+      // Reset only connection-specific refs
       connectionStartTimeRef.current = null;
-      currentHistoryId.current = null;
       pingIntervalRef.current = null;
       latencyCheckIntervalRef.current = null;
       messageHandlerRef.current = null;
 
-      // Reset all states in a single batch to prevent multiple re-renders
+      // Only update connection states
       setIsConnected(false);
       setConnectionStatus("disconnected");
-      setMessages([]); // Clear messages immediately
-      setActiveProtocols([]);
-      resetStats();
+      // Note: Not clearing messages or stats here
     }
   }, [updateHistoryOnDisconnect]);
 
@@ -445,16 +454,14 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       return;
     }
 
-    // Ensure clean disconnect first
-    if (wsRef.current) {
-      await disconnect();
-    }
-
-    // Clear messages and stats before new connection
+    // Clear previous messages and stats only when making a new connection
     setMessages([]);
     resetStats();
     
-    // Initialize new connection
+    if (wsRef.current) {
+      await disconnect();
+    }
+    
     initializeNewConnection(url, protocols);
   }, [url, disconnect]);
 
@@ -540,10 +547,25 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   }, [url, isConnected]);
 
   const handleHistorySelect = useCallback((event: CustomEvent) => {
-    const { url: historyUrl } = event.detail;
+    const { url: historyUrl, item, messages, stats: historyStats } = event.detail;
     if (historyUrl) {
-      // Just update the URL, don't connect automatically
       onUrlChange(historyUrl);
+      
+      // Restore messages and stats from history
+      if (messages) {
+        setMessages(messages);
+        setStats(prev => ({
+          ...prev,
+          messagesSent: historyStats?.messagesSent || 0,
+          messagesReceived: historyStats?.messagesReceived || 0,
+          averageLatency: historyStats?.avgLatency || 0,
+          // Keep other stats at initial values
+          minLatency: Infinity,
+          maxLatency: 0,
+          latencyHistory: [],
+          lastMessageTime: null,
+        }));
+      }
     }
   }, [onUrlChange]);
 
@@ -614,9 +636,14 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       }
     };
   }, []);
-  const updateProtocolConfig = (config: ProtocolConfig) => {
-    setProtocolConfig(config);
-  };
+
+  // Fix updateProtocolConfig to handle partial updates
+  const updateProtocolConfig = useCallback((config: Partial<ProtocolConfig>) => {
+    setProtocolConfig(prev => ({
+      ...prev,
+      ...config
+    }));
+  }, []);
 
   const subscribeToTopic = (topic: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -630,7 +657,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
   };
 
-  const value = {
+  const value: WebSocketContextType = {
     ws: wsRef,
     isConnected,
     connectionStatus,
@@ -646,7 +673,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     connectionTime,
     setMessagesBulk,
     currentLatency,
-    lastLatency,
     activeProtocols,
     setActiveProtocols,
     protocolHandlers,

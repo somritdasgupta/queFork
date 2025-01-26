@@ -15,9 +15,8 @@ const ResizablePanel = React.forwardRef<
   <ResizablePrimitive.Panel
     className={`
       flex flex-col overflow-hidden
-      border border-slate-200/30
       bg-gradient-to-b from-white/60 via-slate-50/50 to-white/60
-      backdrop-blur-[8px] backdrop-saturate-150
+      backdrop-blur-[0px] backdrop-saturate-150
       shadow-[0_2px_8px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.02)]
       supports-[backdrop-filter]:bg-white/40
       motion-reduce:transition-none
@@ -44,26 +43,32 @@ const ResizableHandle = ({
     <ResizablePrimitive.PanelResizeHandle
       className={`
         group relative flex items-center justify-center
-        data-[panel-group-direction=vertical]:h-1.5
+        data-[panel-group-direction=vertical]:h-1
         data-[panel-group-direction=vertical]:w-full
         data-[panel-group-direction=horizontal]:w-1.5
         data-[panel-group-direction=horizontal]:h-full
+        data-[panel-group-direction=horizontal]:bg-transparent
+        hover:bg-transparent
+        active:bg-transparent
         bg-transparent
-        hover:bg-slate-200/30
-        active:bg-slate-200/50
-        transition-colors duration-75
+        transition-opacity duration-50
         cursor-row-resize
-        touch-none
         select-none
-        motion-reduce:transition-none
+        touch-pan-y
+        will-change-transform
         ${className}
       `}
-      // Add these props for smoother dragging
-      style={{ contain: "strict" }}
+      style={{
+        contain: "strict",
+        touchAction: "none",
+        userSelect: "none",
+        WebkitTapHighlightColor: "transparent",
+        WebkitTouchCallout: "none",
+      }}
       {...props}
     >
       {withHandle && (
-        <div className="h-0.5 w-full transition-all duration-100 bg-blue-500 opacity-100 animate-pulse" />
+        <div className="relative w-12 h-0.5 bg-transparent before:absolute before:inset-0 before:bg-slate-600 before:w-full before:h-full before:backdrop-blur-sm transition-all duration-150" />
       )}
     </ResizablePrimitive.PanelResizeHandle>
   );
@@ -77,15 +82,16 @@ const ResizablePanelGroup = ({
     className={`
       flex h-full w-full 
       data-[panel-group-direction=vertical]:flex-col
-      bg-gradient-to-br from-white/30 via-slate-50/30 to-white/30
-      backdrop-blur-xl backdrop-saturate-150
-      supports-[backdrop-filter]:bg-white/30
+      bg-transparent
+      will-change-[height]
       motion-reduce:transition-none
       ${className}
     `}
-    // Add these props for better performance
     autoSaveId="panel-group-layout"
-    style={{ contain: "paint" }}
+    style={{
+      contain: "strict",
+      touchAction: "none",
+    }}
     {...props}
   />
 );

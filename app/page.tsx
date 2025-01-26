@@ -1,16 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Send, Loader2, GlobeIcon } from "lucide-react";
+
 import { toast } from "sonner";
 import { RequestPanel } from "@/components/request-panel";
 import { ResponsePanel } from "@/components/response-panel";
@@ -610,7 +601,25 @@ export default function Page() {
         {/* Mobile Header */}
         <div className="md:hidden flex flex-col w-full px-2 py-3 space-y-3">
           <div className="flex items-center gap-2">
-            <MobileNav
+           
+            <UrlBar
+              method={method}
+              url={url}
+              isLoading={isLoading}
+              wsConnected={wsConnected}
+              isWebSocketMode={isWebSocketMode}
+              onMethodChange={setMethod}
+              onUrlChange={handleUrlChange}
+              onSendRequest={handleSendRequest}
+              onWebSocketToggle={handleWebSocketToggle}
+              isMobile={true}
+              variables={mergedEnvVariables}
+              recentUrls={recentUrls}
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+             <MobileNav
               collections={collections}
               history={history}
               onSelectRequest={handleLoadRequest}
@@ -628,41 +637,6 @@ export default function Page() {
               onExportHistory={handleExportHistory}
               onExportCollection={handleExportCollection}
             />
-            <UrlBar
-              method={method}
-              url={url}
-              isLoading={isLoading}
-              wsConnected={wsConnected}
-              isWebSocketMode={isWebSocketMode}
-              onMethodChange={setMethod}
-              onUrlChange={handleUrlChange}
-              onSendRequest={handleSendRequest}
-              onWebSocketToggle={handleWebSocketToggle}
-              isMobile={true}
-              variables={mergedEnvVariables}
-              recentUrls={recentUrls}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              className={`${getWebSocketButtonClasses()} h-9 border border-slate-700`}
-              onClick={handleWebSocketToggle}
-              title={
-                wsConnected
-                  ? "WebSocket Connected"
-                  : "Open WebSocket Connection"
-              }
-            >
-              <div className="relative z-10">
-                <GlobeIcon
-                  className={`w-3 h-3 transition-colors ${
-                    wsConnected
-                      ? "text-green-400 animate-pulse"
-                      : "text-slate-400"
-                  }`}
-                />
-              </div>
-            </Button>
             <div className="flex-1">
               <EnvironmentManager
                 ref={environmentManagerRef}

@@ -31,16 +31,12 @@ import {
 import {
   Send,
   Loader2,
-  GlobeIcon,
-  Variable,
-  History,
-  Wand,
   Unplug,
   PlugZap2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { useWebSocket } from "./websocket/websocket-context";  // Add this import
+import { useWebSocket } from "./websocket/websocket-context";
 
 interface UrlBarProps {
   method: string;
@@ -54,7 +50,7 @@ interface UrlBarProps {
   onMethodChange: (method: string) => void;
   onUrlChange: (url: string) => void;
   onSendRequest: () => void;
-  onWebSocketToggle: () => void;  // This will now only handle UI tab visibility
+  onWebSocketToggle: () => void;  
 }
 
 interface SuggestionType {
@@ -64,11 +60,30 @@ interface SuggestionType {
   description?: string;
 }
 
+// Define URL type
+type UrlType = 'http' | 'websocket';
+type UrlProtocol = 'ws' | 'io';  // Update to be more specific
+
 // Add URL type detection
-const detectUrlType = (url: string) => {
+const detectUrlType = (url: string): UrlType => {
   if (!url) return 'http';
-  if (url.startsWith('ws://') || url.startsWith('wss://')) return 'websocket';
+  if (url.startsWith('ws://') || url.startsWith('wss://') || 
+      url.includes('socket.io') || url.includes('websocket')) {
+    return 'websocket';
+  }
   return 'http';
+};
+
+const detectWebSocketProtocol = (url: string): UrlProtocol => {
+  // Make Socket.IO detection more robust
+  const isSocketIO = 
+    url.includes('socket.io') || 
+    url.includes('engine.io') ||
+    /\?EIO=[3-4]/.test(url) ||
+    /transport=websocket/.test(url) ||
+    /\/socket\.io\/?/.test(url);
+
+  return isSocketIO ? 'io' : 'ws';
 };
 
 export function UrlBar({
@@ -97,11 +112,6 @@ export function UrlBar({
     });
   };
 
-  // Add WebSocket protocol detection
-  const detectWebSocketProtocol = (url: string) => {
-    if (url.includes('socket.io')) return 'socketio';
-    return 'websocket';
-  };
 
   const urlType = detectUrlType(url);
   const wsProtocol = detectWebSocketProtocol(url);
@@ -214,10 +224,22 @@ export function UrlBar({
     url: wsUrl, // Add this
   } = useWebSocket();
 
-  // Combine URL change handlers
+  // Combine URL change handlers with proper type checking
   const handleUrlChange = (newUrl: string) => {
     propsOnUrlChange(newUrl);
-    if (detectUrlType(newUrl) === 'websocket') {
+    const urlProtocol = detectUrlType(newUrl);
+    
+    // If URL is cleared and we're in WebSocket mode, disconnect and switch back
+    if (!newUrl && isWebSocketMode) {
+      if (isConnected) {
+        wsDisconnect();
+      }
+      onWebSocketToggle(); // Switch back to HTTP mode
+      return;
+    }
+
+    // Handle WebSocket URL changes
+    if (urlProtocol === 'websocket') {
       wsUrlChange(newUrl);
     }
   };
@@ -250,30 +272,51 @@ export function UrlBar({
     }
   };
 
-  // Update action buttons render
   const renderActionButtons = () => (
     <div className="flex items-center gap-2">
-      <Button
-        onClick={urlType === 'websocket' ? handleWebSocketAction : onSendRequest}
-        disabled={!isValidUrl(url) || (urlType === 'websocket' ? connectionStatus === 'connecting' : isLoading)}
-        className={cn(
-          "bg-slate-900 hover:bg-slate-800 text-slate-400",
-          (!isValidUrl(url) || isLoading) && "opacity-50 cursor-not-allowed",
-          isConnected && "bg-green-600 hover:bg-green-700"
-        )}
-      >
-        {connectionStatus === 'connecting' ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : urlType === 'websocket' ? (
-          isConnected ? (
-            <Unplug className="h-4 w-4" />
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+        <Button
+          onClick={urlType === 'websocket' ? handleWebSocketAction : onSendRequest}
+          disabled={!isValidUrl(url) || (urlType === 'websocket' ? connectionStatus === 'connecting' : isLoading)}
+          className={cn(
+            "w-10 h-10 transition-all relative border-1 border-slate-700",
+            urlType === 'websocket' 
+            ? isConnected
+              ? "border-1 border-slate-700 bg-blue-500 hover:bg-red-600 text-white after:absolute after:inset-0 after:animate-pulse"
+              : "border-1 border-slate-700 bg-slate-900 hover:bg-slate-700 text-slate-400"
+            : "border-1 border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-400",
+            (!isValidUrl(url) || isLoading) && "opacity-50 cursor-not-allowed"
+          )}
+        >
+          {connectionStatus === 'connecting' ? (
+            <div className="animate-spin">
+              <Loader2 className="h-5 w-5" />
+            </div>
+          ) : urlType === 'websocket' ? (
+            isConnected ? (
+              <div className="relative">
+                <Unplug className="h-5 w-5 animate-pulse" />
+              </div>
+            ) : (
+              <PlugZap2 className="h-5 w-5" />
+            )
           ) : (
-            <PlugZap2 className="h-4 w-4" />
-          )
-        ) : (
-          <Send className="h-4 w-4" />
-        )}
-      </Button>
+            <Send className="h-5 w-5" />
+          )}
+        </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+        {urlType === 'websocket' 
+          ? isConnected 
+            ? 'Disconnect WebSocket'
+            : 'Connect WebSocket'
+          : 'Send Request'
+        }
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
     </div>
   );
 
@@ -296,14 +339,6 @@ export function UrlBar({
       />
 
       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-        {urlType === 'websocket' && (
-          <Badge
-            variant="secondary"
-            className="text-xs bg-purple-500/10 text-purple-400"
-          >
-            {wsProtocol}
-          </Badge>
-        )}
         {variables.length > 0 && (
           <Badge
             variant="secondary"
@@ -362,41 +397,61 @@ export function UrlBar({
     };
   }, [handleUrlChange, onWebSocketToggle, isConnected, isWebSocketMode]);
 
+  // Add protocol badge render function
+  const renderProtocolBadge = (protocol: string) => (
+    <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-3 h-[35px]">
+      <Badge 
+        variant="outline"
+        className={cn(
+          "font-mono text-xs border-none",
+          protocol === 'io' 
+            ? "bg-blue-500/10 text-blue-400" 
+            : "bg-purple-500/10 text-purple-400"
+        )}
+      >
+        {protocol.toUpperCase()}
+      </Badge>
+    </div>
+  );
+
   return (
     <div className="flex-1 flex items-center gap-2">
-      <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-0">
-        <Select 
-          value={method} 
-          onValueChange={onMethodChange}
-          disabled={urlType === 'websocket'}
-        >
-          <SelectTrigger
-            className={cn(
-              "w-auto min-w-[70px] max-w-[100px] font-bold bg-transparent border-0 text-slate-400 hover:text-slate-300 gap-2",
-              `text-xs text-${getMethodColor(method)}-500 py-1`
-            )}
+      {urlType === 'websocket' ? (
+        renderProtocolBadge(wsProtocol)
+      ) : (
+        <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-0">
+          <Select 
+            value={method} 
+            onValueChange={onMethodChange}
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="border border-slate-700 bg-slate-800">
-            {[
-              { value: "GET", color: "emerald" },
-              { value: "POST", color: "blue" },
-              { value: "PUT", color: "yellow" },
-              { value: "DELETE", color: "red" },
-              { value: "PATCH", color: "purple" },
-            ].map(({ value, color }) => (
-              <SelectItem
-                key={value}
-                value={value}
-                className={cn("text-xs font-medium", `text-${color}-500`)}
-              >
-                {value}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            <SelectTrigger
+              className={cn(
+                "w-auto min-w-[70px] max-w-[100px] font-bold bg-transparent border-0 text-slate-400 hover:text-slate-300 gap-2",
+                `text-xs text-${getMethodColor(method)}-500 py-1`
+              )}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="border border-slate-700 bg-slate-800">
+              {[
+                { value: "GET", color: "emerald" },
+                { value: "POST", color: "blue" },
+                { value: "PUT", color: "yellow" },
+                { value: "DELETE", color: "red" },
+                { value: "PATCH", color: "purple" },
+              ].map(({ value, color }) => (
+                <SelectItem
+                  key={value}
+                  value={value}
+                  className={cn("text-xs font-medium", `text-${color}-500`)}
+                >
+                  {value}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {renderUrlInput()}
       {renderActionButtons()}

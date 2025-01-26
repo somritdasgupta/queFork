@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Search, Trash2, MoreVertical, Clock, History, ArrowDownToLine } from "lucide-react";
+  Search,
+  Trash2,
+  Clock,
+  History,
+  ArrowDownToLine,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { HistoryItem } from "@/types";
 import { formatDistanceToNow } from "date-fns";
@@ -27,8 +28,9 @@ interface HistoryPanelProps {
 }
 
 const truncateUrl = (url: string, maxLength: number = 30) => {
-  if (url.length <= maxLength) return url;
-  return url.substring(0, maxLength) + '...';
+  const urlWithoutProtocol = url.replace(/^(https?:\/\/|wss?:\/\/)/, "");
+  if (urlWithoutProtocol.length <= maxLength) return url;
+  return url.slice(0, maxLength) + "...";
 };
 
 export function HistoryPanel({
@@ -42,7 +44,7 @@ export function HistoryPanel({
 }: HistoryPanelProps) {
   const [search, setSearch] = useState("");
 
-  const { isConnected } = useWebSocket(); // Add isConnected from WebSocket context
+  const { url: currentUrl, isConnected } = useWebSocket();
 
   const filteredHistory = history.filter((item) =>
     item.url.toLowerCase().includes(search.toLowerCase())
@@ -50,16 +52,24 @@ export function HistoryPanel({
 
   const handleHistoryClick = (item: HistoryItem) => {
     if (isConnected) {
-      toast.error("Please disconnect current WebSocket before loading a new URL");
+      toast.error(
+        "Please disconnect current WebSocket before loading a new URL"
+      );
       return;
     }
 
     window.dispatchEvent(
       new CustomEvent("loadHistoryItem", {
-        detail: { 
+        detail: {
           item,
-          url: item.url
-        }
+          url: item.url,
+          messages: item.wsStats?.messages || [],
+          stats: {
+            messagesSent: item.wsStats?.messagesSent || 0,
+            messagesReceived: item.wsStats?.messagesReceived || 0,
+            avgLatency: item.wsStats?.avgLatency || 0,
+          },
+        },
       })
     );
     onSelectItem(item);
@@ -67,35 +77,142 @@ export function HistoryPanel({
 
   const renderHistoryItem = (item: HistoryItem) => {
     if (item.type === "websocket") {
+      const isActive = item.url === currentUrl;
+      const isSocketIO =
+        item.url.includes("socket.io") ||
+        item.wsStats?.protocols?.includes("io") ||
+        item.url.includes("engine.io");
+
       return (
         <div
           key={item.id}
           className={cn(
-            "flex items-center gap-2 p-2 border rounded-lg",
-            !isConnected 
-              ? "hover:bg-slate-50 cursor-pointer" 
-              : "opacity-50 cursor-not-allowed bg-slate-50"
+            "flex items-center gap-2 p-2 border rounded-lg transition-all",
+            !isConnected
+              ? "hover:bg-slate-50 hover:border-slate-300 cursor-pointer border-slate-200"
+              : "cursor-not-allowed bg-slate-100 border-slate-200/50 text-slate-500",
+            isActive && !isConnected && "border-purple-200 bg-purple-50/50"
           )}
-          onClick={() => handleHistoryClick(item)}
+          onClick={() => !isConnected && handleHistoryClick(item)}
         >
-          <Badge variant="outline" className="text-purple-500">WS</Badge>
+          <Badge
+            variant={isActive ? "default" : "outline"}
+            className={cn(
+              "flex-shrink-0",
+              isSocketIO ? "text-blue-500" : "text-purple-500",
+              isActive && isSocketIO
+                ? "bg-blue-100"
+                : isActive
+                ? "bg-purple-100"
+                : ""
+            )}
+          >
+            {isSocketIO ? "IO" : "WS"}
+          </Badge>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-mono truncate">{item.url}</div>
-            <div className="text-xs text-slate-500 flex gap-2">
-              <span>{formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}</span>
+            <div className="text-sm font-mono truncate">
+              {truncateUrl(item.url)}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span>
+                {formatDistanceToNow(new Date(item.timestamp), {
+                  addSuffix: true,
+                })}
+              </span>
               {item.wsStats && (
-                <span className="text-slate-400">
-                  {item.wsStats.messagesSent}↑ {item.wsStats.messagesReceived}↓
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-500">
+                    {item.wsStats.messagesSent}↑
+                  </span>
+                  <span className="text-blue-500">
+                    {item.wsStats.messagesReceived}↓
+                  </span>
+                </div>
               )}
             </div>
           </div>
-          {/* ... rest of item UI ... */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 flex-shrink-0 text-red-500 opacity-70 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteItem(item.id);
+              toast.success("History item deleted");
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      );
+    } else {
+      return (
+        <div
+          key={item.id}
+          className="flex items-center gap-2 p-2 border rounded-lg hover:bg-slate-50 cursor-pointer group"
+          onClick={() => handleHistoryClick(item)}
+        >
+          <Badge
+            variant="outline"
+            className={cn(
+              "flex-shrink-0 font-mono text-xs",
+              item.method === "GET" && "text-emerald-500 border-emerald-200",
+              item.method === "POST" && "text-blue-500 border-blue-200",
+              item.method === "PUT" && "text-yellow-500 border-yellow-200",
+              item.method === "DELETE" && "text-red-500 border-red-200",
+              item.method === "PATCH" && "text-purple-500 border-purple-200"
+            )}
+          >
+            {item.method}
+          </Badge>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-mono truncate">
+              {truncateUrl(item.url)}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span>
+                {formatDistanceToNow(new Date(item.timestamp), {
+                  addSuffix: true,
+                })}
+              </span>
+              {item.response && (
+                <>
+                  <span>•</span>
+                  <span
+                    className={cn(
+                      "font-medium",
+                      item.response.status >= 200 && item.response.status < 300
+                        ? "text-emerald-500"
+                        : "text-red-500"
+                    )}
+                  >
+                    {item.response.status}
+                  </span>
+                  {item.response.time && (
+                    <>
+                      <span>•</span>
+                      <span>{item.response.time}</span>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 flex-shrink-0 text-red-500 opacity-70 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteItem(item.id);
+              toast.success("History item deleted");
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       );
     }
-    
-    // ... render other history item types ...
   };
 
   return (
@@ -150,58 +267,18 @@ export function HistoryPanel({
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 mb-8">
               <Clock className="h-8 w-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No History</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No History
+            </h3>
             <p className="text-sm text-gray-500 text-center">
               Your request history will appear here
             </p>
           </div>
         ) : (
-          <div className="p-4 space-y-2">
-            {filteredHistory.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-2 p-2 bg-white border rounded-lg hover:bg-gray-50 cursor-pointer group"
-                onClick={() => handleHistoryClick(item)}
-              >
-                <Badge
-                  variant="outline"
-                  className={`method-${item.method.toLowerCase()} shrink-0 text-xs font-mono`}
-                >
-                  {item.method}
-                </Badge>
-                <div className="flex-1 min-w-0">
-                  <div className="relative">
-                    <div className="text-sm font-mono text-gray-700 truncate pr-6">
-                      {truncateUrl(item.url)}
-                    </div>
-                    <div className="absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white via-white to-transparent" />
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {formatDistanceToNow(new Date(item.timestamp), {
-                      addSuffix: true,
-                    })}
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onDeleteItem(item.id)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
+          <div className="p-4 space-y-2 min-w-0">
+            {" "}
+            {/* Add min-w-0 */}
+            {filteredHistory.map((item) => renderHistoryItem(item))}
           </div>
         )}
       </ScrollArea>

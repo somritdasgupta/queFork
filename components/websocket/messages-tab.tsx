@@ -18,8 +18,6 @@ import {
   Trash2,
   Copy,
   MessageSquare,
-  ArrowDown,
-  ArrowUp,
   Unplug,
   Upload,
   Clock,
@@ -366,16 +364,16 @@ export function MessagesTab() {
                     >
                       <div className={cn("shrink-0", style.icon)}>
                         {msg.content.startsWith("Connected") ? (
-                          <PlugZap2 className="h-4 w-4" />
+                          <PlugZap2 className="h-4 w-4 -rotate-12" />
                         ) : msg.content.startsWith("Disconnected") ? (
-                          <Unplug className="h-4 w-4" />
+                          <Unplug className="h-4 w-4 rotate-12" />
                         ) : msg.content.startsWith("Connection error") ||
                           msg.content.startsWith("Failed") ? (
-                          <XCircle className="h-4 w-4" />
+                          <XCircle className="h-4 w-4 -rotate-12" />
                         ) : msg.type === "sent" ? (
-                          <ArrowUpCircle className="h-4 w-4" />
+                          <ArrowUpCircle className="h-4 w-4 rotate-[315deg]" />
                         ) : (
-                          <ArrowDownCircle className="h-4 w-4" />
+                          <ArrowDownCircle className="h-4 w-4 -rotate-45" />
                         )}
                       </div>
 

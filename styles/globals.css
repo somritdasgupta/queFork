@@ -1,15 +1,15 @@
-@import './highlight.css';
+@import "./highlight.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 * {
-  scrollbar-width: none;  /* Firefox */
-  -ms-overflow-style: none;  /* Internet Explorer and Edge */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer and Edge */
 }
 
 *::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari, and Opera */
+  display: none; /* Chrome, Safari, and Opera */
 }
 
 :root {
@@ -35,47 +35,28 @@
   --radius: 0.6rem;
 }
 
-.dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 263.4 70% 50.4%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 263.4 70% 50.4%;
-}
-
 @keyframes ping {
-  75%, 100% {
+  75%,
+  100% {
     transform: scale(2);
     opacity: 0;
   }
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
-    opacity: .5;
+    opacity: 0.5;
     transform: scale(1.1);
   }
 }
 
 @keyframes bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -84,13 +65,27 @@
 }
 
 @keyframes jelly-scroll {
-  0% { transform: translateX(0); }
-  15% { transform: translateX(var(--scroll-offset)) scale(1.02, 0.98); }
-  30% { transform: translateX(var(--scroll-offset)) scale(0.98, 1.02); }
-  45% { transform: translateX(var(--scroll-offset)) scale(1.01, 0.99); }
-  60% { transform: translateX(var(--scroll-offset)) scale(0.99, 1.01); }
-  75% { transform: translateX(var(--scroll-offset)) scale(1.005, 0.995); }
-  100% { transform: translateX(var(--scroll-offset)) scale(1, 1); }
+  0% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(var(--scroll-offset)) scale(1.02, 0.98);
+  }
+  30% {
+    transform: translateX(var(--scroll-offset)) scale(0.98, 1.02);
+  }
+  45% {
+    transform: translateX(var(--scroll-offset)) scale(1.01, 0.99);
+  }
+  60% {
+    transform: translateX(var(--scroll-offset)) scale(0.99, 1.01);
+  }
+  75% {
+    transform: translateX(var(--scroll-offset)) scale(1.005, 0.995);
+  }
+  100% {
+    transform: translateX(var(--scroll-offset)) scale(1, 1);
+  }
 }
 
 .animate-ping {
@@ -187,7 +182,7 @@
   }
 
   .websocket-button-connected::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: -2px;
     border-radius: 8px;
@@ -268,11 +263,21 @@
   }
 
   /* Legacy class mappings for backward compatibility */
-  .vercel-panel { @apply glass-panel; }
-  .panel-content { @apply glass-content; }
-  .panel-tabs { @apply tab-container; }
-  .panel-tab-list { @apply tab-list; }
-  .panel-tab-button { @apply tab-button; }
+  .vercel-panel {
+    @apply glass-panel;
+  }
+  .panel-content {
+    @apply glass-content;
+  }
+  .panel-tabs {
+    @apply tab-container;
+  }
+  .panel-tab-list {
+    @apply tab-list;
+  }
+  .panel-tab-button {
+    @apply tab-button;
+  }
 
   /* Panel Styles */
   .vercel-panel {
@@ -334,4 +339,3 @@
     user-select: none;
   }
 }
-

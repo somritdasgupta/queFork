@@ -298,7 +298,7 @@ export const EnvironmentManager = forwardRef<
           <DialogTrigger asChild>
             <Button
               size="icon"
-              className="h-10 w-12 flex-shrink-0 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-lg"
+              className="h-10 w-10 flex-shrink-0 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-lg"
             >
               <Settings className="h-4 w-4" />
             </Button>

@@ -4,6 +4,12 @@ export interface ProtocolConfig {
   autoReconnect?: boolean;
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
+  defaultUrl?: string;
+  name: string;
+  color: string;
+  description?: string;
+  urlPattern: RegExp;
+  placeholder: string;
 }
 
 export interface WebSocketContextType {
@@ -26,6 +32,7 @@ export interface WebSocketContextType {
   };
   currentLatency: number | null;
   connectionTime: number | null;
+  connectionStartTime: number | null;  // Add this field
   messages: Array<{
     type: "sent" | "received";
     content: string;
@@ -48,5 +55,19 @@ export interface WebSocketContextType {
   updateProtocolConfig: (config: Partial<ProtocolConfig>) => void;
   subscribeToTopic: (topic: string) => void;
   unsubscribeFromTopic: (topic: string) => void;
+}
+
+export interface WebSocketStats {
+  protocols: string[];
+  messagesSent: number;
+  messagesReceived: number;
+  avgLatency: number | null;
+  connectionDuration: number;
+  messages: Array<{
+    type: "sent" | "received";
+    content: string;
+    timestamp: string;
+  }>;
+  lastConnected: string;
 }
 
