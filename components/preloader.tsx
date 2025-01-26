@@ -22,7 +22,7 @@ export function Preloader() {
     };
 
     const minLoadingTime = 2000;
-    const startTime = Date.now();
+    const startTime = performance.now();
 
     const handleLoad = () => {
       if (is404Page()) {
@@ -59,7 +59,7 @@ export function Preloader() {
         subtitleColor="text-slate-200"
       />
       <div className="flex flex-col items-center gap-2">
-        <div className="w-48 h-1 bg-slate-200 rounded-full overflow-hidden">
+        <div className="w-48 h-1 bg-slate-50 rounded-full overflow-hidden">
           <div className="h-full bg-blue-500 animate-progress rounded-full" />
         </div>
       </div>

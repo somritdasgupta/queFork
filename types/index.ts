@@ -1,6 +1,7 @@
 export interface KeyValuePair {
   type: string;
   key: string;
+  id?: string;
   value: string;
   description?: string;
   enabled?: boolean;

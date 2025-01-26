@@ -93,7 +93,7 @@ export function UrlBar({
   wsConnected,
   isWebSocketMode,
   variables,
-  isMobile,
+  isMobile,  // We'll keep this prop but use it for fine-tuning UI only
   recentUrls = [],
   onMethodChange,
   onUrlChange: propsOnUrlChange,
@@ -225,21 +225,26 @@ export function UrlBar({
   } = useWebSocket();
 
   // Combine URL change handlers with proper type checking
+  // Update URL handling to auto-switch modes consistently
   const handleUrlChange = (newUrl: string) => {
     propsOnUrlChange(newUrl);
     const urlProtocol = detectUrlType(newUrl);
     
-    // If URL is cleared and we're in WebSocket mode, disconnect and switch back
-    if (!newUrl && isWebSocketMode) {
+    // Auto-switch to WebSocket mode when WS URL is detected
+    if (urlProtocol === 'websocket' && !isWebSocketMode) {
+      onWebSocketToggle();
+    }
+    
+    // Switch back to HTTP mode when URL is cleared or changed to HTTP
+    if ((!newUrl || urlProtocol === 'http') && isWebSocketMode) {
       if (isConnected) {
         wsDisconnect();
       }
-      onWebSocketToggle(); // Switch back to HTTP mode
-      return;
+      onWebSocketToggle();
     }
-
-    // Handle WebSocket URL changes
-    if (urlProtocol === 'websocket') {
+    
+    // Update WebSocket URL if in WS mode
+    if (isWebSocketMode) {
       wsUrlChange(newUrl);
     }
   };
@@ -281,12 +286,12 @@ export function UrlBar({
           onClick={urlType === 'websocket' ? handleWebSocketAction : onSendRequest}
           disabled={!isValidUrl(url) || (urlType === 'websocket' ? connectionStatus === 'connecting' : isLoading)}
           className={cn(
-            "w-10 h-10 transition-all relative border-1 border-slate-700",
+            "w-10 h-10 transition-all relative border border-slate-700",  // Changed to add consistent border
             urlType === 'websocket' 
             ? isConnected
-              ? "border-1 border-slate-700 bg-blue-500 hover:bg-red-600 text-white after:absolute after:inset-0 after:animate-pulse"
-              : "border-1 border-slate-700 bg-slate-900 hover:bg-slate-700 text-slate-400"
-            : "border-1 border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-400",
+              ? "bg-blue-500 hover:bg-red-600 text-white after:absolute after:inset-0 after:animate-pulse"
+              : "bg-slate-900 hover:bg-slate-700 text-slate-400"
+            : "bg-slate-900 hover:bg-slate-800 text-slate-400",
             (!isValidUrl(url) || isLoading) && "opacity-50 cursor-not-allowed"
           )}
         >
@@ -419,7 +424,10 @@ export function UrlBar({
       {urlType === 'websocket' ? (
         renderProtocolBadge(wsProtocol)
       ) : (
-        <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-0">
+        <div className={cn(
+          "flex items-center bg-slate-900 border border-slate-700 rounded-lg px-0",
+          isMobile ? "max-w-[60px]" : ""
+        )}>
           <Select 
             value={method} 
             onValueChange={onMethodChange}

@@ -32,6 +32,13 @@ interface MobileNavProps {
   onExportCollection: (collectionId: string) => void;
 }
 
+interface NavItem {
+  id: "collections" | "history";
+  label: string;
+  icon: React.ReactNode;
+  active?: boolean;
+}
+
 export function MobileNav({ ...props }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<"collections" | "history">("collections");
@@ -87,16 +94,16 @@ export function MobileNav({ ...props }: MobileNavProps) {
             ></Button>
           </div>
           <div className="flex gap-2 mt-2 tab-container">
-            {tabs.map(tab => (
+            {tabs.map((item: NavItem) => (
               <Button
-                key={tab.id}
-                variant={activePanel === tab.id ? "default" : "ghost"}
+                key={item.id}
+                variant={activePanel === item.id ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setActivePanel(tab.id)}
+                onClick={() => setActivePanel(item.id)}
                 className="flex-1 tab-button mobile-tab-button"
               >
-                {tab.icon}
-                <span className="ml-1.5">{tab.label}</span>
+                {item.icon}
+                <span className="ml-1.5">{item.label}</span>
               </Button>
             ))}
           </div>

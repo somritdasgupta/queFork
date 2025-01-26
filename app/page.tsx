@@ -612,10 +612,8 @@ export default function Page() {
               onUrlChange={handleUrlChange}
               onSendRequest={handleSendRequest}
               onWebSocketToggle={handleWebSocketToggle}
-              isMobile={true}
               variables={mergedEnvVariables}
-              recentUrls={recentUrls}
-            />
+              recentUrls={recentUrls} isMobile={false}            />
           </div>
           
           <div className="flex items-center gap-2">
@@ -682,10 +680,8 @@ export default function Page() {
               onUrlChange={handleUrlChange}
               onSendRequest={handleSendRequest}
               onWebSocketToggle={handleWebSocketToggle}
-              isMobile={false}
               variables={mergedEnvVariables}
-              recentUrls={recentUrls}
-            />
+              recentUrls={recentUrls} isMobile={false}            />
 
             <EnvironmentManager
               ref={environmentManagerRef}

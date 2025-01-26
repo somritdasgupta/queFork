@@ -560,6 +560,7 @@ export const EnvironmentManager = forwardRef<
                             type: "text",
                             enabled: true,
                             showSecrets: false,
+                          
                           },
                         ]
                       : editingEnvironment.variables.map((v) => ({

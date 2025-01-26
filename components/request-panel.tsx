@@ -74,6 +74,12 @@ interface TabItem {
 
 export function RequestPanel({ isWebSocketMode, ...props }: RequestPanelProps) {
   const { isConnected, stats, messages } = useWebSocket();
+
+  // Update visibility logic for WebSocket content
+  const showWebSocketContent = isWebSocketMode && (
+    isConnected || stats.messagesSent > 0 || stats.messagesReceived > 0
+  );
+
   const bodyTabs = ["json", "form-data", "x-www-form-urlencoded", "raw"];
 
   const getBodyIcon = (type: string) => {
@@ -328,7 +334,7 @@ export function RequestPanel({ isWebSocketMode, ...props }: RequestPanelProps) {
             className="flex-1 px-2 py-3"
           >
             <AnimatePresence mode="wait">
-              {isConnected || stats.messagesSent > 0 || stats.messagesReceived > 0 ? (
+              {showWebSocketContent ? (
                 <motion.div
                   key="connected"
                   variants={switchVariants}
