@@ -61,7 +61,7 @@ const containerClasses = subtitlePosition === 'right'
         <div className={`flex items-center gap-3 ${animationClasses.subtitle}`}>
           {subtitlePosition === 'bottom' && <div className="h-[1px] w-12 bg-slate-700/50" />}
           <span
-            className={`text-sm ${subtitleColor} ${animationClasses.text} tracking-wider font-semibold`}
+            className={`text-sm ${subtitleColor} ${animationClasses.text} tracking-wider font-medium text-slate-100`}
           >
             by Somrit Dasgupta
           </span>

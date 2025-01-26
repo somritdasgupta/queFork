@@ -77,6 +77,14 @@ export default function Page() {
   const { isConnected: wsConnected, disconnect } = useWebSocket();
   const [isWebSocketMode, setIsWebSocketMode] = useState(false);
   const [recentUrls, setRecentUrls] = useState<string[]>([]);
+  const [environmentManagerOpen, setEnvironmentManagerOpen] = useState(false);
+  const [environmentManagerMode, setEnvironmentManagerMode] = useState<{
+    isVariableSelectionMode: boolean;
+    variableToAdd?: { key: string; value: string };
+    onVariableAdd?: (selectedEnvIds: string[]) => void;
+  }>({
+    isVariableSelectionMode: false
+  });
 
   useEffect(() => {
     const loadSavedEnvironments = () => {
@@ -190,6 +198,31 @@ export default function Page() {
     if (saved) {
       setRecentUrls(JSON.parse(saved));
     }
+  }, []);
+
+  useEffect(() => {
+    const handleOpenEnvironmentManager = (event: CustomEvent) => {
+      const { isVariableSelectionMode, variableToAdd, onVariableAdd } = event.detail;
+      // Set state to open environment manager with variable selection mode
+      // You'll need to add these props to your state management
+      setEnvironmentManagerOpen(true);
+      setEnvironmentManagerMode({
+        isVariableSelectionMode,
+        variableToAdd,
+        onVariableAdd
+      });
+    };
+
+    window.addEventListener(
+      "openEnvironmentManager",
+      handleOpenEnvironmentManager as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "openEnvironmentManager",
+        handleOpenEnvironmentManager as EventListener
+      );
+    };
   }, []);
 
   const executeRequest = async () => {
@@ -595,6 +628,43 @@ export default function Page() {
     }
   };
 
+  const handleAddToEnvironment = (key: string, value: string) => {
+    if (!currentEnvironment) {
+      toast.error("Please select an environment first");
+      return;
+    }
+
+    const updatedEnvironments = environments.map((env) => {
+      if (env.id === currentEnvironment.id) {
+        return {
+          ...env,
+          variables: [
+            ...env.variables,
+            {
+              key,
+              value,
+              type: "text" as const,
+              enabled: true,
+            },
+          ],
+          lastModified: new Date().toISOString(),
+        };
+      }
+      return env;
+    });
+
+    handleEnvironmentsUpdate(updatedEnvironments);
+    toast.success(`Added ${key} to ${currentEnvironment.name}`);
+  };
+
+  const handleEnvironmentManagerOpen = (isOpen: boolean) => {
+    setEnvironmentManagerOpen(isOpen);
+    if (!isOpen) {
+      // Reset mode when closing
+      setEnvironmentManagerMode({ isVariableSelectionMode: false });
+    }
+  };
+
   return (
     <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-slate-900/50 text-slate-600">
       <header className="fixed top-0 left-0 right-0 z-50 bg-slate-800">
@@ -643,6 +713,11 @@ export default function Page() {
                 onEnvironmentChange={handleEnvironmentChange}
                 onEnvironmentsUpdate={handleEnvironmentsUpdate}
                 className="rounded-lg border border-slate-700 bg-slate-900 text-xs"
+                isOpen={environmentManagerOpen}
+                onOpenChange={handleEnvironmentManagerOpen}
+                isVariableSelectionMode={environmentManagerMode.isVariableSelectionMode}
+                variableToAdd={environmentManagerMode.variableToAdd}
+                onVariableAdd={environmentManagerMode.onVariableAdd}
               />
             </div>
           </div>
@@ -689,6 +764,11 @@ export default function Page() {
               currentEnvironment={currentEnvironment}
               onEnvironmentChange={handleEnvironmentChange}
               onEnvironmentsUpdate={handleEnvironmentsUpdate}
+              isOpen={environmentManagerOpen}
+              onOpenChange={handleEnvironmentManagerOpen}
+              isVariableSelectionMode={environmentManagerMode.isVariableSelectionMode}
+              variableToAdd={environmentManagerMode.variableToAdd}
+              onVariableAdd={environmentManagerMode.onVariableAdd}
             />
           </div>
         </div>
@@ -746,6 +826,11 @@ export default function Page() {
                     onBodyChange={setBody}
                     onAuthChange={setAuth}
                     isWebSocketMode={isWebSocketMode}
+                    environments={environments}
+                    currentEnvironment={currentEnvironment}
+                    onEnvironmentChange={handleEnvironmentChange}
+                    onEnvironmentsUpdate={handleEnvironmentsUpdate}
+                    onAddToEnvironment={handleAddToEnvironment}
                   />
                 </div>
               </ResizablePanel>

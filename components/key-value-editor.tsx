@@ -1,7 +1,7 @@
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Plus,
@@ -11,22 +11,15 @@ import {
   AlignLeft,
   Copy,
   GripVertical,
-  FileText,
   Eye,
   EyeOff,
   ListPlus,
   List,
   MoreVertical,
+  PackagePlusIcon,
 } from "lucide-react";
 import { KeyValuePair } from "@/types";
-import { useState, useRef, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+
 import { toast } from "sonner";
 
 import {
@@ -52,6 +45,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Environment } from "@/types";
+
+// Add stable ID generation utility
+const generateStableId = (index: number, existingId?: string) => {
+  return existingId || `pair-${index}-${Math.random().toString(36).substr(2, 9)}`;
+};
 
 interface KeyValueEditorProps {
   pairs: KeyValuePair[];
@@ -60,10 +59,18 @@ interface KeyValueEditorProps {
   showDescription?: boolean;
   presetKeys?: string[];
   requireUniqueKeys?: boolean;
+  onAddToEnvironment?: (key: string, value: string) => void;
+  environments?: Environment[];
+  currentEnvironment?: Environment | null;
+  onEnvironmentChange?: (environmentId: string) => void;
+  onEnvironmentsUpdate?: (environments: Environment[]) => void;
+  isEnvironmentEditor?: boolean; // Add this prop to differentiate environment editor
+  preventFirstItemDeletion?: boolean;
+  autoSave?: boolean;
 }
 
 // SortableItem component for drag-and-drop
-function SortableItem({ pair, index, ...props }: any) {
+const SortableItem = React.memo(({ pair, index, ...props }: any) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: pair.id || index });
 
@@ -85,15 +92,111 @@ function SortableItem({ pair, index, ...props }: any) {
       </div>
     </div>
   );
-}
+});
+
+SortableItem.displayName = "SortableItem";
+
+// Improved KeyValueInput with better focus handling
+const KeyValueInput = React.memo(
+  ({
+    value,
+    onChange,
+    placeholder,
+    icon: Icon,
+    onPaste,
+    className,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    placeholder: string;
+    icon: any;
+    onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
+    className: string;
+  }) => {
+    const inputRef = useRef<HTMLInputElement>(null);
+    const [localValue, setLocalValue] = useState(value);
+    const [isFocused, setIsFocused] = useState(false);
+    const changeTimeoutRef = useRef<NodeJS.Timeout>();
+
+    useEffect(() => {
+      if (!isFocused) {
+        setLocalValue(value);
+      }
+    }, [value, isFocused]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      setLocalValue(newValue);
+      
+      // Clear existing timeout
+      if (changeTimeoutRef.current) {
+        clearTimeout(changeTimeoutRef.current);
+      }
+
+      // Set new timeout
+      changeTimeoutRef.current = setTimeout(() => {
+        onChange(newValue);
+      }, 300);
+    };
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (changeTimeoutRef.current) {
+          clearTimeout(changeTimeoutRef.current);
+        }
+      };
+    }, []);
+
+    return (
+      <div className="relative">
+        <Icon className="absolute left-2.5 top-3 h-4 w-4 text-slate-400 hidden sm:block" />
+        <Input
+          ref={inputRef}
+          value={localValue}
+          onChange={handleChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => {
+            setIsFocused(false);
+            onChange(localValue);
+          }}
+          onPaste={onPaste}
+          placeholder={placeholder}
+          className={cn(
+            "bg-slate-50 border-2 border-slate-200 rounded-lg text-xs transition-colors focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-slate-900",
+            typeof window !== "undefined" && window.innerWidth < 640 ? "pl-3" : "pl-9"
+          )}
+        />
+      </div>
+    );
+  },
+  // Custom comparison function for better memoization
+  (prevProps, nextProps) => {
+    return (
+      prevProps.value === nextProps.value &&
+      prevProps.placeholder === nextProps.placeholder &&
+      prevProps.className === nextProps.className
+    );
+  }
+);
+
+KeyValueInput.displayName = "KeyValueInput";
 
 export function KeyValueEditor({
-  pairs,
+  pairs = [], // Provide default value
   onChange,
   addButtonText = "Add Item",
   showDescription = false,
   presetKeys = [],
   requireUniqueKeys = false,
+  onAddToEnvironment,
+  environments = [], // Provide default value
+  currentEnvironment,
+  onEnvironmentChange,
+  onEnvironmentsUpdate,
+  isEnvironmentEditor = false, // Default to false
+  preventFirstItemDeletion = false,
+  autoSave = false,
 }: KeyValueEditorProps) {
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkContent, setBulkContent] = useState("");
@@ -103,6 +206,31 @@ export function KeyValueEditor({
     setIsMounted(true);
   }, []);
 
+  // Ensure there's always at least one pair
+  useEffect(() => {
+    if (pairs.length === 0) {
+      onChange([{
+        id: generateStableId(0),
+        key: "",
+        value: "",
+        description: "",
+        enabled: true,
+        type: "text",
+        showSecrets: false,
+      }]);
+    } else {
+      // Add stable IDs to any pairs that don't have them
+      const needsStableIds = pairs.some(pair => !pair.id);
+      if (needsStableIds) {
+        const pairsWithStableIds = pairs.map((pair, index) => ({
+          ...pair,
+          id: generateStableId(index, pair.id),
+        }));
+        onChange(pairsWithStableIds);
+      }
+    }
+  }, [pairs, onChange]);
+
   // Setup DndKit sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -111,23 +239,34 @@ export function KeyValueEditor({
     })
   );
 
-  const addPair = () => {
+  // Update addPair to handle immediate updates
+  const addPair = useCallback(() => {
     const newPair = {
-      id: `pair-${Date.now()}`,
+      id: generateStableId(pairs.length),
       key: "",
       value: "",
       description: "",
       enabled: true,
-      type: "",
+      type: "text",
       showSecrets: false,
     };
     onChange([...pairs, newPair]);
-  };
+  }, [pairs.length, onChange]);
 
-  // Modify the removePair function to prevent deletion of last pair
-  const removePair = (index: number) => {
+  // Update removePair to handle immediate updates
+  const removePair = useCallback((index: number) => {
+    if (preventFirstItemDeletion && index === 0) {
+      const clearedPair = {
+        ...pairs[0],
+        key: "",
+        value: "",
+        description: "",
+      };
+      onChange([clearedPair, ...pairs.slice(1)]);
+      return;
+    }
+
     if (pairs.length <= 1) {
-      // If it's the last pair, just clearing its values instead of removing
       const clearedPair = {
         ...pairs[0],
         key: "",
@@ -139,29 +278,35 @@ export function KeyValueEditor({
       return;
     }
 
-    const newPairs = [...pairs];
-    newPairs.splice(index, 1);
+    const newPairs = pairs.filter((_, i) => i !== index);
     onChange(newPairs);
-  };
+  }, [pairs, onChange, preventFirstItemDeletion]);
 
-  const updatePair = (
-    index: number,
-    field: keyof KeyValuePair,
-    value: string | boolean
-  ) => {
-    const newPairs = [...pairs];
+  // Update the updatePair function to be more performant
+  const updatePair = useCallback(
+    (index: number, field: keyof KeyValuePair, value: string | boolean) => {
+      const newPairs = pairs.map((pair, i) =>
+        i === index ? { ...pair, [field]: value } : pair
+      );
 
-    if (field === "key" && requireUniqueKeys && typeof value === "string") {
-      const isDuplicate = pairs.some((p, i) => i !== index && p.key === value);
-      if (isDuplicate) {
-        toast.error("Duplicate keys are not allowed");
-        return;
+      if (field === "key" && requireUniqueKeys && typeof value === "string") {
+        const isDuplicate = pairs.some(
+          (p, i) => i !== index && p.key === value
+        );
+        if (isDuplicate) {
+          toast.error("Duplicate keys are not allowed");
+          return;
+        }
       }
-    }
 
-    newPairs[index] = { ...newPairs[index], [field]: value };
-    onChange(newPairs);
-  };
+      onChange(newPairs);
+      if (autoSave) {
+        // Auto save happens through parent's onChange handler
+        toast.success("Variable updated");
+      }
+    },
+    [pairs, onChange, requireUniqueKeys, autoSave]
+  );
 
   const copyValue = (value: string) => {
     navigator.clipboard.writeText(value);
@@ -314,6 +459,44 @@ export function KeyValueEditor({
     setIsBulkMode(!isBulkMode);
   };
 
+  const handleAddToEnvironment = (index: number) => {
+    const pair = pairs[index];
+
+    if (!pair.key.trim()) {
+      toast.error("Please enter a key first");
+      return;
+    }
+
+    if (!environments || !onEnvironmentChange || !onEnvironmentsUpdate) {
+      toast.error("Environment management is not available");
+      return;
+    }
+
+    // Trigger the environment manager with variable selection mode
+    window.dispatchEvent(
+      new CustomEvent("openEnvironmentManager", {
+        detail: {
+          isVariableSelectionMode: true,
+          variableToAdd: {
+            key: pair.key,
+            value: pair.value,
+          },
+          onVariableAdd: (selectedEnvIds: string[]) => {
+            if (onAddToEnvironment) {
+              selectedEnvIds.forEach((envId) => {
+                const env = environments.find((e) => e.id === envId);
+                if (env) {
+                  onAddToEnvironment(pair.key, pair.value);
+                  toast.success(`Added ${pair.key} to ${env.name}`);
+                }
+              });
+            }
+          },
+        },
+      })
+    );
+  };
+
   const renderItemActions = (pair: KeyValuePair, index: number) => {
     return (
       <>
@@ -321,27 +504,27 @@ export function KeyValueEditor({
         <div className="hidden sm:flex items-center gap-2">
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={() => handleSmartCopy(index)}
-            className="h-9 px-3 rounded-lg border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600"
+            className="h-10 w-9 rounded-lg border-2 border-slate-200 bg-slate-50 hover:bg-slate-100"
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-4 w-4 text-slate-600" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => updatePair(index, "enabled", !pair.enabled)}
             className={cn(
-              "h-9 w-9 rounded-lg border-2 transition-colors",
+              "h-10 w-9 rounded-lg border-2",
               pair.enabled
                 ? "border-slate-200 bg-slate-50 hover:bg-slate-100"
-                : "border-slate-300 bg-slate-100/50 text-slate-400"
+                : "border-slate-300 bg-slate-100/50"
             )}
           >
             {pair.enabled ? (
-              <Eye className="h-3.5 w-3.5" />
+              <Eye className="h-4 w-4 text-slate-600" />
             ) : (
-              <EyeOff className="h-3.5 w-3.5" />
+              <EyeOff className="h-4 w-4 text-slate-400" />
             )}
           </Button>
           {pairs.length > 1 && (
@@ -349,9 +532,19 @@ export function KeyValueEditor({
               variant="ghost"
               size="icon"
               onClick={() => removePair(index)}
-              className="h-9 w-9 rounded-lg border-2 border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+              className="h-10 w-9 rounded-lg border-2 border-slate-200 bg-slate-50 hover:bg-slate-100"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-4 w-4 text-slate-600" />
+            </Button>
+          )}
+          {!isEnvironmentEditor && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleAddToEnvironment(index)}
+              className="h-10 w-9 rounded-lg border-2 border-slate-200 bg-slate-50 hover:bg-slate-100"
+            >
+              <PackagePlusIcon className="h-4 w-4 text-slate-600" />
             </Button>
           )}
         </div>
@@ -364,7 +557,7 @@ export function KeyValueEditor({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-lg border-2 border-slate-200 bg-slate-50 hover:bg-slate-100"
+                  className="h-10 w-9 rounded-lg border-2 border-slate-200 bg-slate-50 hover:bg-slate-100"
                 >
                   <MoreVertical className="h-4 w-4 text-slate-600" />
                 </Button>
@@ -436,6 +629,15 @@ export function KeyValueEditor({
                       <Trash2 className="h-3.5 w-3.5 mr-2" />
                       {pairs.length === 1 ? "Cannot Delete" : "Delete Item"}
                     </DropdownMenuItem>
+                    {!isEnvironmentEditor && (
+                      <DropdownMenuItem
+                        onClick={() => handleAddToEnvironment(index)}
+                        className="flex items-center px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-md cursor-pointer"
+                      >
+                        <ListPlus className="h-3.5 w-3.5 mr-2" />
+                        Add to Environment
+                      </DropdownMenuItem>
+                    )}
                   </div>
                 </div>
               </DropdownMenuContent>
@@ -455,9 +657,30 @@ export function KeyValueEditor({
       isMobile ? "pl-3" : "pl-9"
     );
 
+  const handleKeyChange = useCallback(
+    (index: number, value: string) => {
+      updatePair(index, "key", value);
+    },
+    [updatePair]
+  );
+
+  const handleValueChange = useCallback(
+    (index: number, value: string) => {
+      updatePair(index, "value", value);
+    },
+    [updatePair]
+  );
+
+  const handleDescriptionChange = useCallback(
+    (index: number, value: string) => {
+      updatePair(index, "description", value);
+    },
+    [updatePair]
+  );
+
   return (
     <div className="space-y-4">
-      <ScrollArea className="h-auto max-h-[210px] overflow-y-auto">
+      <ScrollArea className="h-auto max-h-[210px] overflow-y-auto rounded-lg">
         {isBulkMode ? (
           <Textarea
             value={bulkContent}
@@ -469,7 +692,7 @@ base_url: https://api.example.com
 #disabled_key: this is disabled
 
 # Paste copied pairs here"
-            className="min-h-[200px] w-full font-mono text-xs bg-slate-50 border-2 border-slate-200 whitespace-pre-wrap break-words overflow-x-hidden"
+            className="min-h-[200px] w-full font-mono text-xs bg-slate-50 border-2 border-slate-200 whitespace-pre-wrap break-words overflow-x-hidden rounded-lg"
           />
         ) : (
           <DndContext
@@ -501,51 +724,41 @@ base_url: https://api.example.com
                         !pair.enabled && "opacity-50"
                       )}
                     >
-                      <div className="relative">
-                        <Key className={fieldIconClasses} />
-                        <Input
-                          placeholder="Key"
-                          value={pair.key}
-                          onChange={(e) =>
-                            updatePair(index, "key", e.target.value)
-                          }
-                          onPaste={(e) => handleSmartPaste(e, index, "key")}
-                          className={inputClasses(
-                            typeof window !== "undefined" &&
-                              window.innerWidth < 640
-                          )}
-                        />
-                      </div>
-                      <div className="relative">
-                        <Type className={fieldIconClasses} />
-                        <Input
-                          placeholder="Value"
-                          value={pair.value}
-                          onChange={(e) =>
-                            updatePair(index, "value", e.target.value)
-                          }
-                          onPaste={(e) => handleSmartPaste(e, index, "value")}
-                          className={inputClasses(
-                            typeof window !== "undefined" &&
-                              window.innerWidth < 640
-                          )}
-                        />
-                      </div>
+                      <KeyValueInput
+                        value={pair.key}
+                        onChange={(value) => handleKeyChange(index, value)}
+                        placeholder="Key"
+                        icon={Key}
+                        onPaste={(e) => handleSmartPaste(e, index, "key")}
+                        className={inputClasses(
+                          typeof window !== "undefined" &&
+                            window.innerWidth < 640
+                        )}
+                      />
+                      <KeyValueInput
+                        value={pair.value}
+                        onChange={(value) => handleValueChange(index, value)}
+                        placeholder="Value"
+                        icon={Type}
+                        onPaste={(e) => handleSmartPaste(e, index, "value")}
+                        className={inputClasses(
+                          typeof window !== "undefined" &&
+                            window.innerWidth < 640
+                        )}
+                      />
                       {showDescription && (
-                        <div className="relative">
-                          <AlignLeft className={fieldIconClasses} />
-                          <Input
-                            placeholder="Description"
-                            value={pair.description || ""}
-                            onChange={(e) =>
-                              updatePair(index, "description", e.target.value)
-                            }
-                            className={inputClasses(
-                              typeof window !== "undefined" &&
-                                window.innerWidth < 640
-                            )}
-                          />
-                        </div>
+                        <KeyValueInput
+                          value={pair.description || ""}
+                          onChange={(value) =>
+                            handleDescriptionChange(index, value)
+                          }
+                          placeholder="Description"
+                          icon={AlignLeft}
+                          className={inputClasses(
+                            typeof window !== "undefined" &&
+                              window.innerWidth < 640
+                          )}
+                        />
                       )}
                     </div>
                     {renderItemActions(pair, index)}
@@ -561,9 +774,9 @@ base_url: https://api.example.com
         <Button
           variant="outline"
           onClick={addPair}
-          className="flex-1 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300 font-medium rounded-lg h-10 transition-colors"
+          className="flex-1 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300 font-medium rounded-lg transition-colors"
         >
-          <Plus className="h-4 w-4" />
+          <Plus />
           {pairs.length === 0 ? "Add First Item" : addButtonText}
         </Button>
         <Button
@@ -571,25 +784,13 @@ base_url: https://api.example.com
           size="icon"
           onClick={toggleBulkMode}
           className={cn(
-            "h-10 w-32 rounded-lg transition-colors flex items-center justify-center",
+            "w-9 rounded-lg border-2 transition-colors",
             isBulkMode
-              ? "bg-emerald-900/10 text-emerald-600 border-emerald-200 hover:bg-emerald-900/20"
-              : "bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+              ? "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100"
+              : "bg-slate-900 text-slate-400 border-1 border-slate-700 hover:bg-slate-800 hover:text-slate-300"
           )}
         >
-          {isBulkMode ? (
-            <>
-              <List className="h-4 w-4" />
-              <span className="text-xs">
-                ({bulkContent.split("\n").filter((line) => line.trim()).length})
-              </span>
-            </>
-          ) : (
-            <>
-              <ListPlus className="h-4 w-4" />
-              <span className="text-xs">({pairs.length})</span>
-            </>
-          )}
+          {isBulkMode ? <List className="h-4 w-4" /> : <ListPlus className="h-4 w-4" />}
         </Button>
       </div>
     </div>

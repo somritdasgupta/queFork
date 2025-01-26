@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from "react";
+import React, { useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,7 +21,6 @@ import {
 import { KeyValueEditor } from "./key-value-editor";
 import {
   Plus,
-  Settings,
   Trash2,
   Edit2,
   Download,
@@ -30,11 +29,13 @@ import {
   Eye,
   EyeOff,
   HelpCircle,
+  BoxIcon,
 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Environment } from "@/types";
+import { Environment, KeyValuePair } from "@/types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface EnvironmentVariable {
   key: string;
@@ -49,20 +50,42 @@ interface EnvironmentManagerProps {
   onEnvironmentChange: (environmentId: string) => void;
   onEnvironmentsUpdate: (environments: Environment[]) => void;
   className?: string;
+  isVariableSelectionMode?: boolean;
+  variableToAdd?: { key: string; value: string };
+  onVariableAdd?: (environmentIds: string[]) => void;
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 export interface EnvironmentManagerRef {
   getMergedEnvironmentVariables: () => EnvironmentVariable[];
 }
 
+const convertEnvVarToKeyValuePair = (envVar: EnvironmentVariable): KeyValuePair => ({
+  key: envVar.key,
+  value: envVar.value,
+  type: envVar.type,
+  enabled: envVar.enabled,
+  description: "",
+  showSecrets: false,
+  id: `env-${envVar.key}`,
+});
+
+const convertKeyValuePairToEnvVar = (pair: KeyValuePair): EnvironmentVariable => ({
+  key: pair.key,
+  value: pair.value,
+  type: pair.type as "text" | "secret",
+  enabled: pair.enabled ?? true, // Provide default true if undefined
+});
+
 const EnvironmentHelp = () => (
   <Dialog>
     <DialogTrigger asChild>
-      <Button variant="ghost" size="sm" className="h-8 w-8">
+      <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg">
         <HelpCircle className="h-4 w-4" />
       </Button>
     </DialogTrigger>
-    <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg">
+    <DialogContent className="sm:max-w-[500px] rounded-lg">
       <DialogHeader>
         <DialogTitle>Using Environment Variables</DialogTitle>
         <DialogDescription>
@@ -107,19 +130,35 @@ export const EnvironmentManager = forwardRef<
       currentEnvironment,
       onEnvironmentChange,
       onEnvironmentsUpdate,
+      isVariableSelectionMode = false,
+      variableToAdd,
+      onVariableAdd,
+      isOpen = false,
+      onOpenChange,
     },
     ref
   ) => {
-    const [isOpen, setIsOpen] = useState(false);
     const [newEnvironmentName, setNewEnvironmentName] = useState("");
     const [editingEnvironment, setEditingEnvironment] =
       useState<Environment | null>(null);
+    const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>([]);
+
+    useEffect(() => {
+      if (isVariableSelectionMode && currentEnvironment) {
+        setSelectedEnvironments([currentEnvironment.id]);
+      }
+    }, [isVariableSelectionMode, currentEnvironment]);
 
     const createDefaultEnvironment = () => {
       const defaultEnv: Environment = {
         id: "default",
         name: "Default",
-        variables: [],
+        variables: [{  // Add default empty variable
+          key: "",
+          value: "",
+          type: "text",
+          enabled: true
+        }],
         global: true,
         created: new Date().toISOString(),
         lastModified: new Date().toISOString(),
@@ -164,7 +203,12 @@ export const EnvironmentManager = forwardRef<
         const newEnvironment: Environment = {
           id: uuidv4(),
           name: newEnvironmentName.trim(),
-          variables: [], // Variables array is empty
+          variables: [{  // Add default empty variable
+            key: "",
+            value: "",
+            type: "text",
+            enabled: true
+          }],
           global: false,
           created: new Date().toISOString(),
           lastModified: new Date().toISOString(),
@@ -173,7 +217,8 @@ export const EnvironmentManager = forwardRef<
         const updatedEnvironments = [...environments, newEnvironment];
         handleEnvironmentsUpdate(updatedEnvironments);
         setNewEnvironmentName("");
-        setIsOpen(false);
+        // Automatically open editor for new environment
+        setEditingEnvironment(newEnvironment);
       }
     };
 
@@ -255,25 +300,6 @@ export const EnvironmentManager = forwardRef<
       onEnvironmentsUpdate(updatedEnvironments);
     };
 
-    const handleSaveEnvironment = () => {
-      if (editingEnvironment) {
-        const updatedEnvironments = environments.map((env) =>
-          env.id === editingEnvironment.id
-            ? {
-                ...editingEnvironment,
-                lastModified: new Date().toISOString(),
-                variables: editingEnvironment.variables.filter(
-                  (v) => v.key.trim() !== ""
-                ),
-              }
-            : env
-        );
-        handleEnvironmentsUpdate(updatedEnvironments);
-        setEditingEnvironment(null);
-        toast.success("Environment updated");
-      }
-    };
-
     return (
       <div className="flex items-center gap-2 max-w-full">
         <div className="flex-shrink sm:w-40 w-full">
@@ -294,312 +320,362 @@ export const EnvironmentManager = forwardRef<
           </Select>
         </div>
 
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
           <DialogTrigger asChild>
             <Button
               size="icon"
-              className="h-10 w-10 flex-shrink-0 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-lg"
+              className="h-10 w-10 flex-shrink-0 bg-slate-900 hover:bg-slate-700 text-slate-400 rounded-lg"
             >
-              <Settings className="h-4 w-4" />
+              <BoxIcon className="h-4 w-4" />
             </Button>
           </DialogTrigger>
 
-          <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg">
-            <DialogHeader>
-              <DialogTitle>Manage Environments</DialogTitle>
-              <DialogDescription>
-                Create and manage your API environments
-              </DialogDescription>
+          <DialogContent className="sm:max-w-[500px] rounded-lg">
+            <DialogHeader className="space-y-1">
+              <DialogTitle>
+                {isVariableSelectionMode 
+                  ? "Add Variable to Environments" 
+                  : "Manage Environments"}
+              </DialogTitle>
+              {isVariableSelectionMode && variableToAdd && (
+                <DialogDescription className="text-sm">
+                  Select environments where you want to add{" "}
+                  <code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-xs">
+                    {variableToAdd.key}
+                  </code>
+                </DialogDescription>
+              )}
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
-              <div className="flex items-center gap-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <HelpCircle className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg">
-                    <DialogHeader>
-                      <DialogTitle>Using Environment Manager</DialogTitle>
-                      <DialogDescription>
-                        Learn how to use and manage environment on queFork
-                      </DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="h-[500px]">
-                      <div className="space-y-4 pr-4">
-                        <div>
-                          <h4 className="font-medium">Environment Types</h4>
-                          <div className="space-y-2 mt-2">
-                            <div>
-                              <p className="text-sm font-medium text-slate-700">
-                                Default (Global) Environment
-                              </p>
-                              <p className="text-sm text-slate-500">
-                                • Variables defined here are available across
-                                all environments
-                                <br />
-                                • Cannot be deleted
-                                <br />• Useful for shared configuration like
-                                base URLs
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-slate-700">
-                                Custom Environments
-                              </p>
-                              <p className="text-sm text-slate-500">
-                                • Environment-specific variables
-                                <br />
-                                • Override global variables if same key exists
-                                <br />• Useful for dev/staging/prod
-                                configurations
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium">Import Format</h4>
-                          <p className="text-sm text-slate-500 mb-2">
-                            JSON structure for importing environments:
-                          </p>
-                          <pre className="bg-gray-100 p-2 rounded text-sm">
-                            <code>{`{
-              "name": "Environment Name",
-              "description": "Optional description",
-              "variables": [
-              {
-                "key": "text_variable",
-                "value": "text_value",
-                "type": "text",
-                "enabled": true
-              },
-              {
-                "key": "secret_variable",
-                "value": "secret_value",
-                "type": "secret",
-                "enabled": true
-              }
-              ]
-            }`}</code>
-                          </pre>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium">Usage</h4>
-                          <p className="text-sm text-slate-500">
-                            Use{" "}
-                            <code className="bg-gray-100 px-1.5 py-0.5 rounded">
-                              {"{{variable_name}}"}
-                            </code>{" "}
-                            to reference variables in:
-                          </p>
-                          <ul className="list-disc list-inside text-sm text-slate-500 mt-2 space-y-1">
-                            <li>URL</li>
-                            <li>Headers</li>
-                            <li>Query Parameters</li>
-                            <li>Body</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h4 className="font-medium">Examples</h4>
-                          <div className="space-y-3 mt-2">
-                            <div>
-                              <p className="text-sm text-slate-500">
-                                URL with base URL and version:
-                              </p>
-                              <pre className="bg-gray-100 p-2 rounded text-sm">
-                                <code>
-                                  https://{"{{base_url}}"}/api/{"{{version}}"}
-                                  /users
-                                </code>
-                              </pre>
-                            </div>
-                            <div>
-                              <p className="text-sm text-slate-500">
-                                Headers with authentication:
-                              </p>
-                              <pre className="bg-gray-100 p-2 rounded text-sm">
-                                <code>
-                                  Authorization: Bearer {"{{auth_token}}"}
-                                </code>
-                              </pre>
-                            </div>
-                            <div>
-                              <p className="text-sm text-slate-500">
-                                Query parameters:
-                              </p>
-                              <pre className="bg-gray-100 p-2 rounded text-sm">
-                                <code>
-                                  /api/search?key={"{{api_key}}"}&limit=
-                                  {"{{page_size}}"}
-                                </code>
-                              </pre>
-                            </div>
-                            <div>
-                              <p className="text-sm text-slate-500">
-                                Request body:
-                              </p>
-                              <pre className="bg-gray-100 p-2 rounded text-sm">
-                                <code>{`{
-                    "apiKey": "{{api_key}}",
-                    "webhook": "{{webhook_url}}",
-                    "environment": "{{env_name}}"
-                    }`}</code>
-                              </pre>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </ScrollArea>
-                  </DialogContent>
-                </Dialog>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleImportEnvironment}
-                  className="rounded-lg"
-                >
-                  <Upload className="h-4 w-4" />
-                </Button>
-                <Input
-                  placeholder="Environment name"
-                  value={newEnvironmentName}
-                  onChange={(e) => setNewEnvironmentName(e.target.value)}
-                  className="rounded-lg"
-                />
-                <Button
-                  onClick={handleCreateEnvironment}
-                  disabled={!newEnvironmentName.trim()}
-                  className="rounded-lg"
-                >
-                  <Plus className="h-4 w-4 text-slate-400" />
-                </Button>
-              </div>
-
-              <ScrollArea className="h-[400px] rounded-lg border border-slate-300">
-                <div className="p-4 space-y-4">
+            {isVariableSelectionMode ? (
+              <div className="py-4">
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-4">
                   {environments.map((env) => (
-                    <div
+                    <label
                       key={env.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-300"
+                      className="flex items-center space-x-3 p-2 rounded hover:bg-slate-50 cursor-pointer"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-slate-700">
-                          {env.name}
-                        </span>
+                      <Checkbox
+                        id={`env-${env.id}`}
+                        checked={selectedEnvironments.includes(env.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedEnvironments(prev =>
+                            checked
+                              ? [...prev, env.id]
+                              : prev.filter(id => id !== env.id)
+                          );
+                        }}
+                      />
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium">{env.name}</span>
                         {env.global && (
-                          <Badge variant="secondary">Global</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            Global
+                          </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDuplicateEnvironment(env)}
-                          className="rounded-lg"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleExportEnvironment(env)}
-                          className="rounded-lg"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingEnvironment(env)}
-                          className="rounded-lg"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        {!env.global && (
+                      <span className="text-xs text-slate-500">
+                        ({env.variables.length} variables)
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                <DialogFooter className="border-t pt-4 mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => onOpenChange?.(false)}
+                    className="bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      onVariableAdd?.(selectedEnvironments);
+                      onOpenChange?.(false);
+                    }}
+                    disabled={selectedEnvironments.length === 0}
+                    className="bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                  >
+                    Add to {selectedEnvironments.length} environment{selectedEnvironments.length !== 1 ? 's' : ''}
+                  </Button>
+                </DialogFooter>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px] rounded-lg">
+                      <DialogHeader>
+                        <DialogTitle>Using Environment Manager</DialogTitle>
+                        <DialogDescription>
+                          Learn how to use and manage environment on queFork
+                        </DialogDescription>
+                      </DialogHeader>
+                      <ScrollArea className="h-[500px]">
+                        <div className="space-y-4 pr-4">
+                          <div>
+                            <h4 className="font-medium">Environment Types</h4>
+                            <div className="space-y-2 mt-2">
+                              <div>
+                                <p className="text-sm font-medium text-slate-700">
+                                  Default (Global) Environment
+                                </p>
+                                <p className="text-sm text-slate-500">
+                                  • Variables defined here are available across
+                                  all environments
+                                  <br />
+                                  • Cannot be deleted
+                                  <br />• Useful for shared configuration like
+                                  base URLs
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-slate-700">
+                                  Custom Environments
+                                </p>
+                                <p className="text-sm text-slate-500">
+                                  • Environment-specific variables
+                                  <br />
+                                  • Override global variables if same key exists
+                                  <br />• Useful for dev/staging/prod
+                                  configurations
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <h4 className="font-medium">Import Format</h4>
+                            <p className="text-sm text-slate-500 mb-2">
+                              JSON structure for importing environments:
+                            </p>
+                            <pre className="bg-gray-100 p-2 rounded text-sm">
+                              <code>{`{
+            "name": "Environment Name",
+            "description": "Optional description",
+            "variables": [
+            {
+              "key": "text_variable",
+              "value": "text_value",
+              "type": "text",
+              "enabled": true
+            },
+            {
+              "key": "secret_variable",
+              "value": "secret_value",
+              "type": "secret",
+              "enabled": true
+            }
+            ]
+          }`}</code>
+                            </pre>
+                          </div>
+
+                          <div>
+                            <h4 className="font-medium">Usage</h4>
+                            <p className="text-sm text-slate-500">
+                              Use{" "}
+                              <code className="bg-gray-100 px-1.5 py-0.5 rounded">
+                                {"{{variable_name}}"}
+                              </code>{" "}
+                              to reference variables in:
+                            </p>
+                            <ul className="list-disc list-inside text-sm text-slate-500 mt-2 space-y-1">
+                              <li>URL</li>
+                              <li>Headers</li>
+                              <li>Query Parameters</li>
+                              <li>Body</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <h4 className="font-medium">Examples</h4>
+                            <div className="space-y-3 mt-2">
+                              <div>
+                                <p className="text-sm text-slate-500">
+                                  URL with base URL and version:
+                                </p>
+                                <pre className="bg-gray-100 p-2 rounded text-sm">
+                                  <code>
+                                    https://{"{{base_url}}"}/api/{"{{version}}"}
+                                    /users
+                                  </code>
+                                </pre>
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500">
+                                  Headers with authentication:
+                                </p>
+                                <pre className="bg-gray-100 p-2 rounded text-sm">
+                                  <code>
+                                    Authorization: Bearer {"{{auth_token}}"}
+                                  </code>
+                                </pre>
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500">
+                                  Query parameters:
+                                </p>
+                                <pre className="bg-gray-100 p-2 rounded text-sm">
+                                  <code>
+                                    /api/search?key={"{{api_key}}"}&limit=
+                                    {"{{page_size}}"}
+                                  </code>
+                                </pre>
+                              </div>
+                              <div>
+                                <p className="text-sm text-slate-500">
+                                  Request body:
+                                </p>
+                                <pre className="bg-gray-100 p-2 rounded text-sm">
+                                  <code>{`{
+                  "apiKey": "{{api_key}}",
+                  "webhook": "{{webhook_url}}",
+                  "environment": "{{env_name}}"
+                  }`}</code>
+                                </pre>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </ScrollArea>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleImportEnvironment}
+                    className="rounded-lg"
+                  >
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    placeholder="Environment name"
+                    value={newEnvironmentName}
+                    onChange={(e) => setNewEnvironmentName(e.target.value)}
+                    className="rounded-lg"
+                  />
+                  <Button
+                    onClick={handleCreateEnvironment}
+                    disabled={!newEnvironmentName.trim()}
+                    className="rounded-lg"
+                  >
+                    <Plus className="h-4 w-4 text-slate-400" />
+                  </Button>
+                </div>
+
+                <ScrollArea className="h-[400px] rounded-lg border border-slate-300">
+                  <div className="p-4 space-y-4">
+                    {environments.map((env) => (
+                      <div
+                        key={env.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-300"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-700">
+                            {env.name}
+                          </span>
+                          {env.global && (
+                            <Badge variant="secondary">Global</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-red-600 hover:text-red-700 rounded-lg"
-                            onClick={() => handleDeleteEnvironment(env.id)}
+                            onClick={() => handleDuplicateEnvironment(env)}
+                            className="rounded-lg"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Copy className="h-4 w-4" />
                           </Button>
-                        )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleExportEnvironment(env)}
+                            className="rounded-lg"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingEnvironment(env)}
+                            className="rounded-lg"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          {!env.global && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 rounded-lg"
+                              onClick={() => handleDeleteEnvironment(env.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
           </DialogContent>
         </Dialog>
 
         {editingEnvironment && (
           <Dialog
             open={!!editingEnvironment}
-            onOpenChange={() => setEditingEnvironment(null)}
+            onOpenChange={(open) => {
+              if (!open) {
+                // Simply close the dialog by setting editingEnvironment to null
+                setEditingEnvironment(null);
+              }
+            }}
           >
-            <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg">
+            <DialogContent className="sm:max-w-[500px] rounded-lg">
               <DialogHeader>
                 <DialogTitle>Variables ({editingEnvironment.name})</DialogTitle>
               </DialogHeader>
 
               <div className="py-4">
                 <KeyValueEditor
-                  pairs={
-                    editingEnvironment.variables.length === 0
-                      ? [
-                          {
-                            key: "",
-                            value: "",
-                            type: "text",
-                            enabled: true,
-                            showSecrets: false,
-                          
-                          },
-                        ]
-                      : editingEnvironment.variables.map((v) => ({
-                          ...v,
-                          showSecrets: false,
-                        }))
-                  }
-                  onChange={(variables) =>
-                    setEditingEnvironment({
+                  pairs={editingEnvironment.variables.length === 0 ? [{ // Ensure at least one pair
+                    key: "",
+                    value: "",
+                    type: "text",
+                    enabled: true,
+                    description: "",
+                    showSecrets: false,
+                    id: `env-${Date.now()}`
+                  }] : editingEnvironment.variables.map(convertEnvVarToKeyValuePair)}
+                  onChange={(pairs) => {
+                    const updatedEnv = {
                       ...editingEnvironment,
-                      variables:
-                        variables.length === 0
-                          ? [
-                              {
-                                key: "",
-                                value: "",
-                                type: "text",
-                                enabled: true,
-                              },
-                            ]
-                          : variables.map(({ key, value, enabled }) => ({
-                              key,
-                              value,
-                              type: "text" as const,
-                              enabled: enabled ?? true,
-                            })),
-                    })
-                  }
+                      variables: pairs.map(convertKeyValuePairToEnvVar),
+                      lastModified: new Date().toISOString()
+                    };
+                    
+                    // Update both local and global state immediately
+                    setEditingEnvironment(updatedEnv);
+                    const updatedEnvironments = environments.map(env => 
+                      env.id === editingEnvironment.id ? updatedEnv : env
+                    );
+                    handleEnvironmentsUpdate(updatedEnvironments);
+                  }}
+                  requireUniqueKeys={true}
+                  isEnvironmentEditor={true}
+                  preventFirstItemDeletion={true}
+                  autoSave={true}
                 />
               </div>
-
-              <DialogFooter>
-                <Button
-                  onClick={handleSaveEnvironment}
-                  className="text-slate-400"
-                >
-                  Save changes
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         )}

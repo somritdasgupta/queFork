@@ -18,13 +18,35 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const truncateUrl = (url: string, containerWidth: number) => {
-  const urlWithoutProtocol = url.replace(/^(https?:\/\/|wss?:\/\/)/, "");
+  // Store original URL for click handling
+  const displayUrl = url
+    .replace(/^(https?:\/\/)?(www\.)?/, "") // Remove protocol and www
+    .replace(/\/$/, ""); // Remove trailing slash
+
+  const minChars = 16;
+  const maxChars = 48;
+
+  // Calculate maximum displayable characters based on container width
   const baseWidth = containerWidth - 120;
   const charsPerPixel = 0.125;
-  const maxLength = Math.max(10, Math.floor(baseWidth * charsPerPixel));
+  const calculatedLength = Math.floor(baseWidth * charsPerPixel);
 
-  if (urlWithoutProtocol.length <= maxLength) return url;
-  return url.slice(0, maxLength - 3) + "...";
+  // If URL is shorter than minimum, show full URL
+  if (displayUrl.length <= minChars) {
+    return displayUrl;
+  }
+
+  // If URL is between min and max chars, use container width to determine truncation
+  if (displayUrl.length <= maxChars) {
+    // Only truncate if calculated length is valid and less than actual length
+    if (calculatedLength > minChars && calculatedLength < displayUrl.length) {
+      return displayUrl.slice(0, calculatedLength) + "...";
+    }
+    return displayUrl;
+  }
+
+  // If longer than maxChars, always truncate to maxChars
+  return displayUrl.slice(0, maxChars) + "...";
 };
 
 interface HistoryPanelProps {
@@ -112,7 +134,7 @@ export function HistoryPanel({
               : "cursor-not-allowed bg-slate-100 border-slate-200/50 text-slate-500",
             isActive && !isConnected && "border-purple-200 bg-purple-50/50"
           )}
-          onClick={() => !isConnected && handleHistoryClick(item)}
+          onClick={() => !isConnected && handleHistoryClick(item)} // Uses full URL from item
         >
           <Badge
             variant={isActive ? "default" : "outline"}
@@ -122,14 +144,14 @@ export function HistoryPanel({
               isActive && isSocketIO
                 ? "bg-blue-100"
                 : isActive
-                ? "bg-purple-100"
-                : ""
+                  ? "bg-purple-100"
+                  : ""
             )}
           >
             {isSocketIO ? "IO" : "WS"}
           </Badge>
           <div ref={urlContainerRef} className="flex-1 min-w-0">
-            <div className="text-sm font-mono truncate">
+            <div className="text-xs font-medium tracking-tighter truncate">
               {truncateUrl(item.url, containerWidth)}
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -169,7 +191,7 @@ export function HistoryPanel({
         <div
           key={item.id}
           className="group relative flex flex-col w-full max-w-full overflow-hidden rounded-lg border border-slate-200 bg-white/60 p-3 shadow-sm transition-all hover:border-slate-300 hover:shadow-md cursor-pointer"
-          onClick={() => handleHistoryClick(item)}
+          onClick={() => handleHistoryClick(item)} // Uses full URL from item
         >
           <div className="flex items-center gap-2 overflow-hidden">
             <Badge
@@ -186,7 +208,7 @@ export function HistoryPanel({
               {item.method}
             </Badge>
             <div ref={urlContainerRef} className="flex-1 min-w-0">
-              <div className="text-sm font-mono truncate">
+              <div className="text-xs font-medium tracking-tighter truncate">
                 {truncateUrl(item.url, containerWidth)}
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500">

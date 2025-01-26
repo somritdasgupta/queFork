@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { KeyValueEditor } from "./key-value-editor";
 import { AuthSection } from "./auth-section";
-import { KeyValuePair, RequestBody } from "@/types";
+import { KeyValuePair, RequestBody, Environment } from "@/types"; // Add Environment import
 import {
   SearchCode,
   List,
@@ -62,6 +62,11 @@ interface RequestPanelProps {
   onBodyChange: (body: RequestBody) => void;
   onAuthChange: (auth: any) => void;
   isWebSocketMode: boolean;
+  environments?: Environment[];
+  currentEnvironment?: Environment | null;
+  onEnvironmentChange?: (environmentId: string) => void;
+  onEnvironmentsUpdate?: (environments: Environment[]) => void;
+  onAddToEnvironment?: (key: string, value: string) => void;
 }
 
 interface TabItem {
@@ -72,7 +77,15 @@ interface TabItem {
   hidden?: boolean;
 }
 
-export function RequestPanel({ isWebSocketMode, ...props }: RequestPanelProps) {
+export function RequestPanel({
+  isWebSocketMode,
+  environments,
+  currentEnvironment,
+  onEnvironmentChange,
+  onEnvironmentsUpdate,
+  onAddToEnvironment,
+  ...props
+}: RequestPanelProps) {
   const { isConnected, stats, messages } = useWebSocket();
 
   // Update visibility logic for WebSocket content
@@ -198,6 +211,11 @@ export function RequestPanel({ isWebSocketMode, ...props }: RequestPanelProps) {
                           pairs={props.params}
                           onChange={props.onParamsChange}
                           addButtonText="Add Query Parameter"
+                          environments={environments}
+                          currentEnvironment={currentEnvironment}
+                          onEnvironmentChange={onEnvironmentChange}
+                          onEnvironmentsUpdate={onEnvironmentsUpdate}
+                          onAddToEnvironment={onAddToEnvironment}
                         />
                       </CardContent>
                     </Card>
@@ -230,6 +248,11 @@ export function RequestPanel({ isWebSocketMode, ...props }: RequestPanelProps) {
                           onChange={props.onHeadersChange}
                           addButtonText="Add Header"
                           presetKeys={commonHeaders}
+                          environments={environments}
+                          currentEnvironment={currentEnvironment}
+                          onEnvironmentChange={onEnvironmentChange}
+                          onEnvironmentsUpdate={onEnvironmentsUpdate}
+                          onAddToEnvironment={onAddToEnvironment}
                         />
                       </CardContent>
                     </Card>
@@ -287,6 +310,11 @@ export function RequestPanel({ isWebSocketMode, ...props }: RequestPanelProps) {
                             type={type as RequestBody["type"]}
                             body={props.body}
                             onChange={props.onBodyChange}
+                            environments={environments}
+                            currentEnvironment={currentEnvironment}
+                            onEnvironmentChange={onEnvironmentChange}
+                            onEnvironmentsUpdate={onEnvironmentsUpdate}
+                            onAddToEnvironment={onAddToEnvironment}
                           />
                         </CardContent>
                       </Card>
@@ -395,10 +423,20 @@ function RequestBodyContent({
   type,
   body,
   onChange,
+  environments,
+  currentEnvironment,
+  onEnvironmentChange,
+  onEnvironmentsUpdate,
+  onAddToEnvironment,
 }: {
   type: RequestBody["type"];
   body: RequestBody;
   onChange: (body: RequestBody) => void;
+  environments?: Environment[];
+  currentEnvironment?: Environment | null;
+  onEnvironmentChange?: (environmentId: string) => void;
+  onEnvironmentsUpdate?: (environments: Environment[]) => void;
+  onAddToEnvironment?: (key: string, value: string) => void;
 }) {
   const [params, setParams] = useState<KeyValuePair[]>([
     { key: "", value: "", type: "text", showSecrets: false },
@@ -434,6 +472,11 @@ function RequestBodyContent({
       onChange={onParamsChange}
       addButtonText={type === "form-data" ? "Add Form Field" : "Add Parameter"}
       showDescription={type === "form-data"}
+      environments={environments}
+      currentEnvironment={currentEnvironment}
+      onEnvironmentChange={onEnvironmentChange}
+      onEnvironmentsUpdate={onEnvironmentsUpdate}
+      onAddToEnvironment={onAddToEnvironment}
     />
   );
 }
