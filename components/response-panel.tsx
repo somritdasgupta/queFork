@@ -300,7 +300,7 @@ export function ResponsePanel({ response, isWebSocketMode, ...props }: ResponseP
 
   if (!response) {
     return (
-      <div className="min-h-[200px] flex items-center justify-center p-4">
+      <div className="min-h-[200px] flex items-center justify-center p-4 bg-slate-900">
         <div className="text-center space-y-6 max-w-md mx-auto">
           <div className="pt-4">
             <span className="inline-flex items-center gap-2 px-4 py-0 rounded-lg text-sm bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-500 border border-blue-500/20">
@@ -385,7 +385,7 @@ export function ResponsePanel({ response, isWebSocketMode, ...props }: ResponseP
   }
 
   return (
-    <div className="bg-slate-950 h-full flex flex-col">
+    <div className="bg-slate-900 h-full flex flex-col">
       {renderStatusBar()}
       <Tabs
         defaultValue={isWebSocketMode ? "messages" : "pretty"}
@@ -418,57 +418,72 @@ export function ResponsePanel({ response, isWebSocketMode, ...props }: ResponseP
                 <DropdownMenuTrigger asChild>
                   <TabsTrigger
                   value="code"
-                  className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800 group flex items-center gap-2"
+                  className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
                   >
                   <span>Code</span>
-                  <div className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-900">
-                  {languageConfigs[selectedLanguage].icon({ 
-                  className: "h-3.5 w-3.5 text-blue-400" 
-                  })}
+                  <div className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/50">
+                    {languageConfigs[selectedLanguage].icon({ 
+                    className: "h-3 w-3 text-blue-300" 
+                    })}
                   </div>
                   </TabsTrigger>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent 
-                  align="start" 
-                  className="bg-slate-800 border-slate-600 max-h-[40vh] overflow-hidden rounded-lg shadow-lg backdrop-blur-sm"
+                  align="start"
+                  sideOffset={0}
+                  className="w-[100vw] md:w-[75vw] lg:w-[75vw] xl:w-[75w] bg-slate-800/95 border border-slate-600/50 rounded-none backdrop-blur-lg"
                 >
-                  <div className="p-2 sticky top-0 z-10 bg-slate-800">
+                  <div className="p-2 sticky top-0 z-10 bg-slate-800/95 backdrop-blur-lg">
                   <Input
-                    type="search"
-                    placeholder="Search languages..."
-                    className="h-8 bg-slate-900 border-slate-700 text-xs"
-                    onChange={(e) => {
-                    const searchBox = e.currentTarget;
-                    const items = searchBox.closest('[role="menu"]')?.querySelectorAll('[role="menuitem"]');
-                    items?.forEach(item => {
-                      const text = item.textContent?.toLowerCase() || '';
-                      const match = text.includes(searchBox.value.toLowerCase());
-                      (item as HTMLElement).style.display = match ? '' : 'none';
+                  type="search"
+                  placeholder="Search languages..."
+                  className="h-8 w-full bg-slate-900/90 border-2 border-slate-600 text-xs text-slate-400 placeholder:text-slate-500 focus:ring-1 focus:ring-blue-500"
+                  onChange={(e) => {
+                  const searchTerm = e.target.value.toLowerCase();
+                  const tabStrip = document.querySelector('.language-tabs');
+                  if (tabStrip) {
+                    const items = tabStrip.querySelectorAll('.language-tab');
+                    items.forEach(item => {
+                    const text = item.textContent?.toLowerCase() || '';
+                    const match = text.includes(searchTerm);
+                    (item as HTMLElement).style.display = match ? '' : 'none';
                     });
-                    }}
+                  }
+                  }}
                   />
                   </div>
-                  <div className="overflow-y-auto scrollbar-none" style={{ maxHeight: "calc(40vh - 60px)" }}>
+                  
+                  <div 
+                  className="language-tabs overflow-x-auto whitespace-nowrap p-1"
+                  style={{
+                  scrollBehavior: 'smooth',
+                  msOverflowStyle: 'none',
+                  scrollbarWidth: 'none',
+                  overflowY: 'hidden'
+                  }}
+                  >
+                  <div className="flex gap-1">
                   {Object.entries(languageConfigs).map(([key, config]) => (
-                    <DropdownMenuItem
+                  <div
                     key={key}
                     onClick={() => setSelectedLanguage(key as CodeGenLanguage)}
                     className={cn(
-                      "flex items-center gap-3 py-2.5 px-3 cursor-pointer transition-colors hover:bg-slate-700 rounded-lg",
-                      selectedLanguage === key && "bg-blue-500/10 text-blue-400"
+                    "language-tab flex-shrink-0 flex items-center gap-2 px-2 cursor-pointer transition-all",
+                    selectedLanguage === key 
+                    ? "text-blue-400" 
+                    : "text-slate-400"
                     )}
-                    >
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900">
-                      {config.icon({ className: "h-4 w-4 text-blue-400" })}
+                  >
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/50">
+                    {config.icon({ className: "h-3 w-3 text-blue-300" })}
                     </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs md:text-sm font-medium text-blue-400 hover:text-slate-900">{config.name}</span>
-                    </div>
+                    <span className="text-sm font-medium text-slate-200">{config.name}</span>
                     {selectedLanguage === key && (
-                      <Check className="h-4 w-4 ml-auto text-blue-400" />
+                    <Check className="h-3.5 w-3.5 text-blue-400 animate-in fade-in-0 zoom-in-50" />
                     )}
-                    </DropdownMenuItem>
+                  </div>
                   ))}
+                  </div>
                   </div>
                 </DropdownMenuContent>
                 </DropdownMenu>
@@ -563,7 +578,7 @@ export function ResponsePanel({ response, isWebSocketMode, ...props }: ResponseP
           </div>
         </TabsList>
 
-        <div className="flex-1 relative bg-slate-900/90 text-blue-300">
+        <div className="flex-1 relative bg-slate-800 text-blue-300">
           {!isWebSocketMode ? (
             <>
               <TabsContent value="pretty" className="absolute inset-0 m-0">

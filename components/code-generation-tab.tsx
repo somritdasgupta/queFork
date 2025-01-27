@@ -18,8 +18,8 @@ export function CodeGenerationTab({
   return (
     <div className="h-full w-full">
       <ScrollArea className="h-full">
-        <div className="p-2">
-          <div className="relative rounded-lg overflow-hidden border border-slate-700/50">
+        <div className="px-2">
+          <div className="relative overflow-hidden">
             <div className="w-full">
               <div className="flex-1 overflow-hidden">
                 <SyntaxHighlighter

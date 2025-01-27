@@ -83,7 +83,7 @@ export default function Page() {
     variableToAdd?: { key: string; value: string };
     onVariableAdd?: (selectedEnvIds: string[]) => void;
   }>({
-    isVariableSelectionMode: false
+    isVariableSelectionMode: false,
   });
 
   useEffect(() => {
@@ -202,14 +202,15 @@ export default function Page() {
 
   useEffect(() => {
     const handleOpenEnvironmentManager = (event: CustomEvent) => {
-      const { isVariableSelectionMode, variableToAdd, onVariableAdd } = event.detail;
+      const { isVariableSelectionMode, variableToAdd, onVariableAdd } =
+        event.detail;
       // Set state to open environment manager with variable selection mode
       // You'll need to add these props to your state management
       setEnvironmentManagerOpen(true);
       setEnvironmentManagerMode({
         isVariableSelectionMode,
         variableToAdd,
-        onVariableAdd
+        onVariableAdd,
       });
     };
 
@@ -660,18 +661,16 @@ export default function Page() {
   const handleEnvironmentManagerOpen = (isOpen: boolean) => {
     setEnvironmentManagerOpen(isOpen);
     if (!isOpen) {
-      // Reset mode when closing
       setEnvironmentManagerMode({ isVariableSelectionMode: false });
     }
   };
 
   return (
-    <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-slate-900/50 text-slate-600">
-      <header className="fixed top-0 left-0 right-0 z-50 bg-slate-800">
+    <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-slate-900/40 text-slate-600">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-slate-800 border-b-2 border-slate-700">
         {/* Mobile Header */}
-        <div className="md:hidden flex flex-col w-full px-2 py-3 space-y-3">
+        <div className="md:hidden flex flex-col w-full px-2 py-2 space-y-2">
           <div className="flex items-center gap-2">
-           
             <UrlBar
               method={method}
               url={url}
@@ -683,11 +682,13 @@ export default function Page() {
               onSendRequest={handleSendRequest}
               onWebSocketToggle={handleWebSocketToggle}
               variables={mergedEnvVariables}
-              recentUrls={recentUrls} isMobile={false}            />
+              recentUrls={recentUrls}
+              isMobile={false}
+            />
           </div>
-          
+
           <div className="flex items-center gap-2">
-             <MobileNav
+            <MobileNav
               collections={collections}
               history={history}
               onSelectRequest={handleLoadRequest}
@@ -715,7 +716,9 @@ export default function Page() {
                 className="rounded-lg border border-slate-700 bg-slate-900 text-xs"
                 isOpen={environmentManagerOpen}
                 onOpenChange={handleEnvironmentManagerOpen}
-                isVariableSelectionMode={environmentManagerMode.isVariableSelectionMode}
+                isVariableSelectionMode={
+                  environmentManagerMode.isVariableSelectionMode
+                }
                 variableToAdd={environmentManagerMode.variableToAdd}
                 onVariableAdd={environmentManagerMode.onVariableAdd}
               />
@@ -756,7 +759,9 @@ export default function Page() {
               onSendRequest={handleSendRequest}
               onWebSocketToggle={handleWebSocketToggle}
               variables={mergedEnvVariables}
-              recentUrls={recentUrls} isMobile={false}            />
+              recentUrls={recentUrls}
+              isMobile={false}
+            />
 
             <EnvironmentManager
               ref={environmentManagerRef}
@@ -766,7 +771,9 @@ export default function Page() {
               onEnvironmentsUpdate={handleEnvironmentsUpdate}
               isOpen={environmentManagerOpen}
               onOpenChange={handleEnvironmentManagerOpen}
-              isVariableSelectionMode={environmentManagerMode.isVariableSelectionMode}
+              isVariableSelectionMode={
+                environmentManagerMode.isVariableSelectionMode
+              }
               variableToAdd={environmentManagerMode.variableToAdd}
               onVariableAdd={environmentManagerMode.onVariableAdd}
             />
@@ -779,9 +786,9 @@ export default function Page() {
           {/* Sidebar */}
           <ResizablePanel
             defaultSize={25}
-            minSize={20}
-            maxSize={30}
-            className="hidden md:block"
+            minSize={25}
+            maxSize={25}
+            className="hidden md:block border-r-2 border-slate-700"
             response={null}
           >
             <DesktopSidePanel
@@ -812,6 +819,8 @@ export default function Page() {
             <ResizablePanelGroup direction="vertical">
               <ResizablePanel
                 defaultSize={50}
+                minSize={20}
+                maxSize={150}
                 className="overflow-hidden"
                 response={null}
               >
@@ -839,8 +848,8 @@ export default function Page() {
 
               <ResizablePanel
                 defaultSize={50}
-                minSize={15}
-                maxSize={!response?.status ? 90 : 90}
+                minSize={90}
+                maxSize={90}
                 className="overflow-hidden"
                 response={response}
               >
@@ -861,9 +870,11 @@ export default function Page() {
         </ResizablePanelGroup>
       </main>
 
-      <footer className="border-t border-slate-700 bg-slate-900/50 shadow-md">
+      <footer className="border-t-2 border-slate-700 bg-slate-800">
         <Footer />
       </footer>
     </div>
   );
 }
+
+

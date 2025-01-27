@@ -54,6 +54,7 @@ interface CollectionsPanelProps {
   onExportCollection: (collectionId: string) => void;
 }
 
+
 export function CollectionsPanel({
   collections,
   onSelectRequest,
@@ -182,36 +183,35 @@ export function CollectionsPanel({
   }, [collections, search, filterBy, sortBy]);
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header Section */}
-      <div className="sticky top-0 z-10 bg-white border-b p-2 space-y-2">
-        <div className="flex items-center justify-between gap-2">
+    <div className="h-full flex flex-col bg-slate-800">
+      <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
+        <div className="flex items-center justify-between">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() =>
               setSortBy((prev) =>
                 prev === "name" ? "date" : prev === "date" ? "method" : "name"
               )
             }
-            className="text-xs h-8 w-full rounded-lg"
+            className="flex items-center h-9 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
           >
-            <SortAsc className="h-4 w-4 mr-2" />
-            {sortBy}
+            <SortAsc className="h-4 w-4 text-blue-400" />
+            <span className="text-xs capitalize">{sortBy}</span>
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="text-xs h-8 w-full rounded-lg"
+                className="flex items-center h-9 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
               >
-                <Filter className="h-4 w-4 mr-2" />
-                {filterBy || "All"}
+                <Filter className="h-4 w-4 text-purple-400" />
+                <span className="text-xs">{filterBy || 'All'}</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="start" className="bg-slate-800 border border-slate-700">
               <DropdownMenuItem onClick={() => setFilterBy("")}>
                 All Methods
               </DropdownMenuItem>
@@ -226,30 +226,33 @@ export function CollectionsPanel({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="flex gap-2">
+          <div className="flex">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={onExportCollections}
-              className="rounded-lg"
+              className="h-9 w-full rounded-none border-2 border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
             >
-              <ArrowDownToLine className="h-4 w-4" />
+              <ArrowDownToLine className="h-4 w-4 text-emerald-400" />
             </Button>
 
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-lg">
-                  <Plus className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 w-full border-2 border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                >
+                  <Plus className="h-4 w-4 text-cyan-400" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:top-[50%] top-[unset] bottom-0 sm:bottom-[unset] sm:translate-y-[-50%] translate-y-0 rounded-t-lg sm:rounded-lg max-w-md">
+              <DialogContent className="bg-slate-900 border border-slate-700">
                 <DialogHeader>
                   <DialogTitle>Create New Collection</DialogTitle>
                   <DialogDescription>
                     Create a new collection to organize your API requests.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Name</label>
                     <Input
@@ -264,7 +267,7 @@ export function CollectionsPanel({
                       }
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="">
                     <label className="text-sm font-medium">API Version</label>
                     <Input
                       placeholder="e.g., 1.0.0"
@@ -293,7 +296,7 @@ export function CollectionsPanel({
                       }}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="">
                     <label className="text-sm font-medium">Description</label>
                     <Textarea
                       placeholder="Description (optional)"
@@ -306,7 +309,6 @@ export function CollectionsPanel({
                       }
                     />
                   </div>
-                </div>
                 <DialogFooter>
                   <div className="flex flex-col gap-3 justify-end w-full">
                     <Button
@@ -334,12 +336,12 @@ export function CollectionsPanel({
 
         {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-2 h-4 w-4 text-slate-500" />
           <Input
             placeholder="Search collections"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-9 rounded-lg"
+            className="h-8 pl-9 rounded-none w-full bg-slate-900 border-y-2 border-slate-700 text-slate-300 placeholder:text-slate-500"
           />
         </div>
       </div>
@@ -347,39 +349,36 @@ export function CollectionsPanel({
       {/* Collections List */}
       <ScrollArea className="flex-1">
         {collections.length === 0 ? (
-          <div className="flex flex-col items-center justify-center mt-12 py-12 px-4">
-            <div className="bg-white rounded-xl border-2 p-6 mb-8 shadow-inner">
-              <Clock className="h-8 w-8 text-gray-400 animate-pulse" />
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <div className="p-4 rounded-lg bg-slate-900 border border-slate-700 mb-4">
+              <Clock className="h-8 w-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-lg font-medium text-slate-300 mb-2">
               No Collections Yet
             </h3>
-            <div className="max-w-sm text-center space-y-2">
-              <p className="text-sm text-gray-500">
-                Create your first collection to organize your API requests and
-                they will show up here.
-              </p>
-            </div>
+            <p className="text-sm text-slate-400 max-w-sm">
+              Create your first collection to organize your API requests.
+            </p>
           </div>
         ) : (
-          <div className="p-4 space-y-4">
-            <Accordion type="multiple" className="space-y-4">
+          <div>
+            <Accordion type="multiple">
               {filteredCollections.map((collection) => (
                 <AccordionItem
                   key={collection.id}
                   value={collection.id}
-                  className="border cursor-pointer rounded-lg hover:border-gray-300 bg-white transition-colors"
+                  className="border-b-2 border-slate-700 bg-slate-900 overflow-hidden"
                 >
-                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <AccordionTrigger className="p-2 hover:no-underline">
                     {renderCollectionHeader(collection)}
                   </AccordionTrigger>
                   <AccordionContent>
-                    <div className="px-4 py-2 space-y-2">
+                    <div>
                       {collection.requests?.length > 0 ? (
                         collection.requests.map((request) => (
                           <div key={request.id} className="group">
                             <div
-                              className="flex items-center gap-2 p-2 bg-white border-2 border-gray-200 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                              className="flex items-center gap-2 px-4 py-2 text-slate-50 bg-blue-900 border-y-2 hover:bg-slate-900  cursor-pointer transition-colors"
                               onClick={() => onSelectRequest(request)}
                             >
                               <Badge
@@ -389,7 +388,7 @@ export function CollectionsPanel({
                                 {request.method}
                               </Badge>
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm font-mono text-gray-700 truncate">
+                                <div className="text-xs font-medium text-gray-700 truncate">
                                   {request.name || request.url}
                                 </div>
                               </div>

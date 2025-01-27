@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "queFork • REST API Testing",
+  title: "queFork / API Testing",
   icons: [
     {
       rel: "icon",

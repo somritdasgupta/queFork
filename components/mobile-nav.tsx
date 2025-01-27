@@ -7,7 +7,7 @@ import {
   SheetHeader,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Layers, FolderOpen, History} from "lucide-react";
+import { Layers, FolderOpen, History } from "lucide-react";
 import { useState } from "react";
 import { CollectionsPanel } from "./collections-panel";
 import { HistoryPanel } from "./history-panel";
@@ -41,34 +41,44 @@ interface NavItem {
 
 export function MobileNav({ ...props }: MobileNavProps) {
   const [open, setOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState<"collections" | "history">("collections");
+  const [activePanel, setActivePanel] = useState<"collections" | "history">(
+    "collections"
+  );
 
   const tabs = [
     {
       id: "collections" as const,
       label: "Collections",
       icon: <FolderOpen className="h-4 w-4 text-emerald-500" />,
-      content: <CollectionsPanel {...props} onSelectRequest={(req) => {
-        props.onSelectRequest(req);
-        setOpen(false);
-      }} onExportCollection={props.onExportCollection} />
+      content: (
+        <CollectionsPanel
+          {...props}
+          onSelectRequest={(req) => {
+            props.onSelectRequest(req);
+            setOpen(false);
+          }}
+          onExportCollection={props.onExportCollection}
+        />
+      ),
     },
     {
       id: "history" as const,
       label: "History",
       icon: <History className="h-4 w-4 text-blue-500" />,
-      content: <HistoryPanel 
-        {...props} 
-        onSelectItem={(item) => {
-          props.onSelectHistoryItem(item);
-          setOpen(false);
-        }}
-        onDeleteItem={props.onDeleteHistoryItem}
-        onToggleHistorySaving={props.onToggleHistorySaving}
-        isHistorySavingEnabled={props.isHistorySavingEnabled}
-        onExportHistory={props.onExportHistory}
-      />
-    }
+      content: (
+        <HistoryPanel
+          {...props}
+          onSelectItem={(item) => {
+            props.onSelectHistoryItem(item);
+            setOpen(false);
+          }}
+          onDeleteItem={props.onDeleteHistoryItem}
+          onToggleHistorySaving={props.onToggleHistorySaving}
+          isHistorySavingEnabled={props.isHistorySavingEnabled}
+          onExportHistory={props.onExportHistory}
+        />
+      ),
+    },
   ];
 
   return (
@@ -82,10 +92,12 @@ export function MobileNav({ ...props }: MobileNavProps) {
           <Layers className="h-8 text-slate-400" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="w-[100vw] p-0 h-[92vh] rounded-t-lg glass-panel">
-        <SheetHeader className="panel-header rounded-t-lg">
+      <SheetContent
+        side="bottom"
+        className="w-[100vw] p-0 h-[92vh] rounded-t-lg bg-white/80"
+      >
+        <SheetHeader>
           <div className="flex items-center justify-between rounded-lg">
-            
             <Button
               variant="ghost"
               size="icon"
@@ -93,7 +105,7 @@ export function MobileNav({ ...props }: MobileNavProps) {
               onClick={() => setOpen(false)}
             ></Button>
           </div>
-          <div className="flex gap-2 mt-2 tab-container">
+          <div className="flex gap-2 mt-2 tab-container px-2">
             {tabs.map((item: NavItem) => (
               <Button
                 key={item.id}
@@ -109,7 +121,7 @@ export function MobileNav({ ...props }: MobileNavProps) {
           </div>
         </SheetHeader>
         <div className="h-[calc(100%-120px)] mb-8 overflow-y-auto panel-body">
-          {tabs.find(tab => tab.id === activePanel)?.content}
+          {tabs.find((tab) => tab.id === activePanel)?.content}
         </div>
       </SheetContent>
     </Sheet>

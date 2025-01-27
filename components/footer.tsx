@@ -3,7 +3,7 @@ import { AnimatedLogo } from './animated-logo';
 
 const Footer = () => {
   return (
-    <footer className="w-full bg-slate-900/50 backdrop-blur text-slate-400 py-2">
+    <footer className="w-full bg-slate-800 text-slate-400 py-2">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {/* Left section */}
@@ -15,11 +15,10 @@ const Footer = () => {
               subtitlePosition="right"
               primaryColor="text-slate-50"
               secondaryColor="text-blue-500"
-              subtitleColor="text-slate-500"
+              subtitleColor="text-slate-300"
             />
           </div>
       
-          {/* Right section */}
           <div className="flex space-x-3">
             <a
               href="https://github.com/somritdasgupta/queFork"
