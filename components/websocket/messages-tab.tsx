@@ -37,39 +37,39 @@ interface Message {
 
 const MESSAGE_STYLES = {
   sent: {
-    bg: "hover:bg-blue-900/20",
-    activeBg: "bg-blue-900/30",
+    bg: "hover:bg-slate-800/50",
+    activeBg: "bg-slate-800",
     icon: "text-blue-500",
-    text: "text-blue-500",
-    border: "border-blue-800/50",
+    text: "text-slate-300",
+    border: "border-slate-700/50",
   },
   received: {
-    bg: "hover:bg-emerald-900/20",
-    activeBg: "bg-emerald-900/30",
+    bg: "hover:bg-slate-800/50",
+    activeBg: "bg-slate-800",
     icon: "text-emerald-500",
-    text: "text-emerald-500",
-    border: "border-emerald-800/50",
+    text: "text-slate-300",
+    border: "border-slate-700/50",
   },
   connected: {
-    bg: "hover:bg-yellow-900/20",
-    activeBg: "bg-yellow-900/30",
+    bg: "hover:bg-slate-800/50",
+    activeBg: "bg-slate-800",
     icon: "text-yellow-500",
     text: "text-yellow-500",
-    border: "border-yellow-800/50",
+    border: "border-slate-700/50",
   },
   disconnected: {
-    bg: "hover:bg-orange-900/20",
-    activeBg: "bg-orange-900/30",
+    bg: "hover:bg-slate-800/50",
+    activeBg: "bg-slate-800",
     icon: "text-orange-500",
     text: "text-orange-500",
-    border: "border-orange-800/50",
+    border: "border-slate-700/50",
   },
   error: {
-    bg: "hover:bg-red-900/20",
-    activeBg: "bg-red-900/30",
+    bg: "hover:bg-slate-800/50",
+    activeBg: "bg-slate-800",
     icon: "text-red-500",
     text: "text-red-500",
-    border: "border-red-800/50",
+    border: "border-slate-700/50",
   },
 };
 
@@ -250,9 +250,9 @@ export function MessagesTab() {
   };
 
   return (
-    <div className="relative w-full h-full bg-slate-900/90 overflow-hidden">
+    <div className="relative w-full h-full bg-slate-900 overflow-hidden">
       {/* Header - Match REST header style */}
-      <div className="absolute top-0 left-0 right-0 z-50 border-b border-slate-700 bg-slate-800/50">
+      <div className="absolute top-0 left-0 right-0 z-0 border-b border-slate-700 bg-slate-800/50">
         <div className="h-14 px-3 flex items-center gap-2 overflow-x-auto">
           <Select
             value={messageFormat}
@@ -440,8 +440,8 @@ export function MessagesTab() {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 border-t border-slate-700 bg-slate-800/50">
-        <div className="h-16 p-3 flex items-center gap-2">
+      <div className="absolute bottom-0 left-0 right-0 z-50 border-t-2 border-slate-700 bg-slate-800">
+        <div className="h-12 p-2 flex items-center gap-2">
           <div className="flex-1 relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs md:text-sm font-medium">
               $

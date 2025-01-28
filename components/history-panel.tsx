@@ -71,7 +71,6 @@ interface HistoryGroup {
     total: number;
     success: number;
     failed: number;
-    avgResponseTime?: number;
     lastAccessed: Date;
   };
 }
@@ -176,14 +175,10 @@ export function HistoryPanel({
           return sum + parseInt(timeStr);
         }, 0);
 
-        const avgTime =
-          itemsWithTime.length > 0 ? totalTime / itemsWithTime.length : 0;
-
         stats[key] = {
           total: items.length,
           success: successfulRequests.length,
           failed: failedRequests.length,
-          avgResponseTime: avgTime,
           lastAccessed: new Date(
             Math.max(...items.map((i) => new Date(i.timestamp).getTime()))
           ),
@@ -373,7 +368,7 @@ export function HistoryPanel({
                 g === "none" ? "domain" : g === "domain" ? "date" : "none"
               )
             }
-            className="flex items-center h-9 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+            className="flex items-center h-10 w-full border-2 border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
           >
             {groupBy === "domain" ? (
               <Globe className="h-4 w-4 text-blue-400 mr-2" />
@@ -391,7 +386,7 @@ export function HistoryPanel({
             variant="ghost"
             size="sm"
             onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
-            className="flex items-center h-9 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+            className="flex items-center h-10 w-full border-2 border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
           >
             <History className="h-4 w-4 text-cyan-400 mr-2" />
             <span className="text-xs capitalize">
@@ -404,7 +399,7 @@ export function HistoryPanel({
               variant="ghost"
               size="sm"
               onClick={onExportHistory}
-              className="h-9 rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+              className="h-10 rounded-none border-2 border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
             >
               <ArrowDownToLine className="h-4 w-4 text-emerald-400" />
             </Button>
@@ -412,7 +407,7 @@ export function HistoryPanel({
               variant="ghost"
               size="sm"
               onClick={onClearHistory}
-              className="h-9 border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+              className="h-10 border-2 border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
             >
               <Trash2 className="h-4 w-4 text-red-400" />
             </Button>
@@ -421,12 +416,11 @@ export function HistoryPanel({
 
         {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3 top-2 h-4 w-4 text-slate-500" />
           <Input
             placeholder="Search history"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-8 pl-9 rounded-none w-full bg-slate-900 border-y-2 border-slate-700 text-slate-300 placeholder:text-slate-500"
+            className="h-8 rounded-none w-full bg-slate-900 border-2 border-slate-700 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
           />
         </div>
       </div>
@@ -476,16 +470,6 @@ export function HistoryPanel({
                             {groupStats[groupKey].failed} ✗
                           </span>
                         )}
-                        {typeof groupStats[groupKey]?.avgResponseTime ===
-                          "number" &&
-                          groupStats[groupKey].avgResponseTime > 0 && (
-                            <span>
-                              {Math.round(
-                                groupStats[groupKey].avgResponseTime!
-                              )}
-                              ms
-                            </span>
-                          )}
                       </div>
                     )}
                   </button>

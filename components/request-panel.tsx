@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { KeyValueEditor } from "./key-value-editor";
 import { AuthSection } from "./auth-section";
-import { KeyValuePair, RequestBody, Environment } from "@/types"; // Add Environment import
+import { KeyValuePair, RequestBody, Environment } from "@/types";
 import {
   SearchCode,
   List,
@@ -197,7 +196,7 @@ export function RequestPanel({
                 <div className="p-0">
                   {/* Query Parameters Tab */}
                   <TabsContent value="params" className="m-0 min-h-0">
-                    <div className="flex items-center justify-between p-2">
+                    <div className="flex border-b-2 border-slate-700 items-center justify-between p-2">
                       <div className="flex items-center gap-2 text-slate-400">
                         <SearchCode className="h-4 w-4" />
                         <h3 className="text-sm font-semibold">
@@ -228,7 +227,7 @@ export function RequestPanel({
 
                   {/* Headers Tab */}
                   <TabsContent value="headers" className="m-0 min-h-0">
-                    <div className="flex items-center justify-between p-2">
+                    <div className="flex border-b-2 border-slate-700 items-center justify-between p-2">
                       <div className="flex items-center gap-2 text-slate-400">
                         <List className="h-4 w-4" />
                         <h3 className="text-sm font-semibold">
@@ -265,7 +264,7 @@ export function RequestPanel({
                       value={`body-${type}`}
                       className="m-0 min-h-0"
                     >
-                      <div className="flex items-center justify-between p-2">
+                      <div className="flex border-b-2 border-slate-700 items-center justify-between p-2">
                         <div className="flex items-center gap-2 text-slate-400">
                           {getBodyIcon(type)}
                           <h3 className="text-sm font-semibold">
@@ -274,7 +273,7 @@ export function RequestPanel({
                               : type === "x-www-form-urlencoded"
                                 ? "URL Encoded"
                                 : type.charAt(0).toUpperCase() +
-                                  type.slice(1)}{" "}
+                                  type.slice(1)}
                             Body
                           </h3>
                         </div>
@@ -314,7 +313,7 @@ export function RequestPanel({
 
                   {/* Auth Tab */}
                   <TabsContent value="auth" className="m-0 min-h-0">
-                    <div className="flex items-center justify-between p-2">
+                    <div className="flex border-b-2 border-slate-700 items-center justify-between p-2">
                       <div className="flex items-center gap-2 text-slate-400">
                         <KeyRound className="h-4 w-4" />
                         <h3 className="text-sm font-semibold">
@@ -330,8 +329,8 @@ export function RequestPanel({
                           : "NONE"}
                       </Badge>
                     </div>
-                    <div className="bg-slate-900">
-                      <div className="p-4">
+                    <div className="bg-slate-800">
+                      <div>
                         <AuthSection
                           auth={props.auth}
                           onChange={props.onAuthChange}
@@ -374,10 +373,10 @@ export function RequestPanel({
                 >
                   <div className="space-y-6">
                     <div className="mx-auto flex justify-center items-center w-16 h-16 bg-gradient-to-b from-slate-100/80 via-white/60 to-slate-50/80 rounded-2xl shadow-inner border-2 border-slate-200/30 backdrop-blur-sm">
-                      <PlugZap2 className="h-8 w-8 text-blue-500/80" />
+                      <PlugZap2 className="h-8 w-8 text-blue-400" />
                     </div>
                     <div className="space-y-2">
-                      <h3 className="text-2xl font-bold text-slate-800">
+                      <h3 className="text-2xl font-bold text-slate-400">
                         WebSocket Mode
                       </h3>
                       <p className="text-sm text-slate-500 max-w-sm">
@@ -447,7 +446,7 @@ function RequestBodyContent({
         setJsonError(null);
         return content;
       }
-      
+
       const parsed = JSON.parse(content);
       const formatted = JSON.stringify(parsed, null, 2);
       setIsValidJson(true);
@@ -493,13 +492,15 @@ function RequestBodyContent({
                 <span className="font-medium">Invalid JSON:</span>
                 <span className="font-mono">{jsonError}</span>
               </div>
-            ) : body.content && (
-              <div className="flex items-center justify-between px-3 py-1.5 text-xs text-slate-400">
-                <span>Valid JSON</span>
-                <span className="font-mono">
-                  {JSON.stringify(body.content).length.toLocaleString()} bytes
-                </span>
-              </div>
+            ) : (
+              body.content && (
+                <div className="flex items-center justify-between px-3 py-1.5 text-xs text-slate-400">
+                  <span>Valid JSON</span>
+                  <span className="font-mono">
+                    {JSON.stringify(body.content).length.toLocaleString()} bytes
+                  </span>
+                </div>
+              )
             )}
           </div>
         )}

@@ -4,7 +4,7 @@ import { AnimatedLogo } from './animated-logo';
 const Footer = () => {
   return (
     <footer className="w-full bg-slate-800 text-slate-400 py-2">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto">
         <div className="flex items-center justify-between">
           {/* Left section */}
           <div className="flex items-center gap-3">

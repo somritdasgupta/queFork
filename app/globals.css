@@ -103,3 +103,27 @@ code {
     linear-gradient(to bottom, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+@keyframes overlay {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-overlay {
+  animation: overlay 2s infinite;
+}
+
+.group-hover\:translate-x-1 {
+  @apply transition-transform duration-200;
+}
+
+.group:hover .group-hover\:translate-x-1 {
+  transform: translateX(0.25rem);
+}

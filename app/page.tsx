@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-
+import { PANEL_SIZING } from "@/lib/constants";
 import { toast } from "sonner";
 import { RequestPanel } from "@/components/request-panel";
 import { ResponsePanel } from "@/components/response-panel";
@@ -18,17 +18,19 @@ import {
   Collection,
   SavedRequest,
   Environment,
+  SidePanelProps,
 } from "@/types";
-import DesktopSidePanel from "@/components/desktop-side-panel";
 import {
-  EnvironmentManager,
-  EnvironmentManagerRef,
-} from "@/components/environment-manager";
+  EnvironmentPanel,
+  EnvironmentPanelRef,
+} from "@/components/environment-panel";
 import { v4 as uuidv4 } from "uuid";
 import Footer from "@/components/footer";
 import { useWebSocket } from "@/components/websocket/websocket-context";
 import saveAs from "file-saver";
 import { UrlBar } from "@/components/url-bar";
+import SidePanel from "@/components/side-panel";
+import { EnvironmentSelector } from "@/components/environment-selector";
 
 export default function Page() {
   const [method, setMethod] = useState("GET");
@@ -62,14 +64,23 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [environments, setEnvironments] = useState<Environment[]>([
+    {
+      id: "global",
+      name: "Global",
+      variables: [],
+      global: true,
+      created: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+    },
+  ]);
   const [currentEnvironment, setCurrentEnvironment] =
     useState<Environment | null>(null);
   const [isHistorySavingEnabled, setIsHistorySavingEnabled] = useState(true);
   const [mergedEnvVariables, setMergedEnvVariables] = useState<
     { key: string; value: string }[]
   >([]);
-  const environmentManagerRef = useRef<EnvironmentManagerRef>(null);
+  const environmentPanelRef = useRef<EnvironmentPanelRef>(null);
   const [isWebSocketOpen, setIsWebSocketOpen] = useState(false);
   const [wsUrl, setWsUrl] = useState("");
   const [webSocketUrl, setWebSocketUrl] = useState("");
@@ -77,14 +88,9 @@ export default function Page() {
   const { isConnected: wsConnected, disconnect } = useWebSocket();
   const [isWebSocketMode, setIsWebSocketMode] = useState(false);
   const [recentUrls, setRecentUrls] = useState<string[]>([]);
-  const [environmentManagerOpen, setEnvironmentManagerOpen] = useState(false);
-  const [environmentManagerMode, setEnvironmentManagerMode] = useState<{
-    isVariableSelectionMode: boolean;
-    variableToAdd?: { key: string; value: string };
-    onVariableAdd?: (selectedEnvIds: string[]) => void;
-  }>({
-    isVariableSelectionMode: false,
-  });
+  const [activePanel, setActivePanel] = useState<
+    "collections" | "history" | "environments"
+  >("collections");
 
   useEffect(() => {
     const loadSavedEnvironments = () => {
@@ -166,11 +172,24 @@ export default function Page() {
   };
 
   useEffect(() => {
-    if (environmentManagerRef.current) {
-      setMergedEnvVariables(
-        environmentManagerRef.current.getMergedEnvironmentVariables()
-      );
-    }
+    const updateMergedVariables = () => {
+      if (environmentPanelRef.current) {
+        const merged = environmentPanelRef.current
+          .getMergedEnvironmentVariables()
+          .filter((v) => v.key.trim() && v.value.trim()); // Only count valid pairs
+        setMergedEnvVariables(merged);
+      }
+    };
+
+    // Initial update
+    updateMergedVariables();
+
+    // Add event listener for environment updates
+    window.addEventListener("environmentUpdated", updateMergedVariables);
+
+    return () => {
+      window.removeEventListener("environmentUpdated", updateMergedVariables);
+    };
   }, [environments, currentEnvironment]);
 
   useEffect(() => {
@@ -198,32 +217,6 @@ export default function Page() {
     if (saved) {
       setRecentUrls(JSON.parse(saved));
     }
-  }, []);
-
-  useEffect(() => {
-    const handleOpenEnvironmentManager = (event: CustomEvent) => {
-      const { isVariableSelectionMode, variableToAdd, onVariableAdd } =
-        event.detail;
-      // Set state to open environment manager with variable selection mode
-      // You'll need to add these props to your state management
-      setEnvironmentManagerOpen(true);
-      setEnvironmentManagerMode({
-        isVariableSelectionMode,
-        variableToAdd,
-        onVariableAdd,
-      });
-    };
-
-    window.addEventListener(
-      "openEnvironmentManager",
-      handleOpenEnvironmentManager as EventListener
-    );
-    return () => {
-      window.removeEventListener(
-        "openEnvironmentManager",
-        handleOpenEnvironmentManager as EventListener
-      );
-    };
   }, []);
 
   const executeRequest = async () => {
@@ -549,6 +542,9 @@ export default function Page() {
       const firstEnv = updatedEnvironments[0] || null;
       setCurrentEnvironment(firstEnv);
     }
+
+    // Dispatch event to trigger variable update
+    window.dispatchEvent(new Event("environmentUpdated"));
   };
 
   const replaceEnvironmentVariables = (value: string): string => {
@@ -586,22 +582,15 @@ export default function Page() {
     }
   };
 
-  const getWebSocketButtonClasses = () => {
-    const baseClasses =
-      "w-10 h-10 rounded-lg transition-all relative overflow-hidden";
-    if (wsConnected) {
-      return `${baseClasses} bg-slate-900 after:absolute after:inset-0 after:bg-green-500/20 after:animate-ping`;
-    }
-    return `${baseClasses} bg-slate-900 hover:bg-slate-800`;
-  };
-
   const handleWebSocketToggle = () => {
-    setIsWebSocketMode(!isWebSocketMode);
-    if (!isWebSocketMode) {
-      // Clear REST-specific state when switching to WebSocket
+    setIsWebSocketMode((prev) => !prev);
+    if (isWebSocketMode) {
+      // Switching from WebSocket to REST
+      if (wsConnected) {
+        disconnect();
+      }
       setResponse(null);
       setMethod("GET");
-      // Reset all REST-related states
       setHeaders([
         { key: "", value: "", enabled: true, showSecrets: false, type: "" },
       ]);
@@ -611,17 +600,43 @@ export default function Page() {
       setBody({ type: "none", content: "" });
       setAuth({ type: "none" });
     } else {
-      // Clean up WebSocket state when switching back to REST
-      if (wsConnected) {
-        // Disconnect WebSocket if connected
-        disconnect();
+      // Switching from REST to WebSocket
+      setResponse(null);
+      // Format URL if needed
+      if (url && !url.startsWith("ws://") && !url.startsWith("wss://")) {
+        const newUrl = url.startsWith("http://")
+          ? url.replace("http://", "ws://")
+          : url.startsWith("https://")
+            ? url.replace("https://", "wss://")
+            : `ws://${url}`;
+        setUrl(newUrl);
       }
     }
   };
 
   const handleUrlChange = (newUrl: string) => {
     setUrl(newUrl);
-    // Update recent URLs
+
+    // Auto-detect WebSocket URLs and handle mode switching
+    const isWebSocketUrl =
+      newUrl.startsWith("ws://") ||
+      newUrl.startsWith("wss://") ||
+      newUrl.includes("socket.io") ||
+      newUrl.includes("websocket");
+
+    // Switch back to HTTP mode if URL is cleared or not a WebSocket URL
+    if ((!newUrl || !isWebSocketUrl) && isWebSocketMode) {
+      setIsWebSocketMode(false);
+      if (wsConnected) {
+        disconnect();
+      }
+    }
+    // Switch to WebSocket mode for WebSocket URLs
+    else if (isWebSocketUrl && !isWebSocketMode) {
+      setIsWebSocketMode(true);
+    }
+
+    // Update recent URLs only for non-empty URLs
     if (newUrl && !recentUrls.includes(newUrl)) {
       const updated = [newUrl, ...recentUrls].slice(0, 10);
       setRecentUrls(updated);
@@ -658,96 +673,139 @@ export default function Page() {
     toast.success(`Added ${key} to ${currentEnvironment.name}`);
   };
 
-  const handleEnvironmentManagerOpen = (isOpen: boolean) => {
-    setEnvironmentManagerOpen(isOpen);
-    if (!isOpen) {
-      setEnvironmentManagerMode({ isVariableSelectionMode: false });
-    }
+  // Define panel props
+  const sidebarProps = {
+    collections,
+    history,
+    onSelectRequest: handleLoadRequest,
+    onSelectHistoryItem: handleLoadHistoryItem,
+    onClearHistory: handleClearHistory,
+    onCreateCollection: handleCreateCollection,
+    onSaveRequest: handleSaveRequest,
+    onDeleteCollection: handleDeleteCollection,
+    onDeleteRequest: handleDeleteRequest,
+    onDeleteHistoryItem: handleDeleteHistoryItem,
+    isHistorySavingEnabled,
+    onToggleHistorySaving: toggleHistorySaving,
+    onExportCollections: handleExportCollections,
+    onExportHistory: handleExportHistory,
+    onExportCollection: handleExportCollection,
+    environments,
+    currentEnvironment,
+    onEnvironmentChange: handleEnvironmentChange,
+    onEnvironmentsUpdate: handleEnvironmentsUpdate,
   };
 
-  return (
-    <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-slate-900/40 text-slate-600">
-      <header className="fixed top-0 left-0 right-0 z-50 bg-slate-800 border-b-2 border-slate-700">
-        {/* Mobile Header */}
-        <div className="md:hidden flex flex-col w-full p-2 space-y-2">
-          <div className="flex items-center gap-2">
-            <UrlBar
-              method={method}
-              url={url}
-              isLoading={isLoading}
-              wsConnected={wsConnected}
-              isWebSocketMode={isWebSocketMode}
-              onMethodChange={setMethod}
-              onUrlChange={handleUrlChange}
-              onSendRequest={handleSendRequest}
-              onWebSocketToggle={handleWebSocketToggle}
-              variables={mergedEnvVariables}
-              recentUrls={recentUrls}
-              isMobile={false}
-            />
-          </div>
+  const requestPanelProps = {
+    headers,
+    params,
+    body,
+    auth,
+    onHeadersChange: setHeaders,
+    onParamsChange: setParams,
+    onBodyChange: setBody,
+    onAuthChange: setAuth,
+    isWebSocketMode,
+    environments,
+    currentEnvironment,
+    onEnvironmentChange: handleEnvironmentChange,
+    onEnvironmentsUpdate: handleEnvironmentsUpdate,
+    onAddToEnvironment: handleAddToEnvironment,
+  };
 
-          <div className="flex items-center gap-2">
-            <MobileNav
-              collections={collections}
-              history={history}
-              onSelectRequest={handleLoadRequest}
-              onSelectHistoryItem={handleLoadHistoryItem}
-              onClearHistory={handleClearHistory}
-              onCreateCollection={handleCreateCollection}
-              onSaveRequest={handleSaveRequest}
-              onDeleteCollection={handleDeleteCollection}
-              onDeleteRequest={handleDeleteRequest}
-              onDeleteHistoryItem={handleDeleteHistoryItem}
-              className="rounded-lg border border-slate-700 hover:bg-slate-700/50"
-              isHistorySavingEnabled={isHistorySavingEnabled}
-              onToggleHistorySaving={toggleHistorySaving}
-              onExportCollections={handleExportCollections}
-              onExportHistory={handleExportHistory}
-              onExportCollection={handleExportCollection}
-            />
+  const responsePanelProps = {
+    response,
+    isLoading,
+    collections,
+    onSaveToCollection: handleSaveRequest,
+    method,
+    url,
+    isWebSocketMode,
+  };
+
+  // Define mobile nav props
+  const mobileNavProps: SidePanelProps = {
+    collections,
+    history,
+    onSelectRequest: handleLoadRequest,
+    onSelectHistoryItem: handleLoadHistoryItem,
+    onClearHistory: handleClearHistory,
+    onCreateCollection: handleCreateCollection,
+    onSaveRequest: handleSaveRequest,
+    onDeleteCollection: handleDeleteCollection,
+    onDeleteRequest: handleDeleteRequest,
+    onDeleteHistoryItem: handleDeleteHistoryItem,
+    isHistorySavingEnabled,
+    onToggleHistorySaving: setIsHistorySavingEnabled,
+    onExportCollections: handleExportCollections,
+    onExportHistory: handleExportHistory,
+    onExportCollection: handleExportCollection,
+    environments,
+    currentEnvironment,
+    onEnvironmentChange: handleEnvironmentChange,
+    onEnvironmentsUpdate: handleEnvironmentsUpdate,
+    isMobile: true,
+  };
+
+  useEffect(() => {
+    const computeMergedVariables = () => {
+      let merged: { key: string; value: string; type?: "text" | "secret" }[] = [];
+      
+      // Add global environment variables first
+      const globalEnv = environments.find(env => env.global);
+      if (globalEnv) {
+        merged.push(...globalEnv.variables.filter(v => v.enabled));
+      }
+
+      // Add current environment variables, overwriting any duplicates
+      if (currentEnvironment && !currentEnvironment.global) {
+        currentEnvironment.variables.filter(v => v.enabled).forEach(v => {
+          const index = merged.findIndex(mv => mv.key === v.key);
+          if (index !== -1) {
+            merged[index] = v;
+          } else {
+            merged.push(v);
+          }
+        });
+      }
+
+      // Filter out any empty keys
+      merged = merged.filter(v => v.key.trim() !== '');
+      
+      setMergedEnvVariables(merged);
+    };
+
+    computeMergedVariables();
+
+    // Also compute when environment is updated
+    window.addEventListener('environmentUpdated', computeMergedVariables);
+    return () => {
+      window.removeEventListener('environmentUpdated', computeMergedVariables);
+    };
+  }, [environments, currentEnvironment]);
+
+  return (
+    <main className="flex flex-col h-screen bg-slate-900">
+      {/* Header Section */}
+      <header className="flex flex-col border-b border-slate-800">
+        {/* Mobile/Desktop Layout Container */}
+        <div className="w-full flex flex-col md:flex-row items-stretch gap-2 p-4">
+          {/* Environment and Mobile Controls - Full width on mobile, fixed width on desktop */}
+          <div className="flex gap-2 md:w-[280px] shrink-0">
             <div className="flex-1">
-              <EnvironmentManager
-                ref={environmentManagerRef}
+              <EnvironmentSelector
                 environments={environments}
                 currentEnvironment={currentEnvironment}
                 onEnvironmentChange={handleEnvironmentChange}
-                onEnvironmentsUpdate={handleEnvironmentsUpdate}
-                className="rounded-lg border border-slate-700 bg-slate-900 text-xs"
-                isOpen={environmentManagerOpen}
-                onOpenChange={handleEnvironmentManagerOpen}
-                isVariableSelectionMode={
-                  environmentManagerMode.isVariableSelectionMode
-                }
-                variableToAdd={environmentManagerMode.variableToAdd}
-                onVariableAdd={environmentManagerMode.onVariableAdd}
+                className="h-10 w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 
+                  text-slate-300 rounded-md transition-colors"
               />
             </div>
+            <div className="md:hidden">
+              <MobileNav {...mobileNavProps} />
+            </div>
           </div>
-        </div>
-
-        {/* Desktop Header */}
-        <div className="hidden md:flex h-16 items-center gap-4 p-4 max-w-screen-2xl mx-auto w-full">
-          <MobileNav
-            collections={collections}
-            history={history}
-            onSelectRequest={handleLoadRequest}
-            onSelectHistoryItem={handleLoadHistoryItem}
-            onClearHistory={handleClearHistory}
-            onCreateCollection={handleCreateCollection}
-            onSaveRequest={handleSaveRequest}
-            onDeleteCollection={handleDeleteCollection}
-            onDeleteRequest={handleDeleteRequest}
-            onDeleteHistoryItem={handleDeleteHistoryItem}
-            className="rounded-lg border border-slate-700 hover:bg-slate-700/50"
-            isHistorySavingEnabled={isHistorySavingEnabled}
-            onToggleHistorySaving={toggleHistorySaving}
-            onExportCollections={handleExportCollections}
-            onExportHistory={handleExportHistory}
-            onExportCollection={handleExportCollection}
-          />
-
-          <div className="flex-1 flex items-center gap-3">
+          <div className="w-full flex flex-1 gap-2">
             <UrlBar
               method={method}
               url={url}
@@ -761,120 +819,63 @@ export default function Page() {
               variables={mergedEnvVariables}
               recentUrls={recentUrls}
               isMobile={false}
-            />
-
-            <EnvironmentManager
-              ref={environmentManagerRef}
-              environments={environments}
-              currentEnvironment={currentEnvironment}
-              onEnvironmentChange={handleEnvironmentChange}
-              onEnvironmentsUpdate={handleEnvironmentsUpdate}
-              isOpen={environmentManagerOpen}
-              onOpenChange={handleEnvironmentManagerOpen}
-              isVariableSelectionMode={
-                environmentManagerMode.isVariableSelectionMode
-              }
-              variableToAdd={environmentManagerMode.variableToAdd}
-              onVariableAdd={environmentManagerMode.onVariableAdd}
+              className="flex-1"
             />
           </div>
         </div>
       </header>
 
-      <main className="pt-28 md:pt-16 h-[calc(100vh-3rem)] overflow-hidden bg-slate-800">
+      {/* Rest of the layout */}
+      <div className="h-[calc(100vh-3rem)] overflow-hidden bg-slate-800">
         <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* Sidebar */}
           <ResizablePanel
-            defaultSize={25}
-            minSize={25}
-            maxSize={25}
+            defaultSize={PANEL_SIZING.SIDEBAR}
             className="hidden md:block border-r-2 border-slate-700"
             response={null}
           >
-            <DesktopSidePanel
-              collections={collections}
-              history={history}
-              onSelectRequest={handleLoadRequest}
-              onSelectHistoryItem={handleLoadHistoryItem}
-              onClearHistory={handleClearHistory}
-              onCreateCollection={handleCreateCollection}
-              onSaveRequest={handleSaveRequest}
-              onDeleteCollection={handleDeleteCollection}
-              onDeleteRequest={handleDeleteRequest}
-              onDeleteHistoryItem={handleDeleteHistoryItem}
-              isHistorySavingEnabled={isHistorySavingEnabled}
-              onToggleHistorySaving={toggleHistorySaving}
-              onExportCollections={handleExportCollections}
-              onExportHistory={handleExportHistory}
-              onExportCollection={handleExportCollection}
-            />
+            <SidePanel {...sidebarProps} />
           </ResizablePanel>
 
-          {/* Main Panel */}
+          {/* Main Content */}
           <ResizablePanel
-            defaultSize={75}
+            defaultSize={PANEL_SIZING.MAIN}
             className="bg-gray-50"
             response={null}
           >
             <ResizablePanelGroup direction="vertical">
+              {/* Request Panel */}
               <ResizablePanel
-                defaultSize={50}
-                minSize={20}
-                maxSize={150}
+                defaultSize={
+                  response || isWebSocketMode ? PANEL_SIZING.DEFAULT : 100
+                }
                 className="overflow-hidden"
                 response={null}
               >
-                <div className="h-full overflow-y-auto">
-                  <RequestPanel
-                    headers={headers}
-                    params={params}
-                    body={body}
-                    auth={auth}
-                    onHeadersChange={setHeaders}
-                    onParamsChange={setParams}
-                    onBodyChange={setBody}
-                    onAuthChange={setAuth}
-                    isWebSocketMode={isWebSocketMode}
-                    environments={environments}
-                    currentEnvironment={currentEnvironment}
-                    onEnvironmentChange={handleEnvironmentChange}
-                    onEnvironmentsUpdate={handleEnvironmentsUpdate}
-                    onAddToEnvironment={handleAddToEnvironment}
-                  />
-                </div>
+                <RequestPanel {...requestPanelProps} />
               </ResizablePanel>
 
-              <ResizableHandle withHandle />
-
-              <ResizablePanel
-                defaultSize={50}
-                minSize={90}
-                maxSize={90}
-                className="overflow-hidden"
-                response={response}
-              >
-                <div className="h-full bg-gray-50 overflow-y-auto">
-                  <ResponsePanel
+              {/* Response Panel */}
+              {(response || isWebSocketMode) && (
+                <>
+                  <ResizableHandle withHandle className="select-none" />
+                  <ResizablePanel
+                    defaultSize={PANEL_SIZING.DEFAULT}
+                    className="overflow-hidden"
                     response={response}
-                    isLoading={isLoading}
-                    collections={collections}
-                    onSaveToCollection={handleSaveRequest}
-                    method={method}
-                    url={url}
-                    isWebSocketMode={isWebSocketMode}
-                  />
-                </div>
-              </ResizablePanel>
+                  >
+                    <ResponsePanel {...responsePanelProps} />
+                  </ResizablePanel>
+                </>
+              )}
             </ResizablePanelGroup>
           </ResizablePanel>
         </ResizablePanelGroup>
-      </main>
+      </div>
 
       <footer className="border-t-2 border-slate-700 bg-slate-800">
         <Footer />
       </footer>
-    </div>
+    </main>
   );
 }
-
-

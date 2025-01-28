@@ -63,6 +63,8 @@ interface KeyValueEditorProps {
   isEnvironmentEditor?: boolean;
   preventFirstItemDeletion?: boolean;
   autoSave?: boolean;
+  isMobile?: boolean;
+  className?: string;
 }
 
 interface KeyValueInputProps {
@@ -229,6 +231,8 @@ export function KeyValueEditor({
   isEnvironmentEditor = false,
   preventFirstItemDeletion = false,
   autoSave = false,
+  isMobile = false,
+  className,
 }: KeyValueEditorProps) {
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkContent, setBulkContent] = useState("");
@@ -600,98 +604,116 @@ export function KeyValueEditor({
     );
   };
 
+  // Calculate height based on number of pairs
+  const getEditorHeight = () => {
+    const pairHeight = 32; // Height of each pair row in pixels
+    const minHeight = pairHeight; // Minimum height for 1 pair
+    const maxPairs = 6; // Maximum pairs before scrolling
+    const currentPairs = pairs.length;
+    
+    if (currentPairs <= maxPairs) {
+      return `${currentPairs * pairHeight}px`;
+    }
+    return `${maxPairs * pairHeight}px`;
+  };
+
   return (
     <div className="flex flex-col h-full">
-      <div className="min-h-0 flex-1 relative">
-        <ScrollArea className="absolute inset-0">
-          {isBulkMode ? (
-            <Textarea
-              value={bulkContent}
-              onChange={(e) => setBulkContent(e.target.value)}
-              placeholder={`• Format: key: value\n• Examples:\n  • api_key: your-key-here\n  • base_url: https://api.example.com\n  • disabled_key: this is disabled`}
-              className="w-full min-h-[300px] border border-slate-700 text-xs 
-                rounded-none bg-slate-950 
-                text-slate-300 placeholder:text-slate-500
-                focus:outline-none focus:ring-2 focus:ring-slate-700
-                font-mono"
-            />
-          ) : (
-            <div className="relative">
-              {" "}
-              {/* Remove pl-8 from this div */}
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-                modifiers={restrictToVerticalAxis.modifiers}
-              >
-                <SortableContext
-                  items={pairs.map((p) => p.id || `temp-${Math.random()}`)} // Ensure unique IDs
-                  strategy={verticalListSortingStrategy}
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea 
+          className={cn(
+            "w-full transition-all duration-200",
+            pairs.length > 6 ? "h-[192px]" : "h-auto"
+          )}
+        >
+          <div className="p-0.5">
+            {isBulkMode ? (
+              <Textarea
+                value={bulkContent}
+                onChange={(e) => setBulkContent(e.target.value)}
+                placeholder={`• Format: key: value\n• Examples:\n  • api_key: your-key-here\n  • base_url: https://api.example.com\n  • disabled_key: this is disabled`}
+                className="w-full min-h-[300px] border border-slate-700 text-xs 
+                  rounded-none bg-slate-950 
+                  text-slate-300 placeholder:text-slate-500
+                  focus:outline-none focus:ring-2 focus:ring-slate-700
+                  font-mono"
+              />
+            ) : (
+              <div className="relative" style={{ minHeight: '32px' }}>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                  modifiers={restrictToVerticalAxis.modifiers}
                 >
-                  <div className="divide-y divide-slate-700">
-                    {pairs.map((pair, index) => (
-                      <SortableItem
-                        key={pair.id || `temp-${index}`}
-                        pair={pair}
-                        index={index}
-                      >
-                        <div className="flex w-full">
-                          <div
-                            className={cn(
-                              "grid flex-1",
-                              showDescription
-                                ? "grid-cols-[1fr_1fr_1fr]"
-                                : "grid-cols-[1fr_1fr]",
-                              !pair.enabled && "opacity-50"
-                            )}
-                          >
-                            <KeyValueInput
-                              key={`key-${pair.id}-${index}`}
-                              value={pair.key}
-                              onChange={(value: string) =>
-                                updatePair(index, "key", value)
-                              }
-                              placeholder="Key"
-                              icon={Key}
-                              onPaste={(e) => handleSmartPaste(e, index, "key")}
-                              className="flex-1 bg-slate-950 border-slate-800 text-slate-300 placeholder:text-slate-600 focus:border-slate-700 focus:ring-slate-700"
-                            />
-                            <KeyValueInput
-                              key={`value-${pair.id}-${index}`}
-                              value={pair.value}
-                              onChange={(value: string) =>
-                                updatePair(index, "value", value)
-                              }
-                              placeholder="Value"
-                              icon={Type}
-                              onPaste={(e) =>
-                                handleSmartPaste(e, index, "value")
-                              }
-                              className="flex-1 bg-slate-950 border-slate-800 text-slate-300 placeholder:text-slate-600 focus:border-slate-700 focus:ring-slate-700"
-                            />
-                            {showDescription && (
+                  <SortableContext
+                    items={pairs.map((p) => p.id || `temp-${Math.random()}`)} // Ensure unique IDs
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="divide-y divide-slate-700">
+                      {pairs.map((pair, index) => (
+                        <SortableItem
+                          key={pair.id || `temp-${index}`}
+                          pair={pair}
+                          index={index}
+                        >
+                          <div className="flex w-full">
+                            <div
+                              className={cn(
+                                "grid flex-1",
+                                showDescription
+                                  ? "grid-cols-[1fr_1fr_1fr]"
+                                  : "grid-cols-[1fr_1fr]",
+                                !pair.enabled && "opacity-50"
+                              )}
+                            >
                               <KeyValueInput
-                                key={`desc-${pair.id}-${index}`}
-                                value={pair.description || ""}
+                                key={`key-${pair.id}-${index}`}
+                                value={pair.key}
                                 onChange={(value: string) =>
-                                  updatePair(index, "description", value)
+                                  updatePair(index, "key", value)
                                 }
-                                placeholder="Description"
-                                icon={AlignLeft}
+                                placeholder="Key"
+                                icon={Key}
+                                onPaste={(e) => handleSmartPaste(e, index, "key")}
                                 className="flex-1 bg-slate-950 border-slate-800 text-slate-300 placeholder:text-slate-600 focus:border-slate-700 focus:ring-slate-700"
                               />
-                            )}
+                              <KeyValueInput
+                                key={`value-${pair.id}-${index}`}
+                                value={pair.value}
+                                onChange={(value: string) =>
+                                  updatePair(index, "value", value)
+                                }
+                                placeholder="Value"
+                                icon={Type}
+                                onPaste={(e) =>
+                                  handleSmartPaste(e, index, "value")
+                                }
+                                className="flex-1 bg-slate-950 border-slate-800 text-slate-300 placeholder:text-slate-600 focus:border-slate-700 focus:ring-slate-700"
+                              />
+                              {showDescription && (
+                                <KeyValueInput
+                                  key={`desc-${pair.id}-${index}`}
+                                  value={pair.description || ""}
+                                  onChange={(value: string) =>
+                                    updatePair(index, "description", value)
+                                  }
+                                  placeholder="Description"
+                                  icon={AlignLeft}
+                                  className="flex-1 bg-slate-950 border-slate-800 text-slate-300 placeholder:text-slate-600 focus:border-slate-700 focus:ring-slate-700"
+                                />
+                              )}
+                            </div>
+                            {renderItemActions(pair, index)}
                           </div>
-                          {renderItemActions(pair, index)}
-                        </div>
-                      </SortableItem>
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            </div>
-          )}
+                        </SortableItem>
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            )}
+          </div>
         </ScrollArea>
       </div>
 
@@ -720,33 +742,24 @@ export function KeyValueEditor({
             }
           }}
           className={cn(
-            "h-8 rounded-none sm:w-[128px] relative", // Added relative for text positioning
-            "w-8", // Keep original width on mobile
+            "h-8 px-3",
+            "sm:w-[128px] flex items-center justify-center gap-2",
             isBulkMode
-              ? "bg-blue-900/20 text-blue-400 border-blue-800/30 hover:bg-blue-900/30  hover:text-blue-100"
-              : "bg-slate-900 text-cyan-400 hover:bg-slate-800 hover:text-cyan-300"
+              ? "bg-blue-900/20 text-blue-400 border-blue-800/30 hover:bg-blue-900/20 hover:text-blue-100"
+              : "bg-slate-900 text-cyan-400 hover:bg-slate-900 hover:text-cyan-300"
           )}
         >
-          <span className="hidden sm:inline-flex items-center gap-2">
-            {isBulkMode ? (
-              <>
-                <List className="h-4 w-4" />
-                <span className="text-xs">Exit Bulk</span>
-              </>
-            ) : (
-              <>
-                <ListPlus className="h-4 w-4" />
-                <span className="text-xs">Bulk Edit</span>
-              </>
-            )}
-          </span>
-          <span className="sm:hidden">
-            {isBulkMode ? (
+          {isBulkMode ? (
+            <>
               <List className="h-4 w-4" />
-            ) : (
+              <span className="hidden sm:inline text-xs">Exit Bulk</span>
+            </>
+          ) : (
+            <>
               <ListPlus className="h-4 w-4" />
-            )}
-          </span>
+              <span className="hidden sm:inline text-xs">Bulk Edit</span>
+            </>
+          )}
         </Button>
       </div>
     </div>

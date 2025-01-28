@@ -22,16 +22,18 @@ export interface CollectionVersion {
 export interface Environment {
   id: string;
   name: string;
-  variables: {
-    key: string;
-    value: string;
-    type: "text" | "secret";
-    enabled: boolean;
-  }[];
+  variables: EnvironmentVariable[];
   global?: boolean;
   description?: string;
   created: string;
   lastModified: string;
+}
+
+export interface EnvironmentVariable {
+  key: string;
+  value: string;
+  type: "text" | "secret";
+  enabled: boolean;
 }
 
 export interface WebSocketPanelProps {
@@ -49,6 +51,13 @@ export interface Collection {
   apiVersion?: string;
   requests: SavedRequest[];
   lastModified: string;
+  runConfig?: {
+    delay: number; // Delay between requests in ms
+    stopOnError: boolean;
+    environment?: string; // Environment ID to use for the run
+    timeout?: number; // Request timeout in ms
+    retryCount?: number; // Number of retries for failed requests
+  };
 }
 
 export interface SavedRequest {
@@ -142,4 +151,64 @@ export interface WebSocketMessage {
 export interface WebSocketState {
   isConnected: boolean;
   messages: WebSocketMessage[];
+}
+
+export interface CollectionRunResult {
+  id: string;
+  collectionId: string;
+  timestamp: string;
+  duration: number;
+  results: RequestRunResult[];
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+    skipped: number;
+    averageResponseTime?: number;
+  };
+  environment?: string;
+  config?: {
+    delay: number;
+    stopOnError: boolean;
+    timeout?: number;
+  };
+}
+
+export interface RequestRunResult {
+  id: string;
+  requestId: string;
+  name: string;
+  method: string;
+  url: string;
+  status: 'success' | 'failed' | 'skipped';
+  statusCode?: number;
+  duration: number;
+  response?: any;
+  error?: string;
+  timestamp: string;
+  retryCount?: number;
+}
+
+export interface SidePanelProps {
+  collections: Collection[];
+  history: HistoryItem[];
+  onSelectRequest: (request: SavedRequest) => void;
+  onSelectHistoryItem: (item: HistoryItem) => void;
+  onClearHistory: () => void;
+  onCreateCollection: (collection: Partial<Collection>) => void;
+  onSaveRequest: (collectionId: string, request: Partial<SavedRequest>) => void;
+  onDeleteCollection: (collectionId: string) => void;
+  onDeleteRequest: (collectionId: string, requestId: string) => void;
+  onDeleteHistoryItem: (id: string) => void;
+  isHistorySavingEnabled: boolean;
+  onToggleHistorySaving: (enabled: boolean) => void;
+  onExportCollections: () => void;
+  onExportHistory: () => void;
+  onExportCollection: (collectionId: string) => void;
+  environments: Environment[];
+  currentEnvironment: Environment | null;
+  onEnvironmentChange: (environmentId: string) => void;
+  onEnvironmentsUpdate: (environments: Environment[]) => void;
+  isMobile?: boolean;
+  className?: string; // Add this line
 }
