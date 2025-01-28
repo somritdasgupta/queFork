@@ -9,10 +9,14 @@ import {
   History,
   ArrowDownToLine,
   X,
+  ChevronDown,
+  ChevronRight,
+  Globe,
+  CalendarDays,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { HistoryItem } from "@/types";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { useWebSocket } from "./websocket/websocket-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -59,6 +63,40 @@ interface HistoryPanelProps {
   onExportHistory: () => void;
 }
 
+// Add new types
+interface HistoryGroup {
+  domain: string;
+  items: HistoryItem[];
+  stats: {
+    total: number;
+    success: number;
+    failed: number;
+    avgResponseTime?: number;
+    lastAccessed: Date;
+  };
+}
+
+// Add grouping utilities
+const getDomain = (url: string) => {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url.split("/")[0];
+  }
+};
+
+const getDateGroup = (date: Date) => {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const days = diff / (1000 * 60 * 60 * 24);
+
+  if (days < 1) return "Today";
+  if (days < 2) return "Yesterday";
+  if (days < 7) return "Last Week";
+  if (days < 30) return "Last Month";
+  return "Older";
+};
+
 export function HistoryPanel({
   history,
   onSelectItem,
@@ -71,6 +109,8 @@ export function HistoryPanel({
   const [search, setSearch] = useState("");
   const [containerWidth, setContainerWidth] = useState(0);
   const urlContainerRef = useRef<HTMLDivElement>(null);
+  const [groupBy, setGroupBy] = useState<"none" | "domain" | "date">("none");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!urlContainerRef.current) return;
@@ -90,6 +130,78 @@ export function HistoryPanel({
   const filteredHistory = history.filter((item) =>
     item.url.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Group history items
+  const groupedHistory = useMemo(() => {
+    if (groupBy === "none") return { ungrouped: filteredHistory };
+
+    return filteredHistory.reduce(
+      (groups: Record<string, HistoryItem[]>, item) => {
+        const key =
+          groupBy === "domain"
+            ? getDomain(item.url)
+            : getDateGroup(new Date(item.timestamp));
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item);
+        return groups;
+      },
+      {}
+    );
+  }, [filteredHistory, groupBy]);
+
+  // Calculate group stats with proper type checking
+  const groupStats = useMemo(() => {
+    return Object.entries(groupedHistory).reduce(
+      (stats, [key, items]) => {
+        const responseItems = items.filter((i) => i.response?.status);
+        const successfulRequests = responseItems.filter(
+          (i) => i.response!.status < 400
+        );
+        const failedRequests = responseItems.filter(
+          (i) => i.response!.status >= 400
+        );
+
+        // Calculate average response time only for items with valid time values
+        const itemsWithTime = items.filter((i) => {
+          const timeStr = i.response?.time;
+          return (
+            timeStr !== undefined &&
+            timeStr !== null &&
+            !isNaN(parseInt(timeStr))
+          );
+        });
+
+        const totalTime = itemsWithTime.reduce((sum, i) => {
+          const timeStr = i.response?.time || "0";
+          return sum + parseInt(timeStr);
+        }, 0);
+
+        const avgTime =
+          itemsWithTime.length > 0 ? totalTime / itemsWithTime.length : 0;
+
+        stats[key] = {
+          total: items.length,
+          success: successfulRequests.length,
+          failed: failedRequests.length,
+          avgResponseTime: avgTime,
+          lastAccessed: new Date(
+            Math.max(...items.map((i) => new Date(i.timestamp).getTime()))
+          ),
+        };
+        return stats;
+      },
+      {} as Record<string, HistoryGroup["stats"]>
+    );
+  }, [groupedHistory]);
+
+  const toggleGroup = (groupKey: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
+  };
 
   const handleHistoryClick = (item: HistoryItem) => {
     if (isConnected) {
@@ -127,28 +239,22 @@ export function HistoryPanel({
       return (
         <div
           key={item.id}
-          className={cn(
-            "flex items-center gap-2 p-3 rounded-lg transition-all",
-            "border bg-white/60",
-            !isConnected
-              ? "hover:bg-slate-50 hover:border-slate-300 border-2 border-slate-100 cursor-pointer"
-              : "cursor-not-allowed bg-slate-100 border-2 border-slate-100 text-slate-500",
-            isActive && !isConnected && "border-purple-200 bg-purple-50/50"
-          )}
+          className="group flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
           onClick={() => !isConnected && handleHistoryClick(item)}
         >
           <Badge
-            variant={isActive ? "default" : "outline"}
+            variant="outline"
             className={cn(
-              "flex-shrink-0",
-              isSocketIO ? "text-blue-500" : "text-purple-500",
-              isActive && (isSocketIO ? "bg-blue-100" : "bg-purple-100")
+              "shrink-0 text-xs font-mono border",
+              isSocketIO
+                ? "text-blue-400 border-blue-500/20"
+                : "text-purple-400 border-purple-500/20"
             )}
           >
             {isSocketIO ? "IO" : "WS"}
           </Badge>
           <div ref={urlContainerRef} className="flex-1 min-w-0">
-            <div className="text-xs font-medium tracking-tighter truncate">
+            <div className="text-xs font-medium text-slate-400 tracking-tighter truncate">
               {truncateUrl(item.url, containerWidth)}
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -159,9 +265,11 @@ export function HistoryPanel({
               </span>
               {item.wsStats && (
                 <div className="flex items-center gap-2">
+                  <span>•</span>
                   <span className="text-emerald-500">
                     {item.wsStats.messagesSent}↑
                   </span>
+                  <span>•</span>
                   <span className="text-blue-500">
                     {item.wsStats.messagesReceived}↓
                   </span>
@@ -172,7 +280,7 @@ export function HistoryPanel({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+            className="h-8 w-8 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
             onClick={(e) => {
               e.stopPropagation();
               onDeleteItem(item.id);
@@ -187,72 +295,67 @@ export function HistoryPanel({
       return (
         <div
           key={item.id}
-          className="group relative flex flex-col w-full max-w-full overflow-hidden rounded-lg border-2 border-slate-100 bg-white/60 p-3 transition-all hover:border-slate-300 cursor-pointer"
+          className="group flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
           onClick={() => handleHistoryClick(item)} // Uses full URL from item
         >
-          <div className="flex items-center gap-2 overflow-hidden">
-            <Badge
-              variant="outline"
-              className={cn(
-                "h-6 shrink-0",
-                item.method === "GET" && "text-emerald-500 border-emerald-200",
-                item.method === "POST" && "text-blue-500 border-blue-200",
-                item.method === "PUT" && "text-yellow-500 border-yellow-200",
-                item.method === "DELETE" && "text-red-500 border-red-200",
-                item.method === "PATCH" && "text-purple-500 border-purple-200"
-              )}
-            >
-              {item.method}
-            </Badge>
-            <div ref={urlContainerRef} className="flex-1 min-w-0">
-              <div className="text-xs font-medium tracking-tighter truncate">
-                {truncateUrl(item.url, containerWidth)}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span>
-                  {formatDistanceToNow(new Date(item.timestamp), {
-                    addSuffix: true,
-                  })}
-                </span>
-                {item.response && (
-                  <>
-                    <span>•</span>
-                    <span
-                      className={cn(
-                        "font-medium",
-                        item.response.status >= 200 &&
-                          item.response.status < 300
-                          ? "text-emerald-500"
-                          : "text-red-500"
-                      )}
-                    >
-                      {item.response.status}
-                    </span>
-                    {item.response.time && (
-                      <>
-                        <span>•</span>
-                        <span>{item.response.time}</span>
-                      </>
+          <Badge
+            variant="outline"
+            className={cn(
+              "shrink-0 text-xs font-mono border",
+              item.method === "GET" && "text-emerald-400 border-emerald-500/20",
+              item.method === "POST" && "text-blue-400 border-blue-500/20",
+              item.method === "PUT" && "text-yellow-400 border-yellow-500/20",
+              item.method === "DELETE" && "text-red-400 border-red-500/20",
+              item.method === "PATCH" && "text-purple-400 border-purple-500/20"
+            )}
+          >
+            {item.method}
+          </Badge>
+          <div ref={urlContainerRef} className="flex-1 min-w-0">
+            <div className="text-xs font-medium text-slate-400 tracking-tighter truncate">
+              {truncateUrl(item.url, containerWidth)}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span>
+                {formatDistanceToNow(new Date(item.timestamp), {
+                  addSuffix: true,
+                })}
+              </span>
+              {item.response && (
+                <>
+                  <span>•</span>
+                  <span
+                    className={cn(
+                      "font-medium",
+                      item.response.status >= 200 && item.response.status < 300
+                        ? "text-emerald-500"
+                        : "text-red-500"
                     )}
-                  </>
-                )}
-              </div>
+                  >
+                    {item.response.status}
+                  </span>
+                  {item.response.time && (
+                    <>
+                      <span>•</span>
+                      <span>{item.response.time}</span>
+                    </>
+                  )}
+                </>
+              )}
             </div>
           </div>
-          <div className="absolute right-2 top-2 flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteItem(item.id);
-                toast.success("History item deleted");
-              }}
-            >
-              <X className="h-4 w-4 text-red-400" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteItem(item.id);
+              toast.success("History item deleted");
+            }}
+          >
+            <X className="h-4 w-4 text-red-400" />
+          </Button>
         </div>
       );
     }
@@ -260,215 +363,142 @@ export function HistoryPanel({
 
   return (
     <div className="h-full flex flex-col bg-slate-800">
-      <div className="flex flex-col gap-2 p-2 bg-slate-900 border-b border-slate-700">
-        <div className="flex items-center justify-between gap-2">
+      <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setGroupBy((g) =>
+                g === "none" ? "domain" : g === "domain" ? "date" : "none"
+              )
+            }
+            className="flex items-center h-9 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+          >
+            {groupBy === "domain" ? (
+              <Globe className="h-4 w-4 text-blue-400 mr-2" />
+            ) : groupBy === "date" ? (
+              <CalendarDays className="h-4 w-4 text-purple-400 mr-2" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-slate-400 mr-2" />
+            )}
+            <span className="text-xs capitalize">
+              {groupBy === "none" ? "No Groups" : `${groupBy}`}
+            </span>
+          </Button>
+
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
-            className="flex items-center gap-2 h-8 w-auto px-3 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+            className="flex items-center h-9 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
           >
-            <History className="h-4 w-4 text-blue-400" />
-            <span className="text-xs">
-              {isHistorySavingEnabled ? "Saving" : "Save Off"}
+            <History className="h-4 w-4 text-cyan-400 mr-2" />
+            <span className="text-xs capitalize">
+              {isHistorySavingEnabled ? "Saving" : "Off"}
             </span>
           </Button>
 
-          <div className="flex gap-2">
+          <div className="flex">
             <Button
               variant="ghost"
               size="sm"
               onClick={onExportHistory}
-              className="flex items-center gap-2 h-8 w-auto px-3 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+              className="h-9 rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
             >
               <ArrowDownToLine className="h-4 w-4 text-emerald-400" />
-              <span className="text-xs">Export</span>
             </Button>
-
             <Button
               variant="ghost"
               size="sm"
               onClick={onClearHistory}
-              className="flex items-center gap-2 h-8 w-auto px-3 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+              className="h-9 border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
             >
               <Trash2 className="h-4 w-4 text-red-400" />
-              <span className="text-xs">Clear</span>
             </Button>
           </div>
         </div>
 
+        {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-2 h-4 w-4 text-slate-500" />
           <Input
             placeholder="Search history"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-9 rounded-lg w-full bg-slate-900 border-slate-700 text-slate-300 placeholder:text-slate-500"
+            className="h-8 pl-9 rounded-none w-full bg-slate-900 border-y-2 border-slate-700 text-slate-300 placeholder:text-slate-500"
           />
         </div>
       </div>
 
-      <ScrollArea className="flex-1 w-full">
+      <ScrollArea className="flex-1">
         {history.length === 0 ? (
-          <div className="flex flex-col items-center justify-center mt-12 py-12 px-4">
-            <div className="bg-slate-900 rounded-xl border-2 p-6 mb-8 shadow-inner border-slate-700">
-              <Clock className="h-8 w-8 text-slate-400 animate-pulse" />
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <div className="p-4 rounded-lg bg-slate-900 border border-slate-700 mb-4">
+              <Clock className="h-8 w-8 text-slate-400" />
             </div>
             <h3 className="text-lg font-medium text-slate-300 mb-2">
-              No Histories Yet
+              No History Yet
             </h3>
-            <div className="max-w-sm text-center space-y-2">
-              <p className="text-sm text-slate-400">
-                Send your first API reqeust to view their response and they will
-                show up here.
-              </p>
-            </div>
+            <p className="text-sm text-slate-400 max-w-sm">
+              Make your first request to see it appear in history.
+            </p>
           </div>
         ) : (
-          <div className="p-3 space-y-3 w-full max-w-full">
-            {filteredHistory.map((item) => (
-              <div key={item.id} className="relative group">
-                <div
-                  onClick={() => handleHistoryClick(item)}
-                  className={cn(
-                    "group relative flex flex-col w-full overflow-hidden",
-                    "rounded-none border border-slate-700 bg-slate-900",
-                    "p-2 transition-all",
-                    "hover:bg-slate-800",
-                    !isConnected
-                      ? "cursor-pointer"
-                      : "cursor-not-allowed opacity-50"
-                  )}
-                >
-                  {item.type === "websocket" ? (
+          <div>
+            {Object.entries(groupedHistory).map(([groupKey, items]) => (
+              <div key={groupKey} className="border-b border-slate-700">
+                {groupBy !== "none" && (
+                  <button
+                    onClick={() => toggleGroup(groupKey)}
+                    className="flex items-center justify-between w-full px-3 py-2 hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors"
+                  >
                     <div className="flex items-center gap-2">
-                      <Badge
-                        variant={item.url === currentUrl ? "default" : "outline"}
-                        className={cn(
-                          "flex-shrink-0",
-                          item.url.includes("socket.io") ||
-                          item.wsStats?.protocols?.includes("io") ||
-                          item.url.includes("engine.io")
-                            ? "text-blue-500"
-                            : "text-purple-500",
-                          item.url === currentUrl &&
-                            (item.url.includes("socket.io") ||
-                            item.wsStats?.protocols?.includes("io") ||
-                            item.url.includes("engine.io")
-                              ? "bg-blue-100"
-                              : "bg-purple-100")
-                        )}
-                      >
-                        {item.url.includes("socket.io") ||
-                        item.wsStats?.protocols?.includes("io") ||
-                        item.url.includes("engine.io")
-                          ? "IO"
-                          : "WS"}
-                      </Badge>
-                      <div ref={urlContainerRef} className="flex-1 min-w-0">
-                        <div className="text-xs font-medium tracking-tighter truncate text-slate-300">
-                          {truncateUrl(item.url, containerWidth)}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <span>
-                            {formatDistanceToNow(new Date(item.timestamp), {
-                              addSuffix: true,
-                            })}
-                          </span>
-                          {item.wsStats && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-emerald-500">
-                                {item.wsStats.messagesSent}↑
-                              </span>
-                              <span className="text-blue-500">
-                                {item.wsStats.messagesReceived}↓
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteItem(item.id);
-                          toast.success("History item deleted");
-                        }}
-                      >
-                        <X className="h-4 w-4 text-red-400" />
-                      </Button>
+                      {expandedGroups.has(groupKey) ? (
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                      )}
+                      <span className="text-sm font-medium text-slate-300">
+                        {groupKey}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        ({items.length})
+                      </span>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "h-6 shrink-0",
-                          item.method === "GET" &&
-                            "text-emerald-500 border-emerald-200",
-                          item.method === "POST" &&
-                            "text-blue-500 border-blue-200",
-                          item.method === "PUT" &&
-                            "text-yellow-500 border-yellow-200",
-                          item.method === "DELETE" &&
-                            "text-red-500 border-red-200",
-                          item.method === "PATCH" &&
-                            "text-purple-500 border-purple-200"
-                        )}
-                      >
-                        {item.method}
-                      </Badge>
-                      <div ref={urlContainerRef} className="flex-1 min-w-0">
-                        <div className="text-xs font-medium tracking-tighter truncate text-slate-300">
-                          {truncateUrl(item.url, containerWidth)}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <span>
-                            {formatDistanceToNow(new Date(item.timestamp), {
-                              addSuffix: true,
-                            })}
+                    {groupStats[groupKey] && (
+                      <div className="flex items-center gap-4 text-xs text-slate-500">
+                        <span className="text-emerald-400">
+                          {groupStats[groupKey].success} ✓
+                        </span>
+                        {groupStats[groupKey].failed > 0 && (
+                          <span className="text-red-400">
+                            {groupStats[groupKey].failed} ✗
                           </span>
-                          {item.response && (
-                            <>
-                              <span>•</span>
-                              <span
-                                className={cn(
-                                  "font-medium",
-                                  item.response.status >= 200 &&
-                                  item.response.status < 300
-                                    ? "text-emerald-500"
-                                    : "text-red-500"
-                                )}
-                              >
-                                {item.response.status}
-                              </span>
-                              {item.response.time && (
-                                <>
-                                  <span>•</span>
-                                  <span>{item.response.time}</span>
-                                </>
+                        )}
+                        {typeof groupStats[groupKey]?.avgResponseTime ===
+                          "number" &&
+                          groupStats[groupKey].avgResponseTime > 0 && (
+                            <span>
+                              {Math.round(
+                                groupStats[groupKey].avgResponseTime!
                               )}
-                            </>
+                              ms
+                            </span>
                           )}
-                        </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteItem(item.id);
-                          toast.success("History item deleted");
-                        }}
-                      >
-                        <X className="h-4 w-4 text-red-400" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </button>
+                )}
+                {(groupBy === "none" || expandedGroups.has(groupKey)) && (
+                  <div className="bg-slate-900/50 divide-y divide-slate-700/50">
+                    {items.map((item) => (
+                      <div key={item.id} className="group">
+                        {renderHistoryItem(item)}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

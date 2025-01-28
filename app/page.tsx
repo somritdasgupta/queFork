@@ -669,7 +669,7 @@ export default function Page() {
     <div className="min-h-screen grid grid-rows-[auto_1fr_auto] bg-slate-900/40 text-slate-600">
       <header className="fixed top-0 left-0 right-0 z-50 bg-slate-800 border-b-2 border-slate-700">
         {/* Mobile Header */}
-        <div className="md:hidden flex flex-col w-full px-2 py-2 space-y-2">
+        <div className="md:hidden flex flex-col w-full p-2 space-y-2">
           <div className="flex items-center gap-2">
             <UrlBar
               method={method}

@@ -17,6 +17,8 @@ import {
   List,
   MoreVertical,
   PackagePlusIcon,
+  Check,
+  Eraser,
 } from "lucide-react";
 import { KeyValuePair, Environment } from "@/types";
 import { toast } from "sonner";
@@ -40,7 +42,6 @@ import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -73,7 +74,6 @@ interface KeyValueInputProps {
   className?: string;
 }
 
-// Update KeyValueInput component with proper types
 const KeyValueInput = React.memo(
   ({
     value,
@@ -181,15 +181,17 @@ const SortableItem = React.memo(
         ref={setNodeRef}
         style={style}
         className={cn(
-          "transition-shadow",
+          "transition-shadow pl-8", // Add left padding for drag handle
           isDragging && "shadow-lg bg-slate-800"
         )}
         {...attributes}
       >
-        <div className="group flex items-start min-w-0">
+        <div className="group flex items-start min-w-0 relative">
+          {" "}
+          {/* Add relative positioning */}
           <button
             {...listeners}
-            className="flex items-center justify-center w-8 h-8 -ml-8 text-slate-200 opacity-50 group-hover:opacity-100 transition-opacity"
+            className="flex items-center justify-center w-8 h-8 absolute left-0 -ml-8 text-slate-200 opacity-30 group-hover:opacity-100 transition-opacity border-r border-slate-700"
             title="Drag to reorder"
           >
             <GripVertical className="h-4 w-4" />
@@ -231,6 +233,7 @@ export function KeyValueEditor({
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkContent, setBulkContent] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   // Setup DnD sensors
   const sensors = useSensors(
@@ -269,6 +272,8 @@ export function KeyValueEditor({
         pairs.map((pair, index) => ({
           ...pair,
           id: generateStableId(index, pair.id),
+          key: pair.key || "", // Ensure empty string if null/undefined
+          value: pair.value || "", // Ensure empty string if null/undefined
         }))
       );
     }
@@ -357,32 +362,47 @@ export function KeyValueEditor({
     e.preventDefault();
     const pastedText = e.clipboardData.getData("text").trim();
 
-    if (pastedText.includes(":")) {
-      const [key, ...valueParts] = pastedText.split(":");
-      const value = valueParts.join(":").trim();
-
-      if (key && value) {
-        onChange(
-          pairs.map((p, i) =>
-            i === index ? { ...p, key: key.trim(), value } : p
-          )
+    try {
+      // Try to parse as JSON first (our smart copy format)
+      const parsed = JSON.parse(pastedText);
+      if (parsed.key !== undefined && parsed.value !== undefined) {
+        const newPairs = pairs.map((p, i) =>
+          i === index ? { ...p, key: parsed.key, value: parsed.value } : p
         );
+        onChange(newPairs);
+        toast.success("Pasted key-value pair");
+        return;
+      }
+    } catch {
+      // If not JSON, try the colon format
+      if (pastedText.includes(":")) {
+        const [key, ...valueParts] = pastedText.split(":");
+        const value = valueParts.join(":").trim();
+
+        const newPairs = pairs.map((p, i) =>
+          i === index ? { ...p, key: key.trim(), value } : p
+        );
+        onChange(newPairs);
         toast.success("Pasted key-value pair");
         return;
       }
     }
 
+    // Fallback to normal paste in the specific field
     updatePair(index, field, pastedText);
     toast.success(`Pasted as ${field}`);
   };
 
   const handleSmartCopy = (index: number) => {
     const pair = pairs[index];
-    const copyFormat = `${pair.key}: ${pair.value}`;
+    const copyFormat = JSON.stringify({ key: pair.key, value: pair.value });
     navigator.clipboard.writeText(copyFormat).then(() => {
-      toast.success("Copied key-value pair to clipboard", {
-        description: copyFormat,
+      setCopiedIndex(index);
+      toast.success("Copied key-value pair", {
+        description: `${pair.key}: ${pair.value}`,
       });
+      // Reset copy feedback after 2 seconds
+      setTimeout(() => setCopiedIndex(null), 2000);
     });
   };
 
@@ -464,106 +484,119 @@ export function KeyValueEditor({
         {/* Desktop Actions - Hidden on mobile */}
         <div className="hidden sm:flex border-l border-slate-700">
           <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => handleSmartCopy(index)}
-        className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
+            variant="ghost"
+            size="icon"
+            onClick={() => handleSmartCopy(index)}
+            className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
           >
-        <Copy className="h-4 w-4 text-blue-400" />
+            {copiedIndex === index ? (
+              <Check className="h-4 w-4 text-green-400" />
+            ) : (
+              <Copy className="h-4 w-4 text-blue-400" />
+            )}
           </Button>
           <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => updatePair(index, "enabled", !pair.enabled)}
-        className={cn(
-          "h-8 w-8 rounded-none border-y border-r border-slate-700",
-          pair.enabled ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-800"
-        )}
+            variant="ghost"
+            size="icon"
+            onClick={() => updatePair(index, "enabled", !pair.enabled)}
+            className={cn(
+              "h-8 w-8 rounded-none border-y border-r border-slate-700",
+              pair.enabled ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-800"
+            )}
           >
-        {pair.enabled ? (
-          <Eye className="h-4 w-4 text-emerald-400" />
-        ) : (
-          <EyeOff className="h-4 w-4 text-slate-500" />
-        )}
+            {pair.enabled ? (
+              <Eye className="h-4 w-4 text-emerald-400" />
+            ) : (
+              <EyeOff className="h-4 w-4 text-slate-500" />
+            )}
           </Button>
-          {pairs.length > 1 && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => removePair(index)}
-          className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
-        >
-          <Trash2 className="h-4 w-4 text-red-400" />
-        </Button>
+          {pairs.length > 1 ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => removePair(index)}
+              className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => removePair(index)}
+              className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
+            >
+              <Eraser className="h-4 w-4 text-red-400" />
+            </Button>
           )}
           {!isEnvironmentEditor && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleAddToEnvironment(index)}
-          className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
-        >
-          <PackagePlusIcon className="h-4 w-4 text-purple-400" />
-        </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleAddToEnvironment(index)}
+              className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
+            >
+              <PackagePlusIcon className="h-4 w-4 text-purple-400" />
+            </Button>
           )}
         </div>
 
         {/* Mobile Actions */}
         {isMounted && (
           <div className="sm:hidden border-l border-slate-700">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
-            >
-          <MoreVertical className="h-4 w-4 text-slate-400" />
-            </Button>
-          </DropdownMenuTrigger>
-            <DropdownMenuContent
-            align="end"
-            className="w-[160px] rounded-md bg-slate-800 border-slate-800"
-            >
-            <div className="flex items-center justify-around p-2">
-              <button
-              className="hover:opacity-80"
-              onClick={() => handleSmartCopy(index)}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
+                >
+                  <MoreVertical className="h-4 w-4 text-slate-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-[160px] rounded-md bg-slate-800 border-slate-800"
               >
-              <Copy className="h-4 w-4 text-blue-400" />
-              </button>
-              <button
-              className="hover:opacity-80"
-              onClick={() => updatePair(index, "enabled", !pair.enabled)}
-              >
-              {pair.enabled ? (
-                <EyeOff className="h-4 w-4 text-slate-400" />
-              ) : (
-                <Eye className="h-4 w-4 text-emerald-400" />
-              )}
-              </button>
-              {pairs.length > 1 && (
-              <button
-                className="hover:opacity-80"
-                onClick={() => removePair(index)}
-              >
-                <Trash2 className="h-4 w-4 text-red-400" />
-              </button>
-              )}
-              {!isEnvironmentEditor && (
-              <button
-                className="hover:opacity-80"
-                onClick={() => handleAddToEnvironment(index)}
-              >
-                <PackagePlusIcon className="h-4 w-4 text-purple-400" />
-              </button>
-              )}
-            </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-            </div>
-          )}
-          </>
+                <div className="flex items-center justify-around p-2">
+                  <button
+                    className="hover:opacity-80"
+                    onClick={() => handleSmartCopy(index)}
+                  >
+                    <Copy className="h-4 w-4 text-blue-400" />
+                  </button>
+                  <button
+                    className="hover:opacity-80"
+                    onClick={() => updatePair(index, "enabled", !pair.enabled)}
+                  >
+                    {pair.enabled ? (
+                      <EyeOff className="h-4 w-4 text-slate-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-emerald-400" />
+                    )}
+                  </button>
+                  {pairs.length > 1 && (
+                    <button
+                      className="hover:opacity-80"
+                      onClick={() => removePair(index)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-400" />
+                    </button>
+                  )}
+                  {!isEnvironmentEditor && (
+                    <button
+                      className="hover:opacity-80"
+                      onClick={() => handleAddToEnvironment(index)}
+                    >
+                      <PackagePlusIcon className="h-4 w-4 text-purple-400" />
+                    </button>
+                  )}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      </>
     );
   };
 
@@ -571,17 +604,21 @@ export function KeyValueEditor({
     <div className="flex flex-col h-full">
       <div className="min-h-0 flex-1 relative">
         <ScrollArea className="absolute inset-0">
-          <div className="pl-8">
-            {" "}
-            {/* Add padding for drag handle */}
-            {isBulkMode ? (
-              <Textarea
-                value={bulkContent}
-                onChange={(e) => setBulkContent(e.target.value)}
-                placeholder={`• Format: key: value\n• Examples:\n  • api_key: your-key-here\n  • base_url: https://api.example.com\n  • disabled_key: this is disabled`}
-                className="min-h-[200px] w-full text-xs rounded-none bg-slate-900 border-slate-700 text-slate-300 placeholder:text-slate-500"
-              />
-            ) : (
+          {isBulkMode ? (
+            <Textarea
+              value={bulkContent}
+              onChange={(e) => setBulkContent(e.target.value)}
+              placeholder={`• Format: key: value\n• Examples:\n  • api_key: your-key-here\n  • base_url: https://api.example.com\n  • disabled_key: this is disabled`}
+              className="w-full min-h-[300px] border border-slate-700 text-xs 
+                rounded-none bg-slate-950 
+                text-slate-300 placeholder:text-slate-500
+                focus:outline-none focus:ring-2 focus:ring-slate-700
+                font-mono"
+            />
+          ) : (
+            <div className="relative">
+              {" "}
+              {/* Remove pl-8 from this div */}
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -653,8 +690,8 @@ export function KeyValueEditor({
                   </div>
                 </SortableContext>
               </DndContext>
-            )}
-          </div>
+            </div>
+          )}
         </ScrollArea>
       </div>
 
@@ -662,7 +699,7 @@ export function KeyValueEditor({
         <Button
           variant="ghost"
           onClick={handleAddPair}
-          className="flex-1 h-8 rounded-none bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-slate-200 border-r border-slate-700"
+          className="flex-1 h-8 rounded-none bg-slate-900 text-slate-300 hover:bg-slate-900/50 hover:text-slate-200 border-r border-slate-700"
         >
           <Plus className="h-4 w-4 mr-2 text-emerald-400" />
           {pairs.length === 0 ? "Add First Item" : addButtonText}
@@ -675,6 +712,7 @@ export function KeyValueEditor({
             else {
               setBulkContent(
                 pairs
+                  .filter((p) => p.key || p.value)
                   .map((p) => `${!p.enabled ? "#" : ""}${p.key}: ${p.value}`)
                   .join("\n")
               );
@@ -682,17 +720,33 @@ export function KeyValueEditor({
             }
           }}
           className={cn(
-            "h-8 w-8 rounded-none",
+            "h-8 rounded-none sm:w-[128px] relative", // Added relative for text positioning
+            "w-8", // Keep original width on mobile
             isBulkMode
-              ? "bg-blue-900/20 text-blue-400 border-blue-800/30 hover:bg-blue-900/30"
+              ? "bg-blue-900/20 text-blue-400 border-blue-800/30 hover:bg-blue-900/30  hover:text-blue-100"
               : "bg-slate-900 text-cyan-400 hover:bg-slate-800 hover:text-cyan-300"
           )}
         >
-          {isBulkMode ? (
-            <List className="h-4 w-4" />
-          ) : (
-            <ListPlus className="h-4 w-4" />
-          )}
+          <span className="hidden sm:inline-flex items-center gap-2">
+            {isBulkMode ? (
+              <>
+                <List className="h-4 w-4" />
+                <span className="text-xs">Exit Bulk</span>
+              </>
+            ) : (
+              <>
+                <ListPlus className="h-4 w-4" />
+                <span className="text-xs">Bulk Edit</span>
+              </>
+            )}
+          </span>
+          <span className="sm:hidden">
+            {isBulkMode ? (
+              <List className="h-4 w-4" />
+            ) : (
+              <ListPlus className="h-4 w-4" />
+            )}
+          </span>
         </Button>
       </div>
     </div>

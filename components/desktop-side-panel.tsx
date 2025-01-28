@@ -53,29 +53,34 @@ const DesktopSidePanel = ({ ...props }: DesktopSidePanelProps) => {
   return (
     <div className="h-full flex flex-col bg-slate-900/40">
       <div className="flex flex-col h-full">
-        <div className="bg-slate-950">
-          <Tabs className="flex w-full">
-            <TabsList className="flex w-full justify-start rounded-none bg-slate-800 border-b-2 border-slate-700 p-0">
-              {tabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.id}
-                  value={tab.id}
-                  onClick={() => setActivePanel(tab.id)}
-                  className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs md:text-sm data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
-                  data-state={activePanel === tab.id ? "active" : "inactive"}
-                >
-                  <div className="flex items-center gap-2">
-                    {tab.icon}
-                    {tab.label}
-                  </div>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
-        <div className="flex-1 overflow-hidden bg-slate-800">
-          {tabs.find((tab) => tab.id === activePanel)?.content}
-        </div>
+      <div className="bg-slate-950">
+        <Tabs className="flex w-full" defaultValue={activePanel}>
+        <TabsList className="flex w-full justify-start rounded-none bg-slate-900 border-b border-slate-700 p-0">
+          {tabs.map((tab) => (
+          <TabsTrigger
+            key={tab.id}
+            value={tab.id}
+            onClick={() => setActivePanel(tab.id)}
+            className="flex-1 h-10 rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs text-slate-400 whitespace-nowrap 
+              data-[state=active]:border-blue-400 
+              data-[state=active]:text-blue-400 
+              data-[state=active]:bg-slate-800
+              hover:text-slate-300
+              hover:bg-slate-800
+              transition-colors"
+          >
+            <div className="flex items-center justify-center gap-2">
+            {tab.icon}
+            {tab.label}
+            </div>
+          </TabsTrigger>
+          ))}
+        </TabsList>
+        </Tabs>
+      </div>
+      <div className="flex-1 overflow-hidden bg-slate-800">
+        {tabs.find((tab) => tab.id === activePanel)?.content}
+      </div>
       </div>
     </div>
   );

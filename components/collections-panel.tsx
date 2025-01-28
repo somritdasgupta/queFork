@@ -41,6 +41,7 @@ import { useState, useMemo } from "react";
 import { Collection, SavedRequest } from "@/types";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
+import { cn } from "@/lib/utils";
 
 interface CollectionsPanelProps {
   collections: Collection[];
@@ -100,11 +101,11 @@ export function CollectionsPanel({
     return (
       <div className="flex items-center justify-between w-full group">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-medium text-gray-700 truncate">
+          <span className="text-sm font-medium text-slate-400 truncate">
             {collection.name}
           </span>
           {collection.apiVersion && (
-            <Badge className="text-xs bg-blue-100 text-blue-800">
+            <Badge className="text-xs bg-blue-500 text-blue-100">
               v{collection.apiVersion}
             </Badge>
           )}
@@ -114,7 +115,7 @@ export function CollectionsPanel({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 opacity-70 hover:opacity-100 transition-opacity"
+              className="h-8 w-8 p-0 hover:text-slate-300 hover:bg-transparent opacity-30 hover:opacity-100 transition-opacity"
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
@@ -122,25 +123,22 @@ export function CollectionsPanel({
           <DropdownMenuContent
             align="start"
             side="bottom"
-            className="w-[200px]"
+            className="w-[200px] bg-slate-900 border border-slate-700"
             sideOffset={5}
           >
-            <DropdownMenuLabel>Collection Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-slate-400">Collection Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-slate-700" />
 
-            <DropdownMenuItem onClick={() => onSaveRequest(collection.id, {})}>
-              <Save className="mr-2 h-4 w-4" />
+            <DropdownMenuItem className="text-slate-300 hover:bg-slate-800 focus:bg-slate-800 cursor-pointer" onClick={() => onSaveRequest(collection.id, {})}>
+              <Save className="mr-2 h-4 w-4 text-blue-400" />
               Save Request
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onExportCollection(collection.id)}>
-              <ArrowDownToLine className="mr-2 h-4 w-4" />
+            <DropdownMenuItem className="text-slate-300 hover:bg-slate-800 focus:bg-slate-800 cursor-pointer" onClick={() => onExportCollection(collection.id)}>
+              <ArrowDownToLine className="mr-2 h-4 w-4 text-emerald-400" />
               Export Collection
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => handleDeleteCollection(collection.id)}
-              className="text-red-600"
-            >
+            <DropdownMenuSeparator className="bg-slate-700" />
+            <DropdownMenuItem className="text-red-400 hover:bg-red-950/30 focus:bg-red-950/30 cursor-pointer" onClick={() => handleDeleteCollection(collection.id)}>
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Collection
             </DropdownMenuItem>
@@ -231,7 +229,7 @@ export function CollectionsPanel({
               variant="ghost"
               size="sm"
               onClick={onExportCollections}
-              className="h-9 w-full rounded-none border-2 border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+              className="h-9 w-full rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
             >
               <ArrowDownToLine className="h-4 w-4 text-emerald-400" />
             </Button>
@@ -241,7 +239,7 @@ export function CollectionsPanel({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-9 w-full border-2 border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                  className="h-9 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
                 >
                   <Plus className="h-4 w-4 text-cyan-400" />
                 </Button>
@@ -367,47 +365,55 @@ export function CollectionsPanel({
                 <AccordionItem
                   key={collection.id}
                   value={collection.id}
-                  className="border-b-2 border-slate-700 bg-slate-900 overflow-hidden"
+                  className="px-0 border-b border-slate-700"
                 >
-                  <AccordionTrigger className="p-2 hover:no-underline">
+                  <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors">
                     {renderCollectionHeader(collection)}
                   </AccordionTrigger>
-                  <AccordionContent>
-                    <div>
+                  <AccordionContent className="pt-0 pb-0">
+                    <div className="bg-slate-900/50">
                       {collection.requests?.length > 0 ? (
                         collection.requests.map((request) => (
-                          <div key={request.id} className="group">
+                          <div key={request.id} className="group border-t border-slate-700/50">
                             <div
-                              className="flex items-center gap-2 px-4 py-2 text-slate-50 bg-blue-900 border-y-2 hover:bg-slate-900  cursor-pointer transition-colors"
+                              className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer"
                               onClick={() => onSelectRequest(request)}
                             >
                               <Badge
                                 variant="outline"
-                                className={`method-${request.method.toLowerCase()} shrink-0 text-xs font-mono`}
+                                className={cn(
+                                  "shrink-0 text-xs font-mono border",
+                                  request.method === "GET" && "text-emerald-400 border-emerald-500/20",
+                                  request.method === "POST" && "text-blue-400 border-blue-500/20",
+                                  request.method === "PUT" && "text-yellow-400 border-yellow-500/20",
+                                  request.method === "DELETE" && "text-red-400 border-red-500/20",
+                                  request.method === "PATCH" && "text-purple-400 border-purple-500/20"
+                                )}
                               >
                                 {request.method}
                               </Badge>
                               <div className="flex-1 min-w-0">
-                                <div className="text-xs font-medium text-gray-700 truncate">
+                                <div className="text-xs font-medium text-slate-300 truncate">
                                   {request.name || request.url}
                                 </div>
                               </div>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 w-7 p-0 opacity-70 hover:opacity-100 transition-opacity"
-                                    onClick={(e) => e.stopPropagation()}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
+                                  onClick={(e) => e.stopPropagation()}
                                   >
-                                    <MoreVertical className="h-4 w-4" />
+                                  <MoreVertical className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
                                   align="end"
-                                  className="w-[160px]"
+                                  className="w-[160px] bg-slate-900 border border-slate-700"
                                 >
-                                  <DropdownMenuItem
+                                  <DropdownMenuItem 
+                                    className="text-red-400 hover:bg-red-950/30 focus:bg-red-950/30 cursor-pointer"
                                     onClick={() =>
                                       onDeleteRequest(collection.id, request.id)
                                     }
@@ -421,7 +427,7 @@ export function CollectionsPanel({
                           </div>
                         ))
                       ) : (
-                        <div className="text-sm text-gray-500 text-center py-2">
+                        <div className="py-3 text-sm text-slate-500 text-center border-t border-slate-700/50">
                           No requests in this collection
                         </div>
                       )}

@@ -147,7 +147,7 @@ export function RequestPanel({
   ];
 
   return (
-    <div className="h-full flex flex-col rounded-lg">
+    <div className="h-full flex flex-col bg-slate-800">
       <AnimatePresence mode="wait">
         {!isWebSocketMode ? (
           <motion.div
@@ -159,19 +159,27 @@ export function RequestPanel({
             className="flex-1"
           >
             <Tabs defaultValue="params" className="flex-1 flex flex-col">
-              <div className="bg-slate-900">
+              <div className="bg-slate-900 border-b border-slate-700">
                 <div
-                  className="overflow-x-auto scrollbar-none"
+                  className="overflow-x-auto scrollbar-none "
                   style={{ WebkitOverflowScrolling: "touch" }}
                 >
-                  <TabsList className="w-max min-w-full flex-none justify-start rounded-none bg-slate-800 border-b-2 border-slate-700 p-0">
+                  <TabsList className="flex w-max min-w-full justify-start rounded-none bg-slate-900 p-0">
                     {tabs.map(
                       (tab) =>
                         !tab.hidden && (
                           <TabsTrigger
                             key={tab.id}
                             value={tab.id}
-                            className="rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs whitespace-nowrap data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 data-[state=active]:bg-slate-800"
+                            className="flex-1 h-10 rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs text-slate-400 whitespace-nowrap 
+                              data-[state=active]:border-blue-400 
+                              data-[state=active]:text-blue-400 
+                              data-[state=active]:bg-slate-800
+                              hover:text-slate-300
+                              hover:bg-slate-800
+                              disabled:opacity-50
+                              disabled:cursor-not-allowed
+                              transition-colors"
                             disabled={tab.disabled}
                           >
                             <div className="flex items-center gap-2">
@@ -192,10 +200,16 @@ export function RequestPanel({
                     <div className="flex items-center justify-between p-2">
                       <div className="flex items-center gap-2 text-slate-400">
                         <SearchCode className="h-4 w-4" />
-                        <h3 className="text-sm font-semibold">Query Parameters</h3>
+                        <h3 className="text-sm font-semibold">
+                          Query Parameters
+                        </h3>
                       </div>
-                      <Badge variant="secondary" className="bg-slate-800 text-slate-400">
-                        {props.params.filter((p) => p.enabled && p.key).length} Active
+                      <Badge
+                        variant="secondary"
+                        className="bg-slate-800 text-slate-400"
+                      >
+                        {props.params.filter((p) => p.enabled && p.key).length}{" "}
+                        Active
                       </Badge>
                     </div>
                     <div className="bg-slate-900 flex-1">
@@ -217,10 +231,16 @@ export function RequestPanel({
                     <div className="flex items-center justify-between p-2">
                       <div className="flex items-center gap-2 text-slate-400">
                         <List className="h-4 w-4" />
-                        <h3 className="text-sm font-semibold">Request Headers</h3>
+                        <h3 className="text-sm font-semibold">
+                          Request Headers
+                        </h3>
                       </div>
-                      <Badge variant="secondary" className="bg-slate-800 text-slate-400">
-                        {props.headers.filter((h) => h.enabled && h.key).length} Active
+                      <Badge
+                        variant="secondary"
+                        className="bg-slate-800 text-slate-400"
+                      >
+                        {props.headers.filter((h) => h.enabled && h.key).length}{" "}
+                        Active
                       </Badge>
                     </div>
                     <div className="bg-slate-900">
@@ -240,7 +260,11 @@ export function RequestPanel({
 
                   {/* Body Tabs */}
                   {bodyTabs.map((type) => (
-                    <TabsContent key={type} value={`body-${type}`} className="m-0 min-h-0">
+                    <TabsContent
+                      key={type}
+                      value={`body-${type}`}
+                      className="m-0 min-h-0"
+                    >
                       <div className="flex items-center justify-between p-2">
                         <div className="flex items-center gap-2 text-slate-400">
                           {getBodyIcon(type)}
@@ -249,18 +273,30 @@ export function RequestPanel({
                               ? "Form Data"
                               : type === "x-www-form-urlencoded"
                                 ? "URL Encoded"
-                                : type.charAt(0).toUpperCase() + type.slice(1)}{" "}
+                                : type.charAt(0).toUpperCase() +
+                                  type.slice(1)}{" "}
                             Body
                           </h3>
                         </div>
-                        {(type === "form-data" || type === "x-www-form-urlencoded") && (
-                          <Badge variant="secondary" className="bg-slate-800 text-slate-400">
-                            {(props.body.content as KeyValuePair[])?.filter?.((p) => p.enabled && p.key)?.length || 0} Fields
+                        {(type === "form-data" ||
+                          type === "x-www-form-urlencoded") && (
+                          <Badge
+                            variant="secondary"
+                            className="bg-slate-800 text-slate-400"
+                          >
+                            {(props.body.content as KeyValuePair[])?.filter?.(
+                              (p) => p.enabled && p.key
+                            )?.length || 0}{" "}
+                            Fields
                           </Badge>
                         )}
                       </div>
                       <div className="bg-slate-900">
-                        <div className={cn(type === "json" || type === "raw" ? "p-4" : "p-0")}>
+                        <div
+                          className={cn(
+                            type === "json" || type === "raw" ? "" : "p-0"
+                          )}
+                        >
                           <RequestBodyContent
                             type={type as RequestBody["type"]}
                             body={props.body}
@@ -281,10 +317,17 @@ export function RequestPanel({
                     <div className="flex items-center justify-between p-2">
                       <div className="flex items-center gap-2 text-slate-400">
                         <KeyRound className="h-4 w-4" />
-                        <h3 className="text-sm font-semibold">Authentication</h3>
+                        <h3 className="text-sm font-semibold">
+                          Authentication
+                        </h3>
                       </div>
-                      <Badge variant="secondary" className="bg-slate-800 text-slate-400">
-                        {props.auth.type !== "none" ? props.auth.type.toUpperCase() : "NONE"}
+                      <Badge
+                        variant="secondary"
+                        className="bg-slate-800 text-slate-400"
+                      >
+                        {props.auth.type !== "none"
+                          ? props.auth.type.toUpperCase()
+                          : "NONE"}
                       </Badge>
                     </div>
                     <div className="bg-slate-900">
@@ -389,24 +432,78 @@ function RequestBodyContent({
   const [params, setParams] = useState<KeyValuePair[]>([
     { key: "", value: "", type: "text", showSecrets: false },
   ]);
+  const [isValidJson, setIsValidJson] = useState(true);
+  const [jsonError, setJsonError] = useState<string | null>(null);
 
   function onParamsChange(pairs: KeyValuePair[]): void {
     setParams(pairs);
     onChange({ ...body, content: pairs });
   }
 
+  const validateAndFormatJson = (content: string) => {
+    try {
+      if (!content.trim()) {
+        setIsValidJson(true);
+        setJsonError(null);
+        return content;
+      }
+      
+      const parsed = JSON.parse(content);
+      const formatted = JSON.stringify(parsed, null, 2);
+      setIsValidJson(true);
+      setJsonError(null);
+      return formatted;
+    } catch (e) {
+      setIsValidJson(false);
+      setJsonError((e as Error).message);
+      return content;
+    }
+  };
+
+  const handleBodyChange = (value: string) => {
+    if (type === "json") {
+      const formattedValue = validateAndFormatJson(value);
+      onChange({ ...body, content: formattedValue });
+    } else {
+      onChange({ ...body, content: value });
+    }
+  };
+
   if (type === "json" || type === "raw") {
     return (
-      <Textarea
-        value={
-          typeof body.content === "string"
-            ? body.content
-            : JSON.stringify(body.content, null, 2)
-        }
-        onChange={(e) => onChange({ ...body, content: e.target.value })}
-        className="min-h-[200px] w-full border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-700 font-mono"
-        placeholder={`Enter ${type.toUpperCase()} body`}
-      />
+      <div className="relative">
+        <Textarea
+          value={
+            typeof body.content === "string"
+              ? body.content
+              : JSON.stringify(body.content, null, 2)
+          }
+          onChange={(e) => handleBodyChange(e.target.value)}
+          className="w-full min-h-[300px] border border-slate-700 text-xs 
+            rounded-none bg-slate-950 
+            text-slate-300 placeholder:text-slate-500
+            focus:outline-none focus:ring-2 focus:ring-slate-700
+            font-mono resize-none"
+          placeholder={`${type === "json" ? "// Enter JSON data" : "// Enter raw body"}\n`}
+        />
+        {type === "json" && (
+          <div className="border border-slate-700/50 bg-slate-900/50">
+            {!isValidJson && jsonError ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 bg-red-950/20 border-t border-red-500/20">
+                <span className="font-medium">Invalid JSON:</span>
+                <span className="font-mono">{jsonError}</span>
+              </div>
+            ) : body.content && (
+              <div className="flex items-center justify-between px-3 py-1.5 text-xs text-slate-400">
+                <span>Valid JSON</span>
+                <span className="font-mono">
+                  {JSON.stringify(body.content).length.toLocaleString()} bytes
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     );
   }
 
