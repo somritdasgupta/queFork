@@ -16,11 +16,11 @@ import {
   EyeOff,
   ListPlus,
   List,
-  MoreVertical,
   PackagePlusIcon,
   Check,
   Eraser,
-} from "lucide-react"; // Remove Badge from here
+  EllipsisIcon,
+} from "lucide-react";
 import { KeyValuePair, Environment } from "@/types";
 import { toast } from "sonner";
 import {
@@ -45,7 +45,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NavigableElement, useKeyboardNavigation } from './keyboard-navigation';
+import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
 
 const generateStableId = (index: number, existingId?: string) =>
   existingId || `pair-${index}-${Math.random().toString(36).substr(2, 9)}`;
@@ -80,94 +80,100 @@ interface KeyValueInputProps {
   isValue?: boolean; // Add isValue to props interface
 }
 
-const KeyValueInput = React.memo(({ ...props }: KeyValueInputProps & {
-  navigableElements: React.RefObject<NavigableElement[]>;
-  setFocus: (id: string) => void;
-}) => {
-  const [localValue, setLocalValue] = useState(props.value);
-  const [isFocused, setIsFocused] = useState(false);
-  const changeTimeoutRef = useRef<NodeJS.Timeout>();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const inputId = useRef(`kv-${Math.random()}`).current;
+const KeyValueInput = React.memo(
+  ({
+    ...props
+  }: KeyValueInputProps & {
+    navigableElements: React.RefObject<NavigableElement[]>;
+    setFocus: (id: string) => void;
+  }) => {
+    const [localValue, setLocalValue] = useState(props.value);
+    const [isFocused, setIsFocused] = useState(false);
+    const changeTimeoutRef = useRef<NodeJS.Timeout>();
+    const inputRef = useRef<HTMLInputElement>(null);
+    const inputId = useRef(`kv-${Math.random()}`).current;
 
-  useEffect(() => {
-    if (!isFocused) {
-      setLocalValue(props.value);
-    }
-    return () => {
-      if (changeTimeoutRef.current) {
-        clearTimeout(changeTimeoutRef.current);
+    useEffect(() => {
+      if (!isFocused) {
+        setLocalValue(props.value);
       }
-    };
-  }, [props.value, isFocused]);
+      return () => {
+        if (changeTimeoutRef.current) {
+          clearTimeout(changeTimeoutRef.current);
+        }
+      };
+    }, [props.value, isFocused]);
 
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
-      setLocalValue(newValue);
+    const handleChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value;
+        setLocalValue(newValue);
 
-      if (changeTimeoutRef.current) {
-        clearTimeout(changeTimeoutRef.current);
+        if (changeTimeoutRef.current) {
+          clearTimeout(changeTimeoutRef.current);
+        }
+
+        changeTimeoutRef.current = setTimeout(() => {
+          props.onChange(newValue);
+        }, 300);
+      },
+      [props.onChange]
+    );
+
+    useEffect(() => {
+      if (inputRef.current && props.navigableElements.current) {
+        props.navigableElements.current.push({
+          id: inputId,
+          ref: inputRef.current,
+          type: "key-value-pair",
+          groupId: props.pairId,
+          parentId: props.isValue
+            ? `value-${props.pairId}`
+            : `key-${props.pairId}`,
+        });
       }
+    }, [inputId, props.pairId, props.isValue, props.navigableElements]);
 
-      changeTimeoutRef.current = setTimeout(() => {
-        props.onChange(newValue);
-      }, 300);
-    },
-    [props.onChange]
-  );
-
-  useEffect(() => {
-    if (inputRef.current && props.navigableElements.current) {
-      props.navigableElements.current.push({
-        id: inputId,
-        ref: inputRef.current,
-        type: 'key-value-pair',
-        groupId: props.pairId,
-        parentId: props.isValue ? `value-${props.pairId}` : `key-${props.pairId}`
-      });
-    }
-  }, [inputId, props.pairId, props.isValue, props.navigableElements]);
-
-  return (
-    <div className="relative">
-      <props.icon className="absolute left-2.5 top-2 h-4 w-4 text-slate-500 hidden sm:block" />
-      <Input
-        ref={inputRef}
-        value={localValue}
-        onChange={handleChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => {
-          setIsFocused(false);
-          props.onChange(localValue);
-        }}
-        onPaste={props.onPaste}
-        placeholder={props.placeholder}
-        className={cn(
-          "h-8 bg-slate-900 border-slate-700 text-slate-300 placeholder:text-slate-500",
-          "focus:border-slate-600 focus:ring-slate-700",
-          "rounded-none text-xs font-medium transition-colors",
-          typeof window !== "undefined" && window.innerWidth < 640
-            ? "pl-3"
-            : "pl-9",
-          props.className
-        )}
-        onKeyDown={(e) => {
-          if (e.key === 'Tab' && !e.shiftKey) {
-            e.preventDefault();
-            // Find next input in sequence
-            const nextElement = props.navigableElements.current?.find(
-              el => el.groupId === props.pairId && el.id > inputId
-            );
-            if (nextElement) {
-              props.setFocus(nextElement.id);
+    return (
+      <div className="relative">
+        <props.icon className="absolute left-2.5 top-2 h-4 w-4 text-slate-500 hidden sm:block" />
+        <Input
+          ref={inputRef}
+          value={localValue}
+          onChange={handleChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => {
+            setIsFocused(false);
+            props.onChange(localValue);
+          }}
+          onPaste={props.onPaste}
+          placeholder={props.placeholder}
+          className={cn(
+            "h-8 bg-slate-900 border-slate-700 text-slate-300 placeholder:text-slate-500",
+            "focus:border-slate-600 focus:ring-slate-700",
+            "rounded-none text-xs font-medium transition-colors",
+            typeof window !== "undefined" && window.innerWidth < 640
+              ? "pl-3"
+              : "pl-9",
+            props.className
+          )}
+          onKeyDown={(e) => {
+            if (e.key === "Tab" && !e.shiftKey) {
+              e.preventDefault();
+              // Find next input in sequence
+              const nextElement = props.navigableElements.current?.find(
+                (el) => el.groupId === props.pairId && el.id > inputId
+              );
+              if (nextElement) {
+                props.setFocus(nextElement.id);
+              }
             }
-          }
-        }}
-      />
-    </div>
-  );
-});
+          }}
+        />
+      </div>
+    );
+  }
+);
 
 KeyValueInput.displayName = "KeyValueInput";
 
@@ -269,42 +275,54 @@ export function KeyValueEditor({
   const { setFocus } = useKeyboardNavigation(
     navigableElements.current,
     (direction, currentId) => {
-      const currentElement = navigableElements.current.find(el => el.id === currentId);
+      const currentElement = navigableElements.current.find(
+        (el) => el.id === currentId
+      );
       if (!currentElement) return;
 
       let nextId: string | undefined;
 
       switch (direction) {
-        case 'down':
+        case "down":
           // Move to next pair
           const nextPair = navigableElements.current.find(
-            el => el.groupId === currentElement.groupId && 
-            navigableElements.current.indexOf(el) > navigableElements.current.indexOf(currentElement)
+            (el) =>
+              el.groupId === currentElement.groupId &&
+              navigableElements.current.indexOf(el) >
+                navigableElements.current.indexOf(currentElement)
           );
           nextId = nextPair?.id;
           break;
-        case 'up':
+        case "up":
           // Move to previous pair
-          const prevPair = [...navigableElements.current].reverse().find(
-            el => el.groupId === currentElement.groupId && 
-            navigableElements.current.indexOf(el) < navigableElements.current.indexOf(currentElement)
-          );
+          const prevPair = [...navigableElements.current]
+            .reverse()
+            .find(
+              (el) =>
+                el.groupId === currentElement.groupId &&
+                navigableElements.current.indexOf(el) <
+                  navigableElements.current.indexOf(currentElement)
+            );
           nextId = prevPair?.id;
           break;
-        case 'right':
+        case "right":
           // Move to value field if on key field
-          if (currentElement.type === 'key-value-pair') {
+          if (currentElement.type === "key-value-pair") {
             const valueField = navigableElements.current.find(
-              el => el.parentId === currentElement.parentId && el.type === 'key-value-pair'
+              (el) =>
+                el.parentId === currentElement.parentId &&
+                el.type === "key-value-pair"
             );
             nextId = valueField?.id;
           }
           break;
-        case 'left':
+        case "left":
           // Move to key field if on value field
-          if (currentElement.type === 'key-value-pair') {
+          if (currentElement.type === "key-value-pair") {
             const keyField = navigableElements.current.find(
-              el => el.parentId === currentElement.parentId && el.type === 'key-value-pair'
+              (el) =>
+                el.parentId === currentElement.parentId &&
+                el.type === "key-value-pair"
             );
             nextId = keyField?.id;
           }
@@ -317,16 +335,16 @@ export function KeyValueEditor({
     },
     (id) => {
       // Handle selection - maybe toggle enabled state or focus input
-      const element = navigableElements.current.find(el => el.id === id);
+      const element = navigableElements.current.find((el) => el.id === id);
       if (element?.ref instanceof HTMLInputElement) {
         element.ref.focus();
       }
     },
     (id) => {
       // Handle Delete key press
-      const pair = navigableElements.current.find(el => el.id === id);
-      if (pair && pair.type === 'key-value-pair') {
-        const index = pairs.findIndex(p => p.id === pair.groupId);
+      const pair = navigableElements.current.find((el) => el.id === id);
+      if (pair && pair.type === "key-value-pair") {
+        const index = pairs.findIndex((p) => p.id === pair.groupId);
         if (index !== -1) {
           removePair(index);
         }
@@ -334,12 +352,12 @@ export function KeyValueEditor({
     },
     (id) => {
       // Handle Backspace key press (clear)
-      const element = navigableElements.current.find(el => el.id === id);
-      if (element?.type === 'key-value-pair') {
-        const pair = pairs.find(p => p.id === element.groupId);
+      const element = navigableElements.current.find((el) => el.id === id);
+      if (element?.type === "key-value-pair") {
+        const pair = pairs.find((p) => p.id === element.groupId);
         if (pair) {
-          const isValue = element.parentId?.startsWith('value-');
-          updatePair(pairs.indexOf(pair), isValue ? 'value' : 'key', '');
+          const isValue = element.parentId?.startsWith("value-");
+          updatePair(pairs.indexOf(pair), isValue ? "value" : "key", "");
         }
       }
     }
@@ -547,17 +565,20 @@ export function KeyValueEditor({
       }
 
       // Apply changes immediately
-      const finalPairs = newPairs.length > 0
-        ? newPairs
-        : [{
-            id: generateStableId(0),
-            key: "",
-            value: "",
-            description: "",
-            enabled: true,
-            type: "text",
-            showSecrets: false,
-          }];
+      const finalPairs =
+        newPairs.length > 0
+          ? newPairs
+          : [
+              {
+                id: generateStableId(0),
+                key: "",
+                value: "",
+                description: "",
+                enabled: true,
+                type: "text",
+                showSecrets: false,
+              },
+            ];
 
       onChange(finalPairs);
       setIsBulkMode(false);
@@ -580,7 +601,19 @@ export function KeyValueEditor({
       return;
     }
 
-    onAddToEnvironment?.(pair.key, pair.value);
+    window.dispatchEvent(new CustomEvent('environmentSaveAction', {
+      detail: {
+        key: pair.key,
+        value: pair.value,
+        type: pair.type || "text",
+        isMobile: window.innerWidth < 768,
+        switchPanel: true,
+        showForm: true
+      }
+    }));
+
+    // Provide immediate feedback
+    toast.success("Opening environment selector...");
   };
 
   const handleDragEnd = (event: any) => {
@@ -598,9 +631,11 @@ export function KeyValueEditor({
   };
 
   const renderItemActions = (pair: KeyValuePair, index: number) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
     return (
       <>
-        {/* Desktop Actions - Hidden on mobile */}
+        {/* Desktop View - Show all buttons */}
         <div className="hidden sm:flex border-l border-slate-700">
           <Button
             variant="ghost"
@@ -629,25 +664,18 @@ export function KeyValueEditor({
               <EyeOff className="h-4 w-4 text-slate-500" />
             )}
           </Button>
-          {pairs.length > 1 ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => removePair(index)}
-              className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
-            >
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => removePair(index)}
+            className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
+          >
+            {pairs.length > 1 ? (
               <Trash2 className="h-4 w-4 text-red-400" />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => removePair(index)}
-              className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
-            >
+            ) : (
               <Eraser className="h-4 w-4 text-red-400" />
-            </Button>
-          )}
+            )}
+          </Button>
           {!isEnvironmentEditor && (
             <Button
               variant="ghost"
@@ -660,63 +688,84 @@ export function KeyValueEditor({
           )}
         </div>
 
-        {/* Mobile Actions */}
-        {isMounted && (
-          <div className="sm:hidden border-l border-slate-700">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
-                >
-                  <MoreVertical className="h-4 w-4 text-slate-400" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-[160px] rounded-md bg-slate-800 border-slate-800"
+        {/* Mobile View - Expandable buttons */}
+        <div className="sm:hidden flex items-center relative border-l border-slate-700">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            className="h-8 w-8 text-slate-400 hover:text-slate-300 hover:bg-transparent"
+          >
+            <EllipsisIcon className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              isExpanded && "rotate-90"
+            )} />
+          </Button>
+
+          <div className={cn(
+            "flex absolute right-full top-0 gap-1 overflow-hidden transition-all duration-200",
+            isExpanded ? "w-auto opacity-100 mr-2" : "w-0 opacity-0"
+          )}>
+            {/* Mobile expanded buttons */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 bg-slate-800 text-slate-400 hover:text-slate-300 shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                removePair(index);
+              }}
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+            </Button>
+            {!isEnvironmentEditor && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 bg-slate-800 text-slate-400 hover:text-slate-300 shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAddToEnvironment(index);
+                }}
               >
-                <div className="flex items-center justify-around p-2">
-                  <button
-                    className="hover:opacity-80"
-                    onClick={() => handleSmartCopy(index)}
-                  >
-                    <Copy className="h-4 w-4 text-blue-400" />
-                  </button>
-                  <button
-                    className="hover:opacity-80"
-                    onClick={() => updatePair(index, "enabled", !pair.enabled)}
-                  >
-                    {pair.enabled ? (
-                      <EyeOff className="h-4 w-4 text-slate-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-emerald-400" />
-                    )}
-                  </button>
-                  <button
-                    className="hover:opacity-80"
-                    onClick={() => removePair(index)}
-                  >
-                    {pairs.length > 1 ? (
-                      <Trash2 className="h-4 w-4 text-red-400" />
-                    ) : (
-                      <Eraser className="h-4 w-4 text-red-400" />
-                    )}
-                  </button>
-                  {!isEnvironmentEditor && (
-                    <button
-                      className="hover:opacity-80"
-                      onClick={() => handleAddToEnvironment(index)}
-                    >
-                      <PackagePlusIcon className="h-4 w-4 text-purple-400" />
-                    </button>
-                  )}
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <PackagePlusIcon className="h-4 w-4 text-purple-400" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 bg-slate-800 text-slate-400 hover:text-slate-300 shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSmartCopy(index);
+              }}
+            >
+              {copiedIndex === index ? (
+                <Check className="h-4 w-4 text-green-400" />
+              ) : (
+                <Copy className="h-4 w-4 text-blue-400" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 bg-slate-800 text-slate-400 hover:text-slate-300 shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                updatePair(index, "enabled", !pair.enabled);
+              }}
+            >
+              {pair.enabled ? (
+                <Eye className="h-4 w-4 text-emerald-400" />
+              ) : (
+                <EyeOff className="h-4 w-4 text-slate-500" />
+              )}
+            </Button>
           </div>
-        )}
+        </div>
       </>
     );
   };
@@ -738,33 +787,39 @@ export function KeyValueEditor({
     if (isBulkMode) {
       // Count active pairs from bulk content
       return bulkContent
-        .split('\n')
-        .filter(line => line.trim() && !line.trim().startsWith('#'))
-        .length;
+        .split("\n")
+        .filter((line) => line.trim() && !line.trim().startsWith("#")).length;
     }
     // Count from regular pairs
-    return pairs.filter(p => p.enabled && p.key).length;
+    return pairs.filter((p) => p.enabled && p.key).length;
   };
 
   return (
     <div className="flex flex-col h-full">
+      {/* Fixed Header */}
+      <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700/50">
+        <div className="flex items-center justify-between px-2 h-10">
+          <span className="text-xs font-medium text-slate-400">
+            {isBulkMode ? "Bulk Edit Mode" : "Key-Value Pairs"}
+          </span>
+          <Badge
+            variant="secondary"
+            className="text-xs bg-slate-800 text-slate-400"
+          >
+            {getActivePairsCount()} Active Pair
+          </Badge>
+        </div>
+      </div>
+
+      {/* Scrollable Content */}
       <div className="flex-1 overflow-hidden">
         <ScrollArea
           className={cn(
-            "w-full transition-all duration-200 bg-slate-900/50 backdrop-blur-sm",
+            "w-full transition-all duration-200 bg-slate-900/50 backdrop-blur-sm scroll-container touch-scroll",
             pairs.length > 6 ? "h-[192px]" : "h-auto"
           )}
         >
-          <div className="bg-slate-900/60 h-10 flex items-center justify-between px-2 border-b border-slate-700/50">
-            <span className="text-xs font-medium text-slate-400">
-              {isBulkMode ? "Bulk Edit Mode" : "Key-Value Pairs"}
-            </span>
-            <Badge variant="secondary" className="text-xs sm:text-sm bg-slate-800 text-slate-400">
-              {getActivePairsCount()} Active Pair
-            </Badge>
-          </div>
-          
-          <div>
+          <div className="divide-y divide-slate-700/50">
             {isBulkMode ? (
               <Textarea
                 value={bulkContent}

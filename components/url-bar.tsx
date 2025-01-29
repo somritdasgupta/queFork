@@ -370,7 +370,7 @@ export function UrlBar({
           <TooltipTrigger asChild>
             <Button
               onClick={
-                urlType === "websocket" ? handleWebSocketAction : onSendRequest
+                urlType === "websocket" ? handleWebSocketAction : handleSendRequest
               }
               disabled={
                 !isValidUrl(url) ||
@@ -436,7 +436,7 @@ export function UrlBar({
         handleWebSocketAction();
       } else {
         if (isValidUrl(url)) {
-          onSendRequest();
+          handleSendRequest();
         }
       }
     }
@@ -520,7 +520,7 @@ export function UrlBar({
             variant="secondary"
             className={`text-xs bg-${getMethodColor(
               method
-            )}-500/10 text-${getMethodColor(method)}-400`}
+            )} text-${getMethodColor(method)}-400`}
           >
             {variables.length} vars
           </Badge>
@@ -732,6 +732,36 @@ export function UrlBar({
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
+  }, []);
+
+  const handleSendRequest = () => {
+    // Store the active request data on the window object
+    (window as any).__ACTIVE_REQUEST__ = {
+      method,
+      url,
+      headers: [], // Add your actual headers here
+      params: [], // Add your actual params here
+      body: {}, // Add your actual body here
+      auth: {}, // Add your actual auth here
+      response: null // This will be updated after the response
+    };
+    
+    onSendRequest();
+  };
+
+  // Update the response after receiving it
+  useEffect(() => {
+    const handleResponse = (e: CustomEvent) => {
+      const responseData = e.detail;
+      if ((window as any).__ACTIVE_REQUEST__) {
+        (window as any).__ACTIVE_REQUEST__.response = responseData;
+      }
+    };
+
+    window.addEventListener("apiResponse", handleResponse as EventListener);
+    return () => {
+      window.removeEventListener("apiResponse", handleResponse as EventListener);
+    };
   }, []);
 
   return (

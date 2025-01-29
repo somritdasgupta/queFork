@@ -3,16 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Search,
   Trash2,
   Clock,
   History,
-  ArrowDownToLine,
   X,
   ChevronDown,
   ChevronRight,
   Globe,
   CalendarDays,
+  DownloadIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { HistoryItem } from "@/types";
@@ -20,7 +19,6 @@ import { formatDistanceToNow, format } from "date-fns";
 import { useWebSocket } from "./websocket/websocket-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { NavigableElement, useKeyboardNavigation } from './keyboard-navigation';
 
 const truncateUrl = (url: string, containerWidth: number) => {
   // Store original URL for click handling
@@ -111,7 +109,6 @@ export function HistoryPanel({
   const urlContainerRef = useRef<HTMLDivElement>(null);
   const [groupBy, setGroupBy] = useState<"none" | "domain" | "date">("none");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const navigableElements = useRef<NavigableElement[]>([]);
 
   useEffect(() => {
     if (!urlContainerRef.current) return;
@@ -225,80 +222,6 @@ export function HistoryPanel({
     onSelectItem(item);
   };
 
-  const handleDeleteHistoryItem = (id: string) => {
-    // Clean up navigable elements
-    navigableElements.current = navigableElements.current.filter(
-      el => el.id !== id
-    );
-    onDeleteItem(id);
-    toast.success("History item deleted");
-
-    // Focus next available item
-    const nextElement = navigableElements.current[0];
-    if (nextElement) {
-      setFocus(nextElement.id);
-    }
-  };
-
-  const { setFocus } = useKeyboardNavigation(
-    navigableElements.current,
-    (direction, currentId) => {
-      const currentElement = navigableElements.current.find(el => el.id === currentId);
-      if (!currentElement) return;
-
-      let nextId: string | undefined;
-
-      switch (direction) {
-        case 'down':
-          nextId = navigableElements.current.find(
-            el => el.type === 'history' && 
-            navigableElements.current.indexOf(el) > navigableElements.current.indexOf(currentElement)
-          )?.id;
-          break;
-        case 'up':
-          const reversedElements = [...navigableElements.current].reverse();
-          nextId = reversedElements.find(
-            el => el.type === 'history' && 
-            navigableElements.current.indexOf(el) < navigableElements.current.indexOf(currentElement)
-          )?.id;
-          break;
-      }
-
-      if (nextId) {
-        setFocus(nextId);
-        // Scroll element into view
-        const element = navigableElements.current.find(el => el.id === nextId);
-        element?.ref.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    },
-    (id) => {
-      // Handle history item selection
-      const historyItem = history.find(item => item.id === id);
-      if (historyItem) {
-        onSelectItem(historyItem);
-      }
-    },
-    (id) => {
-      handleDeleteHistoryItem(id);
-    }
-  );
-
-  // Add keyboard event listener for initial focus
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        const firstElement = navigableElements.current[0];
-        if (firstElement && !document.activeElement?.closest('.history-panel')) {
-          e.preventDefault();
-          setFocus(firstElement.id);
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [setFocus]);
-
   const renderHistoryItem = (item: HistoryItem) => {
     if (item.type === "websocket") {
       const isActive = item.url === currentUrl;
@@ -310,23 +233,8 @@ export function HistoryPanel({
       return (
         <div
           key={item.id}
-          ref={el => {
-            if (el) {
-              navigableElements.current.push({
-                id: item.id,
-                ref: el,
-                type: 'history'
-              });
-            }
-          }}
-          tabIndex={0}
-          className="group flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50 outline-none focus:bg-slate-800"
+          className="group flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
           onClick={() => !isConnected && handleHistoryClick(item)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              onSelectItem(item);
-            }
-          }}
         >
           <Badge
             variant="outline"
@@ -369,7 +277,8 @@ export function HistoryPanel({
             className="h-8 w-8 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
             onClick={(e) => {
               e.stopPropagation();
-              handleDeleteHistoryItem(item.id);
+              onDeleteItem(item.id);
+              toast.success("History item deleted");
             }}
           >
             <X className="h-4 w-4 text-red-400" />
@@ -380,23 +289,8 @@ export function HistoryPanel({
       return (
         <div
           key={item.id}
-          ref={el => {
-            if (el) {
-              navigableElements.current.push({
-                id: item.id,
-                ref: el,
-                type: 'history'
-              });
-            }
-          }}
-          tabIndex={0}
-          className="group flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50 outline-none focus:bg-slate-800"
+          className="group flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
           onClick={() => handleHistoryClick(item)} // Uses full URL from item
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              onSelectItem(item);
-            }
-          }}
         >
           <Badge
             variant="outline"
@@ -450,7 +344,8 @@ export function HistoryPanel({
             className="h-8 w-8 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
             onClick={(e) => {
               e.stopPropagation();
-              handleDeleteHistoryItem(item.id);
+              onDeleteItem(item.id);
+              toast.success("History item deleted");
             }}
           >
             <X className="h-4 w-4 text-red-400" />
@@ -462,6 +357,73 @@ export function HistoryPanel({
 
   return (
     <div className="h-full flex flex-col bg-slate-800">
+      <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
+      <div className="flex items-center justify-between">
+        <Button
+        variant="ghost"
+        size="sm"
+        onClick={() =>
+          setGroupBy((g) =>
+          g === "none" ? "domain" : g === "domain" ? "date" : "none"
+          )
+        }
+        className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+        >
+        {groupBy === "domain" ? (
+          <Globe className="h-4 w-4 text-blue-400 mr-2" />
+        ) : groupBy === "date" ? (
+          <CalendarDays className="h-4 w-4 text-purple-400 mr-2" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-slate-400 mr-2" />
+        )}
+        <span className="text-xs capitalize">
+          {groupBy === "none" ? "No Groups" : `${groupBy}`}
+        </span>
+        </Button>
+
+        <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
+        className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+        >
+        <History className="h-4 w-4 text-cyan-400 mr-2" />
+        <span className="text-xs capitalize">
+          {isHistorySavingEnabled ? "Saving" : "Off"}
+        </span>
+        </Button>
+
+        <div className="flex">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onExportHistory}
+          className="h-10 rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+        >
+          <DownloadIcon className="h-4 w-4 text-emerald-400" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClearHistory}
+          className="h-10 border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+        >
+          <Trash2 className="h-4 w-4 text-red-400" />
+        </Button>
+        </div>
+      </div>
+
+      {/* Search Input */}
+      <div className="relative">
+        <Input
+        placeholder="Search history"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="h-8 rounded-none w-full bg-slate-900 border border-slate-700 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
+        />
+      </div>
+      </div>
+
       <ScrollArea className="flex-1">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">

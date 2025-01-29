@@ -60,6 +60,9 @@ body {
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: none;
 }
 
 #root {
@@ -68,15 +71,62 @@ body {
 }
 
 .scrollable {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
   overscroll-behavior: contain;
+  touch-action: pan-y;
+  height: 100%;
 }
 
 /* Prevent pull-to-refresh behavior */
 @supports (-webkit-touch-callout: none) {
   body {
     touch-action: pan-x pan-y;
+  }
+}
+
+/* Prevent zoom on focus for mobile devices */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevent iOS zoom */
+    touch-action: manipulation;
+  }
+}
+
+/* iOS Height Fix */
+@supports (-webkit-touch-callout: none) {
+  .h-screen {
+    height: -webkit-fill-available;
+  }
+
+  .min-h-screen {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Prevent content shift when keyboard appears */
+.keyboard-adjust {
+  height: 100%;
+  position: fixed;
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Better tap targets on mobile */
+@media (max-width: 640px) {
+  button,
+  [role="button"],
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  input,
+  select {
+    min-height: 44px;
+    line-height: 44px;
   }
 }
 
@@ -227,4 +277,71 @@ body {
     -ms-user-select: none;
     user-select: none;
   }
+}
+
+/* Add these to your existing styles */
+.no-zoom {
+  touch-action: pan-x pan-y;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  max-height: 100%;
+  overscroll-behavior: none;
+}
+
+.allow-zoom {
+  touch-action: manipulation;
+  user-select: text;
+}
+
+/* Mobile Touch Scrolling Fixes */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
+/* Enable text selection in scrollable areas */
+.selectable-text {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+/* Prevent body scroll when modal is open */
+.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Override previous touch restrictions */
+@supports (-webkit-touch-callout: none) {
+  .scroll-container {
+    /* Re-enable touch scrolling */
+    touch-action: pan-y;
+    /* Enable momentum scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent parent scroll while scrolling child */
+    overscroll-behavior: contain;
+  }
+}
+
+/* Sticky header for scrollable containers */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: rgb(15 23 42 / 0.95); /* bg-slate-900/95 */
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgb(51 65 85 / 0.5); /* border-slate-700/50 */
+}
+
+/* Adjust scroll container for sticky header */
+.scroll-container-with-header {
+  --header-height: 40px; /* Matches the h-10 class */
+  position: relative;
+  contain: paint;
 }

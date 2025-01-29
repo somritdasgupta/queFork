@@ -3,7 +3,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { KeyValueEditor } from "./key-value-editor";
 import { AuthSection } from "./auth-section";
-import { KeyValuePair, RequestBody, Environment } from "@/types";
+import { Button } from "@/components/ui/button";
+import { KeyValuePair, RequestBody, Environment, TestResult } from "@/types";
 import {
   SearchCode,
   List,
@@ -14,6 +15,8 @@ import {
   KeyRound,
   MessageSquare,
   PlugZap2,
+  FileCode,
+  TestTube2,
 } from "lucide-react";
 import { Textarea } from "./ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +25,7 @@ import { useWebSocket } from "./websocket/websocket-context";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { NavigableElement, useKeyboardNavigation } from './keyboard-navigation';
+import { Editor } from '@monaco-editor/react';
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -108,6 +112,11 @@ export function RequestPanel({
     }
   };
 
+  const [preRequestScript, setPreRequestScript] = useState('');
+  const [testScript, setTestScript] = useState('');
+  const [scriptLogs, setScriptLogs] = useState<string[]>([]);
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+
   const tabs: TabItem[] = [
     {
       id: "messages",
@@ -144,6 +153,18 @@ export function RequestPanel({
       icon: getBodyIcon(type),
       disabled: isWebSocketMode,
     })),
+    {
+      id: "pre-request",
+      label: "Pre-request Script",
+      icon: <FileCode className="h-4 w-4 text-yellow-500" />,
+      disabled: isWebSocketMode,
+    },
+    {
+      id: "tests",
+      label: "Tests",
+      icon: <TestTube2 className="h-4 w-4 text-green-500" />,
+      disabled: isWebSocketMode,
+    },
   ];
 
   const navigableElements = useRef<NavigableElement[]>([]);
@@ -175,6 +196,17 @@ export function RequestPanel({
       }
     }
   );
+
+  const handleResponse = (response: any) => {
+    // Your existing response handling code...
+
+    // Dispatch response event
+    window.dispatchEvent(
+      new CustomEvent("apiResponse", {
+        detail: response
+      })
+    );
+  };
 
   return (
     <div className="h-full flex flex-col bg-slate-800">
@@ -304,6 +336,108 @@ export function RequestPanel({
                           onChange={props.onAuthChange}
                         />
                       </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="pre-request" className="m-0 min-h-0">
+                    <div className="h-full flex flex-col bg-slate-900">
+                      <div className="h-10 border-b border-slate-700 flex items-center justify-between">
+                        <span className="text-xs text-slate-400">Pre-request Script</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPreRequestScript('')}
+                          className="h-7 px-2 text-xs"
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                      <div className="flex-1">
+                        <Editor
+                          height="300px"
+                          defaultLanguage="javascript"
+                          value={preRequestScript}
+                          onChange={(value) => setPreRequestScript(value || '')}
+                          theme="vs-dark"
+                          options={{
+                            minimap: { enabled: true},
+                            fontSize: 12,
+                            lineNumbers: 'on',
+                            folding: true,
+                            tabSize: 2,
+                          }}
+                        />
+                      </div>
+                      {scriptLogs.length > 0 && (
+                        <div className="border-t border-slate-700">
+                          <div className="p-2">
+                            <h3 className="text-xs font-medium text-slate-400">Console Output</h3>
+                            <pre className="mt-2 text-xs text-slate-300 max-h-32 overflow-auto">
+                              {scriptLogs.join('\n')}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="tests" className="m-0 min-h-0">
+                    <div className="h-full flex flex-col bg-slate-900">
+                      <div className="h-10 border-b border-slate-700 flex items-center justify-between">
+                        <span className="text-xs text-slate-400">Test Script</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setTestScript('')}
+                          className="h-7 px-2 text-xs"
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                      <div className="flex-1">
+                        <Editor
+                          height="300px"
+                          defaultLanguage="javascript"
+                          value={testScript}
+                          onChange={(value) => setTestScript(value || '')}
+                          theme="vs-dark"
+                          options={{
+                            minimap: { enabled: true},
+                            fontSize: 12,
+                            lineNumbers: 'on',
+                            folding: true,
+                            tabSize: 2,
+                          }}
+                        />
+                      </div>
+                      {testResults.length > 0 && (
+                        <div className="border-t border-slate-700">
+                          <div className="p-2">
+                            <h3 className="text-xs font-medium text-slate-400">Test Results</h3>
+                            <div className="mt-2 space-y-2">
+                              {testResults.map((result, index) => (
+                                <div
+                                  key={index}
+                                  className={cn(
+                                    'p-2 rounded-md text-xs',
+                                    result.passed
+                                      ? 'bg-green-500/10 text-green-400'
+                                      : 'bg-red-500/10 text-red-400'
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span>{result.name}</span>
+                                    <span>{result.duration.toFixed(2)}ms</span>
+                                  </div>
+                                  {result.error && (
+                                    <p className="mt-1 text-xs opacity-80">{result.error}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
                 </div>
@@ -436,40 +570,82 @@ function RequestBodyContent({
     }
   };
 
+  const handleEditorChange = (value: string | undefined) => {
+    const newValue = value || '';
+    if (type === "json") {
+      try {
+        // Attempt to parse JSON to validate it
+        JSON.parse(newValue);
+        setIsValidJson(true);
+        setJsonError(null);
+      } catch (e) {
+        setIsValidJson(false);
+        setJsonError((e as Error).message);
+      }
+    }
+    onChange({ ...body, content: newValue });
+  };
+
   if (type === "json" || type === "raw") {
     return (
-      <div className="relative">
-        <Textarea
-          value={
-            typeof body.content === "string"
-              ? body.content
-              : JSON.stringify(body.content, null, 2)
-          }
-          onChange={(e) => handleBodyChange(e.target.value)}
-          className="w-full min-h-[300px] border border-slate-700 text-xs 
-            rounded-none bg-slate-950 
-            text-slate-300 placeholder:text-slate-500
-            focus:outline-none focus:ring-2 focus:ring-slate-700
-            font-mono resize-none"
-          placeholder={`${type === "json" ? "// Enter JSON data" : "// Enter raw body"}\n`}
-        />
+      <div className="h-full flex flex-col bg-slate-900">
+        <div className="p-2 border-b border-slate-700 flex items-center justify-between">
+          <span className="text-xs text-slate-400">
+            {type === "json" ? "JSON Body" : "Raw Body"}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange({ ...body, content: "" })}
+            className="h-7 px-2 text-xs"
+          >
+            Clear
+          </Button>
+        </div>
+        <div className="flex-1">
+          <Editor
+            height="300px"
+            defaultLanguage={type === "json" ? "json" : "text"}
+            value={typeof body.content === "string" 
+              ? body.content 
+              : JSON.stringify(body.content, null, 2)}
+            onChange={handleEditorChange}
+            theme="vs-dark"
+            options={{
+              minimap: { enabled: true},
+              fontSize: 12,
+              lineNumbers: 'on',
+              folding: true,
+              foldingStrategy: 'indentation',
+              formatOnPaste: true,
+              formatOnType: true,
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+              wordWrap: 'on',
+              wrappingIndent: 'deepIndent',
+            }}
+          />
+        </div>
         {type === "json" && (
-          <div className="border border-slate-700/50 bg-slate-900/50">
-            {!isValidJson && jsonError ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 bg-red-950/20 border-t border-red-500/20">
-                <span className="font-medium">Invalid JSON:</span>
-                <span className="font-mono">{jsonError}</span>
-              </div>
-            ) : (
-              body.content && (
-                <div className="flex items-center justify-between px-3 py-1.5 text-xs text-slate-400">
-                  <span>Valid JSON</span>
-                  <span className="font-mono">
-                    {JSON.stringify(body.content).length.toLocaleString()} bytes
-                  </span>
+          <div className="border-t border-slate-700">
+            <div className="p-2">
+              {!isValidJson && jsonError ? (
+                <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 bg-red-950/20 rounded-md">
+                  <span className="font-medium">Invalid JSON:</span>
+                  <span className="font-mono">{jsonError}</span>
                 </div>
-              )
-            )}
+              ) : (
+                body.content && (
+                  <div className="flex items-center justify-between px-3 py-1.5 text-xs text-slate-400">
+                    <span>Valid JSON</span>
+                    <span className="font-mono">
+                      {JSON.stringify(body.content).length.toLocaleString()} bytes
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
           </div>
         )}
       </div>

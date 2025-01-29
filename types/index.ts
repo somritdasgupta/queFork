@@ -8,6 +8,27 @@ export interface KeyValuePair {
   showSecrets: boolean;
 }
 
+// Add new interface for environment save event
+export interface EnvironmentSaveEvent extends CustomEvent {
+  detail: {
+    key: string;
+    value: string;
+    type?: "text" | "secret";
+    isMobile?: boolean;
+  };
+}
+
+export interface EnvironmentSaveActionEvent extends CustomEvent {
+  detail: {
+    key: string;
+    value: string;
+    type: "text" | "secret";
+    isMobile?: boolean;
+    switchPanel: boolean;
+    showForm: boolean;
+  };
+}
+
 export interface RequestBody {
   type: "json" | "form-data" | "x-www-form-urlencoded" | "raw" | "none";
   content: string | KeyValuePair[];
@@ -82,6 +103,43 @@ export interface SavedRequest {
     status: number;
     body?: any;
   };
+  runConfig?: {
+    iterations: number;
+    delay: number;
+    parallel: boolean;
+    environment: string | null;
+    timeout?: number;
+    stopOnError?: boolean;
+    retryCount?: number;
+    validateResponse?: boolean;
+  };
+  preRequestScript?: string;
+  testScript?: string;
+  testResults?: TestResult[];
+}
+
+export interface TestResult {
+  name: string;
+  passed: boolean;
+  error?: string;
+  duration: number;
+}
+
+export interface ScriptContext {
+  request: {
+    method: string;
+    url: string;
+    headers: Record<string, string>;
+    body: any;
+  };
+  response?: {
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+    body: any;
+  };
+  environment: Record<string, string>;
+  variables: Record<string, any>;
 }
 
 export interface RequestResponse {
@@ -209,6 +267,17 @@ export interface SidePanelProps {
   currentEnvironment: Environment | null;
   onEnvironmentChange: (environmentId: string) => void;
   onEnvironmentsUpdate: (environments: Environment[]) => void;
+  onUpdateCollections: (collections: Collection[]) => void;
   isMobile?: boolean;
   className?: string; // Add this line
+  onImportCollections: (source: ImportSource, data: string) => Promise<void>;
 }
+
+export type ImportSource = 
+  | "url"
+  | "file"
+  | "clipboard"
+  | "hoppscotch"
+  | "postman"
+  | "insomnia"
+  | "openapi";

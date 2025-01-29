@@ -14,34 +14,30 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
-  Search,
   Plus,
-  MoreVertical,
   Save,
   Filter,
   SortAsc,
   Trash2,
   Clock,
-  ArrowDownToLine,
   FolderOpen,
   X,
+  Copy,
+  Download,
+  Pencil,
+  EllipsisIcon,
+  DownloadIcon,
+  Upload,
+  Check,
 } from "lucide-react";
-import { useState, useMemo, useEffect, useRef } from "react";
-import {
-  Collection,
-  SavedRequest,
-  CollectionRunResult,
-  Environment,
-  RequestRunResult,
-} from "@/types";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { Collection, SavedRequest, ImportSource } from "@/types";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { cn } from "@/lib/utils";
-import { NavigableElement, useKeyboardNavigation } from './keyboard-navigation';
+import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
 
 interface CollectionsPanelProps {
   collections: Collection[];
@@ -54,21 +50,10 @@ interface CollectionsPanelProps {
   onExportCollections: () => void;
   onExportCollection: (collectionId: string) => void;
   onSwitchToCollections?: () => void;
+  onImportCollections: (source: ImportSource, data: string) => Promise<void>;
 }
 
-// Remove the RunConfig interface entirely
-
-export function CollectionsPanel({
-  collections,
-  onSelectRequest,
-  onSaveRequest,
-  onCreateCollection,
-  onDeleteCollection,
-  onDeleteRequest,
-  onExportCollections,
-  onExportCollection,
-  onSwitchToCollections,
-}: CollectionsPanelProps) {
+export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "method" | "date">("name");
@@ -82,29 +67,77 @@ export function CollectionsPanel({
   const [pendingSaveRequest, setPendingSaveRequest] =
     useState<Partial<SavedRequest> | null>(null);
   const [requestName, setRequestName] = useState("");
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navigableElements = useRef<NavigableElement[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: string;
+    type: "collection" | "request";
+    parentId?: string;
+  } | null>(null);
 
-  // Add this effect to listen for save request events
   useEffect(() => {
     const handleSaveRequest = (e: CustomEvent) => {
       const requestData = e.detail;
       setPendingSaveRequest(requestData);
-      onSwitchToCollections?.(); // Switch to collections panel when save is clicked
-      toast.success("Choose a collection to save your request", {
-        description: "You can also create a new collection",
+      setShowSaveForm(true);
+
+      // Immediate focus attempt
+      requestAnimationFrame(() => {
+        const input = document.querySelector(
+          'input[placeholder="Request name"]'
+        ) as HTMLInputElement;
+        if (input) {
+          input.focus();
+        }
       });
     };
 
-    // Add event listener
     window.addEventListener("saveRequest", handleSaveRequest as EventListener);
 
-    // Cleanup
     return () => {
       window.removeEventListener(
         "saveRequest",
         handleSaveRequest as EventListener
       );
     };
-  }, [onSwitchToCollections]);
+  }, []);
+
+  useEffect(() => {
+    const handleShowSaveForm = (e: CustomEvent) => {
+      const requestData = e.detail;
+      setPendingSaveRequest(requestData);
+      setShowSaveForm(true);
+
+      // Focus input after a very short delay to ensure form is rendered
+      requestAnimationFrame(() => {
+        const input = document.querySelector(
+          'input[placeholder="Request name"]'
+        ) as HTMLInputElement;
+        if (input) {
+          input.focus();
+        }
+      });
+    };
+
+    window.addEventListener(
+      "showCollectionSaveForm",
+      handleShowSaveForm as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "showCollectionSaveForm",
+        handleShowSaveForm as EventListener
+      );
+    };
+  }, []);
 
   const handleCreateCollection = (initialRequest?: Partial<SavedRequest>) => {
     if (!newCollection.name) {
@@ -112,11 +145,10 @@ export function CollectionsPanel({
       return;
     }
 
-    // Create a complete SavedRequest object from the partial one
     const completeRequest: SavedRequest | undefined = initialRequest
       ? {
           id: uuidv4(),
-          statusCode: 0, // Default value
+          statusCode: 0,
           timestamp: Date.now(),
           name: requestName || initialRequest.url || "Untitled Request",
           description: "",
@@ -139,7 +171,7 @@ export function CollectionsPanel({
       lastModified: new Date().toISOString(),
     };
 
-    onCreateCollection(collection);
+    props.onCreateCollection(collection);
     setNewCollection({ name: "", description: "", apiVersion: "" });
     setIsCreating(false);
     toast.success(
@@ -149,106 +181,53 @@ export function CollectionsPanel({
     );
   };
 
-  const renderCollectionHeader = (collection: Collection) => {
-    return (
-      <div className="flex items-center justify-between w-full group">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-medium text-slate-400 truncate">
-            {collection.name}
-          </span>
-          {collection.apiVersion && (
-            <Badge className="text-xs bg-blue-500 text-blue-100">
-              v{collection.apiVersion}
-            </Badge>
-          )}
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-slate-300 hover:text-slate-300 hover:bg-transparent opacity-30 hover:opacity-100 transition-opacity"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            side="bottom"
-            className="w-[200px] bg-slate-900 border border-slate-700"
-            sideOffset={5}
-          >
-            <DropdownMenuLabel className="text-slate-400">
-              Collection Actions
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-slate-700" />
-
-            <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-800 focus:bg-slate-800 cursor-pointer"
-              onClick={() => onSaveRequest(collection.id, {})}
-            >
-              <Save className="mr-2 h-4 w-4 text-blue-400" />
-              Save Request
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-slate-300 hover:bg-slate-800 focus:bg-slate-800 cursor-pointer"
-              onClick={() => onExportCollection(collection.id)}
-            >
-              <ArrowDownToLine className="mr-2 h-4 w-4 text-emerald-400" />
-              Export Collection
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-slate-700" />
-            <DropdownMenuItem
-              className="text-red-400 hover:bg-red-950/30 focus:bg-red-950/30 cursor-pointer"
-              onClick={() => handleDeleteCollection(collection.id)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Collection
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    );
-  };
-
   const handleDeleteCollection = (collectionId: string) => {
-    if (confirm('Are you sure you want to delete this collection?')) {
-      // Clean up navigable elements
+    if (
+      deleteConfirm?.id === collectionId &&
+      deleteConfirm.type === "collection"
+    ) {
       navigableElements.current = navigableElements.current.filter(
-        el => el.id !== collectionId && el.parentId !== collectionId
+        (el) => el.id !== collectionId && el.parentId !== collectionId
       );
-      onDeleteCollection(collectionId);
+      props.onDeleteCollection(collectionId);
       toast.success("Collection deleted successfully");
-      
-      // Focus next available item
+      setDeleteConfirm(null);
+
       const nextElement = navigableElements.current[0];
       if (nextElement) {
         setFocus(nextElement.id);
       }
+    } else {
+      setDeleteConfirm({ id: collectionId, type: "collection" });
     }
   };
 
   const handleDeleteRequest = (collectionId: string, requestId: string) => {
-    if (confirm('Are you sure you want to delete this request?')) {
-      // Clean up navigable elements
+    if (deleteConfirm?.id === requestId && deleteConfirm.type === "request") {
       navigableElements.current = navigableElements.current.filter(
-        el => el.id !== requestId
+        (el) => el.id !== requestId
       );
-      onDeleteRequest(collectionId, requestId);
+      props.onDeleteRequest(collectionId, requestId);
       toast.success("Request deleted");
+      setDeleteConfirm(null);
 
-      // Focus collection after request deletion
       const collectionElement = navigableElements.current.find(
-        el => el.id === collectionId
+        (el) => el.id === collectionId
       );
       if (collectionElement) {
         setFocus(collectionElement.id);
       }
+    } else {
+      setDeleteConfirm({
+        id: requestId,
+        type: "request",
+        parentId: collectionId,
+      });
     }
   };
 
   const filteredCollections = useMemo(() => {
-    return collections
+    return props.collections
       .filter((collection: Collection) => {
         const nameMatch = collection.name
           .toLowerCase()
@@ -272,43 +251,42 @@ export function CollectionsPanel({
           );
         }
       });
-  }, [collections, search, filterBy, sortBy]);
-
-  
-  const navigableElements = useRef<NavigableElement[]>([]);
+  }, [props.collections, search, filterBy, sortBy]);
 
   const { setFocus } = useKeyboardNavigation(
     navigableElements.current,
     (direction, currentId) => {
-      const currentElement = navigableElements.current.find(el => el.id === currentId);
+      const currentElement = navigableElements.current.find(
+        (el) => el.id === currentId
+      );
       if (!currentElement) return;
 
       let nextId: string | undefined;
 
       switch (direction) {
-        case 'down':
+        case "down":
           nextId = navigableElements.current.find(
-            el => el.parentId === currentElement.parentId && 
-            navigableElements.current.indexOf(el) > navigableElements.current.indexOf(currentElement)
+            (el) =>
+              el.parentId === currentElement.parentId &&
+              navigableElements.current.indexOf(el) >
+                navigableElements.current.indexOf(currentElement)
           )?.id;
           break;
-        case 'up':
-          // Find previous element in same context
+        case "up":
           const reversedElements = [...navigableElements.current].reverse();
           nextId = reversedElements.find(
-            el => el.parentId === currentElement.parentId && 
-            navigableElements.current.indexOf(el) < navigableElements.current.indexOf(currentElement)
+            (el) =>
+              el.parentId === currentElement.parentId &&
+              navigableElements.current.indexOf(el) <
+                navigableElements.current.indexOf(currentElement)
           )?.id;
           break;
-        case 'right':
-          // If collection, expand it
-          if (currentElement.type === 'collection') {
-            // Trigger accordion expand
+        case "right":
+          if (currentElement.type === "collection") {
           }
           break;
-        case 'left':
-          // If in request, go to parent collection
-          if (currentElement.type === 'request') {
+        case "left":
+          if (currentElement.type === "request") {
             nextId = currentElement.parentId;
           }
           break;
@@ -319,176 +297,706 @@ export function CollectionsPanel({
       }
     },
     (id) => {
-      const element = navigableElements.current.find(el => el.id === id);
-      if (element?.type === 'request') {
-        const request = collections
-          .flatMap(c => c.requests)
-          .find(r => r.id === id);
+      const element = navigableElements.current.find((el) => el.id === id);
+      if (element?.type === "request") {
+        const request = props.collections
+          .flatMap((c) => c.requests)
+          .find((r) => r.id === id);
         if (request) {
-          onSelectRequest(request);
+          props.onSelectRequest(request);
         }
       }
     },
     (id) => {
-      // Handle Delete key press
-      const element = navigableElements.current.find(el => el.id === id);
-      if (element?.type === 'collection') {
+      const element = navigableElements.current.find((el) => el.id === id);
+      if (element?.type === "collection") {
         handleDeleteCollection(id);
-      } else if (element?.type === 'request' && element.parentId) {
+      } else if (element?.type === "request" && element.parentId) {
         handleDeleteRequest(element.parentId, id);
       }
     }
   );
 
-  // Replace the nested button structure in the request item rendering
-  const renderRequestItem = (request: SavedRequest, collection: Collection) => (
-    <div
-      key={request.id}
-      ref={el => {
-        if (el) {
-          navigableElements.current.push({
-            id: request.id,
-            ref: el,
-            type: 'request',
-            parentId: collection.id
-          });
+  const renderRequestItem = useCallback(
+    (request: SavedRequest, collection: Collection) => {
+      const [isEditing, setIsEditing] = useState(false);
+      const [editName, setEditName] = useState(request.name || request.url);
+      const inputRef = useRef<HTMLInputElement>(null);
+
+      const handleRename = (newName: string) => {
+        if (!newName.trim() || newName === request.name) {
+          setIsEditing(false);
+          setEditName(request.name || request.url);
+          return;
         }
-      }}
-      tabIndex={0}
-      className="group border-t border-slate-700/50 outline-none focus:bg-slate-800"
-      // ...existing props
-    >
-      <div
-        className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer"
-        onClick={() => onSelectRequest(request)}
-      >
-        <Badge
-          variant="outline"
-          className={cn(
-            "shrink-0 text-xs font-mono border",
-            request.method === "GET" &&
-              "text-emerald-400 border-emerald-500/20",
-            request.method === "POST" && "text-blue-400 border-blue-500/20",
-            request.method === "PUT" && "text-yellow-400 border-yellow-500/20",
-            request.method === "DELETE" && "text-red-400 border-red-500/20",
-            request.method === "PATCH" && "text-purple-400 border-purple-500/20"
+
+        // Create deep copy of collections to ensure state update
+        const updatedCollections = props.collections.map((c) => {
+          if (c.id === collection.id) {
+            return {
+              ...c,
+              requests: c.requests.map((r) =>
+                r.id === request.id ? { ...r, name: newName.trim() } : r
+              ),
+              lastModified: new Date().toISOString(),
+            };
+          }
+          return c;
+        });
+
+        // Update the collections through the parent component
+        if (props.onUpdateCollections) {
+          props.onUpdateCollections(updatedCollections);
+        }
+
+        // Update local state
+        setIsEditing(false);
+        setEditName(newName.trim());
+
+        toast.success("Request renamed");
+      };
+
+      // Update local state when request name changes from props
+      useEffect(() => {
+        setEditName(request.name || request.url);
+      }, [request.name, request.url]);
+
+      useEffect(() => {
+        if (isEditing && inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, [isEditing]);
+
+      return (
+        <div className="flex flex-col">
+          <div
+            key={request.id}
+            ref={(el) => {
+              if (el) {
+                navigableElements.current.push({
+                  id: request.id,
+                  ref: el,
+                  type: "request",
+                  parentId: collection.id,
+                });
+              }
+            }}
+            tabIndex={0}
+            className="group border-t border-slate-700/50 outline-none focus:bg-slate-800"
+          >
+            <div className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors">
+              <Badge
+                variant="outline"
+                className={cn(
+                  "shrink-0 text-xs font-mono border",
+                  request.method === "GET" &&
+                    "text-emerald-400 border-emerald-500/20",
+                  request.method === "POST" &&
+                    "text-blue-400 border-blue-500/20",
+                  request.method === "PUT" &&
+                    "text-yellow-400 border-yellow-500/20",
+                  request.method === "DELETE" &&
+                    "text-red-400 border-red-500/20",
+                  request.method === "PATCH" &&
+                    "text-purple-400 border-purple-500/20"
+                )}
+              >
+                {request.method}
+              </Badge>
+
+              <div
+                className="flex-1 min-w-0"
+                onClick={() => !isEditing && props.onSelectRequest(request)}
+              >
+                {isEditing ? (
+                  <Input
+                    ref={inputRef}
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="h-6 text-xs bg-slate-900"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleRename(editName);
+                      } else if (e.key === "Escape") {
+                        setIsEditing(false);
+                        setEditName(request.name || request.url);
+                      }
+                    }}
+                    onBlur={() => handleRename(editName)}
+                    maxLength={50}
+                  />
+                ) : (
+                  <div className="text-xs font-medium text-slate-300 truncate cursor-pointer">
+                    {request.name || request.url}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsEditing(true);
+                    setEditName(request.name || request.url);
+                  }}
+                  className="h-7 w-7 p-0"
+                  title="Rename request"
+                >
+                  <Pencil className="h-3 w-3 text-blue-400" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteRequest(collection.id, request.id)}
+                  className="h-7 w-7 p-0"
+                  title="Delete request"
+                >
+                  <Trash2 className="h-3 w-3 text-red-400" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          {deleteConfirm?.id === request.id && (
+            <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
+              <span className="text-xs text-slate-400">Delete request?</span>
+              <div className="flex items-center gap-1 ml-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteConfirm(null);
+                  }}
+                  className="h-6 w-6 p-0"
+                >
+                  <X className="h-4 w-4 text-slate-400" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteRequest(collection.id, request.id);
+                  }}
+                  className="h-6 w-6 p-0"
+                >
+                  <Check className="h-4 w-4 text-emerald-400" />
+                </Button>
+              </div>
+            </div>
           )}
-        >
-          {request.method}
-        </Badge>
-        <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-slate-300 truncate">
-            {request.name || request.url}
+        </div>
+      );
+    },
+    [props.collections, props.onUpdateCollections]
+  );
+
+  const handleQuickSave = (collectionId: string) => {
+    const activeRequest = (window as any).__ACTIVE_REQUEST__;
+    if (!activeRequest?.url) {
+      toast.error("No active request to save");
+      return;
+    }
+
+    const urlObj = new URL(activeRequest.url);
+    const friendlyName =
+      urlObj.pathname.split("/").filter(Boolean).pop() ||
+      urlObj.hostname.split(".")[0] ||
+      "Untitled Request";
+
+    const savedRequest: Partial<SavedRequest> = {
+      id: uuidv4(),
+      method: activeRequest.method,
+      url: activeRequest.url,
+      name: friendlyName,
+      headers: activeRequest.headers || [],
+      params: activeRequest.params || [],
+      body: activeRequest.body,
+      auth: activeRequest.auth,
+      timestamp: Date.now(),
+      response: activeRequest.response,
+      statusCode: activeRequest.response?.status || 0,
+      runConfig: {
+        iterations: 1,
+        delay: 0,
+        parallel: false,
+        environment: null,
+      },
+    };
+
+    props.onSaveRequest(collectionId, savedRequest);
+    toast.success(`Saved "${friendlyName}" to collection`);
+  };
+
+  const canQuickSave = useMemo(() => {
+    const activeRequest = (window as any).__ACTIVE_REQUEST__;
+    return activeRequest?.url && activeRequest?.method;
+  }, [(window as any).__ACTIVE_REQUEST__]);
+
+  const handleDuplicateCollection = useCallback(
+    (collection: Collection) => {
+      const duplicate: Collection = {
+        ...collection,
+        id: uuidv4(),
+        name: `${collection.name} (Copy)`,
+        lastModified: new Date().toISOString(),
+      };
+      props.onCreateCollection(duplicate);
+      toast.success("Collection duplicated");
+    },
+    [props.onCreateCollection]
+  );
+
+  const renderCollectionActions = useCallback(
+    (collection: Collection) => {
+      return (
+        <div className="flex items-center">
+          <div className="hidden sm:flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleQuickSave(collection.id)}
+              disabled={!canQuickSave}
+              className={cn(
+                "h-8 w-8 hover:text-slate-300",
+                !canQuickSave && "opacity-50 cursor-not-allowed"
+              )}
+              title={
+                canQuickSave
+                  ? "Save current request"
+                  : "No active request to save"
+              }
+            >
+              <Save
+                className={cn(
+                  "h-4 w-4",
+                  canQuickSave ? "text-blue-400" : "text-slate-500"
+                )}
+              />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDuplicateCollection(collection)}
+              className="h-8 w-8 hover:text-slate-300"
+              title="Duplicate collection"
+            >
+              <Copy className="h-4 w-4 text-emerald-400" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => props.onExportCollection(collection.id)}
+              className="h-8 w-8 hover:text-slate-300"
+              title="Export collection"
+            >
+              <Download className="h-4 w-4 text-purple-400" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDeleteCollection(collection.id)}
+              className="h-8 w-8 hover:text-slate-300"
+              title="Delete collection"
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+            </Button>
+          </div>
+
+          <div className="sm:hidden flex items-center relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
+              className="h-8 w-8 hover:text-slate-300"
+            >
+              <EllipsisIcon
+                className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  isExpanded && "rotate-90"
+                )}
+              />
+            </Button>
+
+            <div
+              className={cn(
+                "flex absolute left-full top-0 overflow-hidden transition-all duration-200",
+                isExpanded ? "w-auto opacity-100" : "w-0 opacity-70"
+              )}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "h-8 w-8 hover:text-slate-300",
+                  !canQuickSave && "opacity-50 cursor-not-allowed"
+                )}
+                disabled={!canQuickSave}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleQuickSave(collection.id);
+                }}
+              >
+                <Save
+                  className={cn(
+                    "h-4 w-4",
+                    canQuickSave ? "text-blue-400" : "text-slate-500"
+                  )}
+                />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 hover:text-slate-300"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDuplicateCollection(collection);
+                }}
+              >
+                <Copy className="h-4 w-4 text-emerald-400" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 hover:text-slate-300"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  props.onExportCollection(collection.id);
+                }}
+              >
+                <Download className="h-4 w-4 text-purple-400" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 hover:text-slate-300"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteCollection(collection.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4 text-red-400" />
+              </Button>
+            </div>
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            <span // Changed from div to span to avoid button nesting
-              onClick={(e) => e.stopPropagation()}
-              className="h-7 w-7 p-0 flex items-center justify-center text-slate-400 hover:text-slate-300 opacity-30 group-hover:opacity-100 transition-all cursor-pointer"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="w-[160px] bg-slate-900 border border-slate-700"
+      );
+    },
+    [canQuickSave, handleQuickSave, handleDuplicateCollection]
+  );
+
+  const handleExportCollection = (collection: Collection) => {
+    props.onExportCollection(collection.id);
+  };
+
+  const renderCollectionContent = (collection: Collection) => (
+    <div className="flex flex-col">
+      <div className="flex items-center justify-between w-full group px-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="text-sm font-medium text-slate-400 truncate">
+            {collection.name}
+          </span>
+          {collection.apiVersion && (
+            <Badge className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/20">
+              v{collection.apiVersion}
+            </Badge>
+          )}
+          <Badge
+            variant="outline"
+            className="mr-2 text-[10px] px-1 bg-transparent border-slate-700 text-slate-400"
           >
-            <DropdownMenuItem
-              className="text-red-400 hover:bg-red-950/30 focus:bg-red-950/30 cursor-pointer"
-              onClick={() => onDeleteRequest(collection.id, request.id)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Request
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            {collection.requests?.length || 0}
+          </Badge>
+        </div>
+        {renderCollectionActions(collection)}
       </div>
+      {deleteConfirm?.id === collection.id &&
+        deleteConfirm.type === "collection" && (
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
+            <span className="text-xs text-slate-400">Delete collection?</span>
+            <div className="flex items-center gap-1 ml-auto">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteConfirm(null);
+                }}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4 text-slate-400" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteCollection(collection.id);
+                }}
+                className="h-6 w-6 p-0"
+              >
+                <Check className="h-4 w-4 text-emerald-400" />
+              </Button>
+            </div>
+          </div>
+        )}
     </div>
   );
+
+  const handleSaveToCollection = (
+    collectionId: string,
+    request: Partial<SavedRequest>
+  ) => {
+    props.onSaveRequest(collectionId, {
+      ...request,
+      runConfig: {
+        iterations: 1,
+        delay: 0,
+        parallel: false,
+        environment: null,
+        timeout: 30000,
+        stopOnError: true,
+        retryCount: 0,
+        validateResponse: false,
+      },
+      ...pendingSaveRequest,
+    });
+    setPendingSaveRequest(null);
+    setRequestName("");
+    setShowSaveForm(false);
+    toast.success(`Saved to collection`);
+  };
+
+  const handleImportUrl = async () => {
+    try {
+      if (!importUrl.trim()) {
+        toast.error("Please enter a valid URL");
+        return;
+      }
+      await props.onImportCollections("url", importUrl);
+      setIsImporting(false);
+      setImportUrl("");
+      toast.success("Collection imported successfully");
+    } catch (error) {
+      toast.error("Failed to import collection");
+    }
+  };
+
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const extension = file.name.split(".").pop()?.toLowerCase();
+
+      let source: ImportSource = "file";
+      if (extension === "har") source = "postman";
+      else if (extension === "json") {
+        // Try to detect format from content
+        if (text.includes('"_type": "hoppscotch"')) source = "hoppscotch";
+        else if (text.includes('"_postman_id"')) source = "postman";
+        else if (text.includes('"openapi"')) source = "openapi";
+      }
+
+      await props.onImportCollections(source, text);
+      toast.success("Collection imported successfully");
+    } catch (error) {
+      toast.error("Failed to import collection");
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      await props.onImportCollections("clipboard", text);
+      toast.success("Collection imported successfully");
+    } catch (error) {
+      toast.error("Failed to import from clipboard");
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-slate-800">
       <div className="h-full flex flex-col bg-slate-800">
         <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
           <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() =>
-            setSortBy((prev) =>
-          prev === "name" ? "date" : prev === "date" ? "method" : "name"
-            )
-          }
-          className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-        >
-          <SortAsc className="h-4 w-4 text-blue-400" />
-          <span className="text-xs capitalize">{sortBy}</span>
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
             <Button
-          variant="ghost"
-          size="sm"
-          className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                setSortBy((prev) =>
+                  prev === "name" ? "date" : prev === "date" ? "method" : "name"
+                )
+              }
+              className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
             >
-          <Filter className="h-4 w-4 text-purple-400" />
-          <span className="text-xs">{filterBy || "All"}</span>
+              <SortAsc className="h-4 w-4 text-blue-400" />
+              <span className="text-xs capitalize">{sortBy}</span>
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            className="bg-slate-800 border border-slate-700"
-          >
-            <DropdownMenuItem onClick={() => setFilterBy("")}>
-          All Methods
-            </DropdownMenuItem>
-            {["GET", "POST", "PUT", "DELETE", "PATCH"].map((method) => (
-          <DropdownMenuItem
-            key={method}
-            onClick={() => setFilterBy(method)}
-          >
-            {method}
-          </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
 
-        <div className="flex">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onExportCollections}
-            className="h-10 w-full rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-          >
-            <ArrowDownToLine className="h-4 w-4 text-emerald-400" />
-          </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                >
+                  <Filter className="h-4 w-4 text-purple-400" />
+                  <span className="text-xs">{filterBy || "All"}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="bg-slate-800 border border-slate-700 text-slate-400 hover:text-blue-500 hover:bg-slate-800"
+              >
+                <DropdownMenuItem onClick={() => setFilterBy("")}>
+                  All Methods
+                </DropdownMenuItem>
+                {["GET", "POST", "PUT", "DELETE", "PATCH"].map((method) => (
+                  <DropdownMenuItem
+                    key={method}
+                    onClick={() => setFilterBy(method)}
+                  >
+                    {method}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCreating(true)}
-            className="h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-          >
-            <Plus className="h-4 w-4 text-cyan-400" />
-          </Button>
-        </div>
+            <div className="flex">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".json,.har,.yaml,.yml"
+                className="hidden"
+              />
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsImporting(true)}
+                className="h-10 w-full rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+              >
+                <Upload className="h-4 w-4 text-yellow-400" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={props.onExportCollections}
+                className="h-10 w-full rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+              >
+                <DownloadIcon className="h-4 w-4 text-emerald-400" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsCreating(true)}
+                className="h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+              >
+                <Plus className="h-4 w-4 text-cyan-400" />
+              </Button>
+            </div>
           </div>
 
-          {/* Search Input */}
           <div className="relative">
-        <Input
-          placeholder="Search collections"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-8 rounded-none w-full bg-slate-900 border-y border-slate-700 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
-        />
+            <Input
+              placeholder="Search collections"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 rounded-none w-full bg-slate-900 border-y border-slate-700 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
+            />
           </div>
         </div>
 
-        {/* Collections List */}
         <ScrollArea className="flex-1">
+          {isImporting && (
+            <div className="p-4 bg-slate-900/50 border-b border-slate-700">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-slate-300">
+                    Import Collection
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsImporting(false)}
+                    className="h-7 w-7 p-0 hover:bg-slate-800"
+                  >
+                    <X className="h-4 w-4 text-slate-400" />
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-400">
+                      Import from URL
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enter URL (Postman, OpenAPI, etc.)"
+                        value={importUrl}
+                        onChange={(e) => setImportUrl(e.target.value)}
+                        className="h-8 bg-slate-800 border-slate-700 text-sm"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleImportUrl}
+                        disabled={!importUrl.trim()}
+                        className={cn(
+                          "h-8 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700",
+                          "text-slate-300 hover:text-slate-200 transition-colors",
+                          !importUrl.trim() && "opacity-50"
+                        )}
+                      >
+                        Import
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-400">
+                      Import from file
+                    </label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700"
+                    >
+                      Choose File
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-400">
+                      Import from clipboard
+                    </label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handlePaste}
+                      className="w-full h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700"
+                    >
+                      Paste from Clipboard
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isCreating && (
             <div className="p-4 bg-slate-900/50 border-b border-slate-700">
               <div className="space-y-3">
@@ -570,7 +1078,7 @@ export function CollectionsPanel({
             </div>
           )}
 
-          {pendingSaveRequest && (
+          {showSaveForm && pendingSaveRequest && (
             <div className="border-b border-slate-700 bg-slate-900/50">
               <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
@@ -583,6 +1091,7 @@ export function CollectionsPanel({
                     onClick={() => {
                       setPendingSaveRequest(null);
                       setRequestName("");
+                      setShowSaveForm(false);
                     }}
                     className="h-7 w-7 p-0"
                   >
@@ -604,7 +1113,7 @@ export function CollectionsPanel({
                     Select Collection
                   </div>
                   <div className="space-y-1">
-                    {collections.map((collection) => (
+                    {props.collections.map((collection) => (
                       <Button
                         key={collection.id}
                         variant="ghost"
@@ -614,13 +1123,10 @@ export function CollectionsPanel({
                             toast.error("Please enter a request name");
                             return;
                           }
-                          onSaveRequest(collection.id, {
+                          handleSaveToCollection(collection.id, {
                             ...pendingSaveRequest,
                             name: requestName,
                           });
-                          setPendingSaveRequest(null);
-                          setRequestName("");
-                          toast.success(`Saved to ${collection.name}`);
                         }}
                         className="w-full justify-start text-left h-8 px-3 text-slate-300 hover:text-slate-200 hover:bg-slate-800"
                       >
@@ -650,7 +1156,7 @@ export function CollectionsPanel({
             </div>
           )}
 
-          {collections.length === 0 && !isCreating ? (
+          {props.collections.length === 0 && !isCreating ? (
             <div className="flex flex-col items-center justify-center p-8 text-center">
               <div className="p-4 rounded-lg bg-slate-900 border border-slate-700 mb-4">
                 <Clock className="h-8 w-8 text-slate-400" />
@@ -664,6 +1170,7 @@ export function CollectionsPanel({
             </div>
           ) : (
             <div>
+              {" "}
               <Accordion type="multiple">
                 {filteredCollections.map((collection: Collection) => (
                   <AccordionItem
@@ -672,9 +1179,10 @@ export function CollectionsPanel({
                     className="px-0 border-b border-slate-700"
                   >
                     <AccordionTrigger className="px-3 py-2 text-slate-500 hover:no-underline hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors">
-                      {renderCollectionHeader(collection)}
+                      {renderCollectionContent(collection)}
                     </AccordionTrigger>
                     <AccordionContent className="pt-0 pb-0">
+                      {" "}
                       <div className="bg-slate-900/50">
                         {collection.requests?.length > 0 ? (
                           collection.requests.map((request) =>

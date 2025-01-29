@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
-
 import { cn } from "@/lib/utils"
 
 const ScrollArea = React.forwardRef<
@@ -12,17 +11,25 @@ const ScrollArea = React.forwardRef<
   <ScrollAreaPrimitive.Root
     ref={ref}
     className={cn(
-      "relative overflow-hidden overscroll-behavior-contain",
+      "relative overflow-hidden",
       className
     )}
     {...props}
   >
     <ScrollAreaPrimitive.Viewport 
-      className="h-full w-full rounded-[inherit] max-w-full"
+      className="h-full w-full rounded-[inherit]"
       style={{ 
+        WebkitOverflowScrolling: 'touch' as 'touch',
+        touchAction: 'pan-y',
         overscrollBehavior: 'contain',
-        WebkitOverflowScrolling: 'touch'
-      }}
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        userSelect: 'text',
+        scrollBehavior: 'smooth',
+        // Add mask for sticky header
+        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, black var(--header-height, 0px))',
+        maskImage: 'linear-gradient(to bottom, transparent 0, black var(--header-height, 0px))',
+      } as React.CSSProperties}
     >
       {children}
     </ScrollAreaPrimitive.Viewport>

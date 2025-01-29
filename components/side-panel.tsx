@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CollectionsPanel } from "@/components/collections-panel";
 import { HistoryPanel } from "@/components/history-panel";
 import { SidePanelProps } from "@/types";
@@ -16,6 +16,79 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
     "collections" | "history" | "environments"
   >("collections");
 
+  useEffect(() => {
+    const handleSaveRequestAction = (e: CustomEvent) => {
+      // Switch to collections panel
+      setActivePanel("collections");
+      
+      // Only open sheet if we're in mobile mode and the event indicates mobile
+      if (props.isMobile && e.detail.isMobile) {
+        setIsOpen(true);
+      }
+
+      // Forward the request data to CollectionsPanel
+      window.dispatchEvent(new CustomEvent('saveRequest', {
+        detail: e.detail.request
+      }));
+    };
+
+    window.addEventListener('saveRequestAction', handleSaveRequestAction as EventListener);
+
+    return () => {
+      window.removeEventListener('saveRequestAction', handleSaveRequestAction as EventListener);
+    };
+  }, [props.isMobile]);
+
+  useEffect(() => {
+    const handleSaveAndShow = (e: CustomEvent) => {
+      const { request, isMobile } = e.detail;
+      
+      // Set panel and open sheet if mobile
+      setActivePanel("collections");
+      if (props.isMobile && isMobile) {
+        setIsOpen(true);
+      }
+
+      // Small delay to ensure panel switch is complete
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('showCollectionSaveForm', {
+          detail: request
+        }));
+      }, 50);
+    };
+
+    window.addEventListener('saveAndShowRequest', handleSaveAndShow as EventListener);
+    return () => {
+      window.removeEventListener('saveAndShowRequest', handleSaveAndShow as EventListener);
+    };
+  }, [props.isMobile]);
+
+  useEffect(() => {
+    const handleEnvironmentAction = (e: CustomEvent) => {
+      // First, switch the panel and open sheet if needed
+      setActivePanel("environments");
+      if (props.isMobile && e.detail.isMobile) {
+        setIsOpen(true);
+      }
+
+      // Use a minimal timeout to ensure panel switch is complete
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('showEnvironmentSaveForm', {
+          detail: {
+            key: e.detail.key,
+            value: e.detail.value,
+            type: e.detail.type
+          }
+        }));
+      }, 0);
+    };
+
+    window.addEventListener('environmentSaveAction', handleEnvironmentAction as EventListener);
+    return () => {
+      window.removeEventListener('environmentSaveAction', handleEnvironmentAction as EventListener);
+    };
+  }, [props.isMobile]);
+
   const tabs = [
     {
       id: "collections" as const,
@@ -26,6 +99,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
           {...props}
           key="collections-panel"
           onSwitchToCollections={() => setActivePanel("collections")}
+          onUpdateCollections={props.onUpdateCollections} 
         />
       ),
     },
@@ -115,22 +189,31 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
         </SheetTrigger>
         <SheetContent
           position="bottom"
-          className="w-[100vw] p-0 h-[90vh] bg-slate-800 border-t border-slate-700 rounded-t-lg"
+          className="w-[100vw] p-0 h-[88vh] rounded-t-2xl
+            bg-gradient-to-b from-slate-800/95 to-slate-900/95
+            backdrop-blur-xl
+            border-t-2 border-slate-800/60
+            shadow-[0_-15px_50px_-15px_rgba(0,0,0,0.45)]
+            animate-in slide-in-from-bottom duration-300
+            overflow-hidden flex flex-col"  // Added flex and overflow handling
         >
-          <div className="flex flex-col h-full">
-            <div className="rounded-t-lg overflow-hidden flex-1">
+          <div className="flex flex-col h-full overflow-hidden"> {/* Added overflow-hidden */}
+            <div className="rounded-t-2xl flex-1 overflow-hidden"> {/* Added flex-1 and overflow-hidden */}
               <PanelContent />
             </div>
             <div className="mt-auto flex justify-center relative">
               <Button
                 variant="ghost"
                 onClick={() => setIsOpen(false)}
-                className="absolute -top-8 rounded-full w-16 h-4 bg-slate-800 hover:bg-slate-700 
-                  text-slate-400 hover:text-slate-300 border-2 border-slate-700
+                className="absolute -top-16 rounded-full w-4 
+                  bg-slate-800/90 hover:bg-slate-700/90 
+                  text-slate-400 hover:text-slate-300 
+                  border border-slate-600/50 backdrop-blur-sm
                   transform hover:-translate-y-1 active:translate-y-0
-                  transition-all duration-300 animate-pulse"
+                  transition-all duration-300 shadow-lg
+                  group"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5 transition-transform group-hover:scale-90" />
               </Button>
             </div>
           </div>

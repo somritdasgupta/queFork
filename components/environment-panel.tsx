@@ -1,9 +1,9 @@
-import React, { useState, forwardRef, useImperativeHandle, useRef } from "react";
+import React, { useState, forwardRef, useImperativeHandle, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Edit2, Download, Upload, Copy } from "lucide-react";
+import { Plus, Trash2, Edit2, Download, Upload, Copy, X, BoxIcon } from "lucide-react";
 import { KeyValueEditor } from "./key-value-editor";
 import { Environment, EnvironmentVariable, KeyValuePair } from "@/types";
 import { v4 as uuidv4 } from "uuid";
@@ -39,6 +39,53 @@ export const EnvironmentPanel = forwardRef<
   const [expandedEnv, setExpandedEnv] = useState<string | null>(null);
   const navigableElements = useRef<NavigableElement[]>([]);
   const [expandedEnvironments, setExpandedEnvironments] = useState<Set<string>>(new Set());
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [pendingVariable, setPendingVariable] = useState<{
+    key: string;
+    value: string;
+    type: "text" | "secret";
+  } | null>(null);
+
+  useEffect(() => {
+    const handleShowSaveForm = (e: CustomEvent) => {
+      // Set both states immediately and synchronously
+      setPendingVariable(e.detail);
+      setShowSaveForm(true);
+    };
+
+    window.addEventListener("showEnvironmentSaveForm", handleShowSaveForm as EventListener);
+    return () => {
+      window.removeEventListener("showEnvironmentSaveForm", handleShowSaveForm as EventListener);
+    };
+  }, []); // Remove expandedEnvironments dependency
+
+  const handleSaveToEnvironment = (environmentId: string) => {
+    if (!pendingVariable) return;
+
+    const updatedEnvironments = environments.map(env => {
+      if (env.id === environmentId) {
+        return {
+          ...env,
+          variables: [
+            ...env.variables,
+            {
+              key: pendingVariable.key,
+              value: pendingVariable.value,
+              type: pendingVariable.type,
+              enabled: true
+            }
+          ],
+          lastModified: new Date().toISOString()
+        };
+      }
+      return env;
+    });
+
+    onEnvironmentsUpdate(updatedEnvironments);
+    setPendingVariable(null);
+    setShowSaveForm(false);
+    toast.success("Variable added to environment");
+  };
 
   const handleDeleteEnvironment = (id: string) => {
     const env = environments.find(e => e.id === id);
@@ -288,6 +335,13 @@ export const EnvironmentPanel = forwardRef<
   );
 
   if (editingEnvironment) {
+    // Add check to close editing mode if save form needs to be shown
+    useEffect(() => {
+      if (showSaveForm && pendingVariable) {
+        setEditingEnvironment(null);
+      }
+    }, [showSaveForm, pendingVariable]);
+
     return (
       <div className="h-full flex flex-col bg-slate-800">
         <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
@@ -351,7 +405,56 @@ export const EnvironmentPanel = forwardRef<
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-800">
+    <div className="h-full flex flex-col bg-slate-800/95"> {/* Added proper background */}
+      {/* Show save form when needed */}
+      {showSaveForm && pendingVariable && (
+        <div className="border-b border-slate-700 bg-slate-900/50">
+          <div className="p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-slate-300">
+                Save to Environment
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setPendingVariable(null);
+                  setShowSaveForm(false);
+                }}
+                className="h-7 w-7 p-0"
+              >
+                <X className="h-4 w-4 text-slate-400" />
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-slate-400 mb-2">
+                Select Environment
+              </div>
+              <div className="space-y-1">
+                {environments.map((env) => (
+                  <Button
+                    key={env.id}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSaveToEnvironment(env.id)}
+                    className="w-full justify-start text-left h-8 px-3 text-slate-300 hover:text-slate-200 hover:bg-slate-800"
+                  >
+                    <BoxIcon className="h-4 w-4 mr-2 text-slate-400" />
+                    {env.name}
+                    {env.global && (
+                      <Badge variant="secondary" className="ml-2 text-[10px]">
+                        Global
+                      </Badge>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="sticky top-0 z-10 bg-slate-900">
         <div className="flex w-full">
           <Input
@@ -389,7 +492,7 @@ export const EnvironmentPanel = forwardRef<
         />
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 overflow-hidden"> {/* Added flex-1 and overflow handling */}
         <Accordion
           type="multiple"
           value={Array.from(expandedEnvironments)}
@@ -485,7 +588,7 @@ export const EnvironmentPanel = forwardRef<
                   preventFirstItemDeletion={true}
                   autoSave={true}
                   isMobile={true} // Force mobile UI
-                  className="border-0 shadow-none" // Remove any borders/shadows
+                  className="border-0 shadow-none h-full" // Remove any borders/shadows and added full height
                 />
               </AccordionContent>
             </AccordionItem>

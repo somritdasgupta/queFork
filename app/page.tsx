@@ -19,6 +19,7 @@ import {
   SavedRequest,
   Environment,
   SidePanelProps,
+  ImportSource,
 } from "@/types";
 import {
   EnvironmentPanel,
@@ -31,6 +32,8 @@ import saveAs from "file-saver";
 import { UrlBar } from "@/components/url-bar";
 import SidePanel from "@/components/side-panel";
 import { EnvironmentSelector } from "@/components/environment-selector";
+import { importFromUrl, parseImportData } from "@/lib/import-utils";
+import { ScriptRunner } from '@/lib/script-runner';
 
 export default function Page() {
   const [method, setMethod] = useState("GET");
@@ -91,6 +94,10 @@ export default function Page() {
   const [activePanel, setActivePanel] = useState<
     "collections" | "history" | "environments"
   >("collections");
+  const [preRequestScript, setPreRequestScript] = useState<string | null>(null);
+  const [testScript, setTestScript] = useState<string | null>(null);
+  const [scriptLogs, setScriptLogs] = useState<string[]>([]);
+  const [testResults, setTestResults] = useState<any[]>([]);
 
   useEffect(() => {
     const loadSavedEnvironments = () => {
@@ -229,6 +236,28 @@ export default function Page() {
     const startTime = Date.now();
 
     try {
+      // Run pre-request script
+      if (preRequestScript) {
+        const scriptRunner = new ScriptRunner({
+          request: {
+            method,
+            url,
+            headers,
+            body
+          },
+          environment: mergedEnvVariables.reduce((acc, v) => ({ ...acc, [v.key]: v.value }), {}),
+          variables: {}
+        }, (type, ...args) => {
+          setScriptLogs(logs => [...logs, `[${type.toUpperCase()}] ${args.join(' ')}`]);
+        });
+
+        const result = await scriptRunner.runScript(preRequestScript);
+        if (!result.success) {
+          toast.error(`Pre-request script error: ${result.error}`);
+          return;
+        }
+      }
+
       const queryString = params
         .filter((p) => p.key && p.value && p.enabled)
         .map(
@@ -297,6 +326,38 @@ export default function Page() {
       };
 
       setResponse(finalResponse);
+
+      // Run test script
+      if (testScript && response) {
+        const scriptRunner = new ScriptRunner({
+          request: {
+            method,
+            url,
+            headers: requestHeaders,
+            body
+          },
+          response: {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers,
+            body: response.body
+          },
+          environment: mergedEnvVariables.reduce((acc, v) => ({ ...acc, [v.key]: v.value }), {}),
+          variables: {}
+        }, (type, ...args) => {
+          setScriptLogs(logs => [...logs, `[${type.toUpperCase()}] ${args.join(' ')}`]);
+        });
+
+        const results = await scriptRunner.runTests(testScript);
+        setTestResults(results);
+
+        const failedTests = results.filter(r => !r.passed).length;
+        if (failedTests > 0) {
+          toast.error(`${failedTests} test(s) failed`);
+        } else {
+          toast.success(`All ${results.length} test(s) passed`);
+        }
+      }
 
       // Add history saving logic here
       if (isHistorySavingEnabled) {
@@ -673,6 +734,43 @@ export default function Page() {
     toast.success(`Added ${key} to ${currentEnvironment.name}`);
   };
 
+  const handleUpdateCollections = (updatedCollections: Collection[]) => {
+    // Update state
+    setCollections(updatedCollections);
+    // Persist to localStorage
+    localStorage.setItem("apiCollections", JSON.stringify(updatedCollections));
+    toast.success("Collections updated");
+  };
+
+  const handleImportCollections = async (
+    source: ImportSource,
+    data: string
+  ) => {
+    try {
+      let importedCollections: Collection[];
+
+      if (source === "url") {
+        importedCollections = await importFromUrl(data);
+      } else {
+        importedCollections = parseImportData(source, data);
+      }
+
+      // Merge with existing collections
+      const newCollections = [...collections, ...importedCollections];
+
+      // Update state and storage
+      setCollections(newCollections);
+      localStorage.setItem("apiCollections", JSON.stringify(newCollections));
+
+      toast.success(
+        `Successfully imported ${importedCollections.length} collection(s)`
+      );
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error("Failed to import collections");
+    }
+  };
+
   // Define panel props
   const sidebarProps = {
     collections,
@@ -694,6 +792,8 @@ export default function Page() {
     currentEnvironment,
     onEnvironmentChange: handleEnvironmentChange,
     onEnvironmentsUpdate: handleEnvironmentsUpdate,
+    onUpdateCollections: handleUpdateCollections,
+    onImportCollections: handleImportCollections,
   };
 
   const requestPanelProps = {
@@ -744,43 +844,48 @@ export default function Page() {
     currentEnvironment,
     onEnvironmentChange: handleEnvironmentChange,
     onEnvironmentsUpdate: handleEnvironmentsUpdate,
+    onUpdateCollections: handleUpdateCollections, // Add this line
+    onImportCollections: handleImportCollections,
     isMobile: true,
   };
 
   useEffect(() => {
     const computeMergedVariables = () => {
-      let merged: { key: string; value: string; type?: "text" | "secret" }[] = [];
-      
+      let merged: { key: string; value: string; type?: "text" | "secret" }[] =
+        [];
+
       // Add global environment variables first
-      const globalEnv = environments.find(env => env.global);
+      const globalEnv = environments.find((env) => env.global);
       if (globalEnv) {
-        merged.push(...globalEnv.variables.filter(v => v.enabled));
+        merged.push(...globalEnv.variables.filter((v) => v.enabled));
       }
 
       // Add current environment variables, overwriting any duplicates
       if (currentEnvironment && !currentEnvironment.global) {
-        currentEnvironment.variables.filter(v => v.enabled).forEach(v => {
-          const index = merged.findIndex(mv => mv.key === v.key);
-          if (index !== -1) {
-            merged[index] = v;
-          } else {
-            merged.push(v);
-          }
-        });
+        currentEnvironment.variables
+          .filter((v) => v.enabled)
+          .forEach((v) => {
+            const index = merged.findIndex((mv) => mv.key === v.key);
+            if (index !== -1) {
+              merged[index] = v;
+            } else {
+              merged.push(v);
+            }
+          });
       }
 
       // Filter out any empty keys
-      merged = merged.filter(v => v.key.trim() !== '');
-      
+      merged = merged.filter((v) => v.key.trim() !== "");
+
       setMergedEnvVariables(merged);
     };
 
     computeMergedVariables();
 
     // Also compute when environment is updated
-    window.addEventListener('environmentUpdated', computeMergedVariables);
+    window.addEventListener("environmentUpdated", computeMergedVariables);
     return () => {
-      window.removeEventListener('environmentUpdated', computeMergedVariables);
+      window.removeEventListener("environmentUpdated", computeMergedVariables);
     };
   }, [environments, currentEnvironment]);
 
