@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from "react";
+import React, { useState, forwardRef, useImperativeHandle, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,6 +15,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { NavigableElement, useKeyboardNavigation } from './keyboard-navigation';
 
 interface EnvironmentPanelProps {
   environments: Environment[];
@@ -36,6 +37,93 @@ export const EnvironmentPanel = forwardRef<
     useState<Environment | null>(null);
   const [search, setSearch] = useState("");
   const [expandedEnv, setExpandedEnv] = useState<string | null>(null);
+  const navigableElements = useRef<NavigableElement[]>([]);
+  const [expandedEnvironments, setExpandedEnvironments] = useState<Set<string>>(new Set());
+
+  const handleDeleteEnvironment = (id: string) => {
+    const env = environments.find(e => e.id === id);
+    if (env && !env.global) {
+      if (confirm('Are you sure you want to delete this environment?')) {
+        // Clean up navigable elements
+        navigableElements.current = navigableElements.current.filter(
+          el => el.id !== id
+        );
+        onEnvironmentsUpdate(environments.filter(e => e.id !== id));
+        toast.success('Environment deleted');
+
+        // Focus next available environment
+        const nextElement = navigableElements.current[0];
+        if (nextElement) {
+          setFocus(nextElement.id);
+        }
+      }
+    }
+  };
+
+  const { setFocus } = useKeyboardNavigation(
+    navigableElements.current,
+    (direction, currentId) => {
+      const currentElement = navigableElements.current.find(el => el.id === currentId);
+      if (!currentElement) return;
+
+      let nextId: string | undefined;
+
+      switch (direction) {
+        case 'down':
+          nextId = navigableElements.current.find(
+            el => el.type === 'environment' && 
+            navigableElements.current.indexOf(el) > navigableElements.current.indexOf(currentElement)
+          )?.id;
+          break;
+        case 'up':
+          const reversedElements = [...navigableElements.current].reverse();
+          nextId = reversedElements.find(
+            el => el.type === 'environment' && 
+            navigableElements.current.indexOf(el) < navigableElements.current.indexOf(currentElement)
+          )?.id;
+          break;
+        case 'right':
+          // Expand environment if collapsed
+          if (currentElement.type === 'environment') {
+            setExpandedEnvironments(prev => {
+              const next = new Set(prev);
+              next.add(currentElement.id);
+              return next;
+            });
+            setExpandedEnv(currentElement.id);
+          }
+          break;
+        case 'left':
+          // Collapse environment
+          if (currentElement.type === 'environment') {
+            setExpandedEnvironments(prev => {
+              const next = new Set(prev);
+              next.delete(currentElement.id);
+              return next;
+            });
+            setExpandedEnv(null);
+          }
+          break;
+      }
+
+      if (nextId) {
+        setFocus(nextId);
+        // Scroll element into view
+        const element = navigableElements.current.find(el => el.id === nextId);
+        element?.ref.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    },
+    (id) => {
+      // Handle environment selection
+      const element = navigableElements.current.find(el => el.id === id);
+      if (element?.type === 'environment') {
+        setEditingEnvironment(environments.find(env => env.id === id) || null);
+      }
+    },
+    (id) => {
+      handleDeleteEnvironment(id);
+    }
+  );
 
   const handleCreateEnvironment = () => {
     if (
@@ -303,15 +391,26 @@ export const EnvironmentPanel = forwardRef<
 
       <ScrollArea className="flex-1">
         <Accordion
-          type="single"
-          collapsible
-          value={expandedEnv || undefined}
-          onValueChange={(value) => setExpandedEnv(value)}
+          type="multiple"
+          value={Array.from(expandedEnvironments)}
+          onValueChange={(value) => {
+            setExpandedEnvironments(new Set(value));
+            setExpandedEnv(value[value.length - 1]);
+          }}
         >
           {filteredEnvironments.map((env) => (
             <AccordionItem
               key={env.id}
               value={env.id}
+              ref={el => {
+                if (el) {
+                  navigableElements.current.push({
+                    id: env.id,
+                    ref: el,
+                    type: 'environment'
+                  });
+                }
+              }}
               className="border-b border-slate-700"
             >
               <AccordionTrigger className="px-4 text-slate-500 hover:bg-slate-700/50 transition-colors">
@@ -361,16 +460,7 @@ export const EnvironmentPanel = forwardRef<
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (
-                            confirm(
-                              "Are you sure you want to delete this environment?"
-                            )
-                          ) {
-                            onEnvironmentsUpdate(
-                              environments.filter((e) => e.id !== env.id)
-                            );
-                            toast.success("Environment deleted");
-                          }
+                          handleDeleteEnvironment(env.id);
                         }}
                         className="h-8 w-8 hover:bg-slate-800 text-red-400 hover:text-red-300"
                       >

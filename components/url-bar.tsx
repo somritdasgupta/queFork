@@ -11,18 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -32,6 +20,7 @@ import { Send, Loader2, Unplug, PlugZap2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useWebSocket } from "./websocket/websocket-context";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface UrlBarProps {
   method: string;
@@ -42,7 +31,7 @@ interface UrlBarProps {
   variables: {
     key: string;
     value: string;
-    type?: "text" | "secret"; 
+    type?: "text" | "secret";
   }[];
   isMobile: boolean;
   recentUrls?: string[];
@@ -63,34 +52,107 @@ interface SuggestionType {
   description?: string;
 }
 
-// Define URL type
 type UrlType = "http" | "websocket";
-type UrlProtocol = "ws" | "io"; // Update to be more specific
+type UrlProtocol = "ws" | "io";
 
-// Add URL type detection
 const detectUrlType = (url: string): UrlType => {
   if (!url) return "http";
-  if (
-    url.startsWith("ws://") ||
-    url.startsWith("wss://") ||
-    url.includes("socket.io") ||
-    url.includes("websocket")
-  ) {
-    return "websocket";
-  }
-  return "http";
+  return /^wss?:\/\/|socket\.io|websocket/.test(url) ? "websocket" : "http";
 };
 
 const detectWebSocketProtocol = (url: string): UrlProtocol => {
-  // Make Socket.IO detection more robust
-  const isSocketIO =
-    url.includes("socket.io") ||
-    url.includes("engine.io") ||
-    /\?EIO=[3-4]/.test(url) ||
-    /transport=websocket/.test(url) ||
-    /\/socket\.io\/?/.test(url);
+  return /socket\.io|engine\.io|\?EIO=[3-4]|transport=websocket|\/socket\.io\/?/.test(
+    url
+  )
+    ? "io"
+    : "ws";
+};
 
-  return isSocketIO ? "io" : "ws";
+const placeholderTexts = [
+  "Welcome to queFork",
+  "Enter an API endpoint...",
+  "Try a WebSocket URL...",
+  "Type '{{' to use envar",
+  "Press '/' to focus",
+];
+const idleAnimationVariants = {
+  idle: {
+    boxShadow: [
+      "0 0 0 0 rgba(59, 130, 246, 0)",
+      "0 0 0 2px rgba(59, 130, 246, 0.08)",
+      "0 0 0 0 rgba(59, 130, 246, 0)",
+    ],
+    transition: {
+      duration: 3,
+      repeat: Infinity,
+      ease: "easeInOut",
+    },
+  },
+  active: {
+    boxShadow: "0 0 0 0 rgba(59, 130, 246, 0)",
+  },
+};
+
+type PlaceholderTextProps = {
+  text: string;
+  direction: number;
+};
+const typewriterVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: (custom: { delay: number; duration: number }) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: custom.delay,
+      duration: custom.duration,
+      ease: "easeOut",
+    },
+  }),
+  exit: {
+    opacity: 0,
+    x: 20,
+    transition: {
+      duration: 0.2,
+      ease: "easeIn",
+    },
+  },
+};
+
+const AnimatedPlaceholder = ({ text, direction }: PlaceholderTextProps) => {
+  const characters = text.split("");
+
+  return (
+    <motion.div
+      key={text}
+      className="absolute inset-0 flex items-center px-4 pointer-events-none text-xs sm:text-sm"
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      <div className="flex items-center h-full">
+        {characters.map((char, index) => (
+          <motion.span
+            key={index}
+            variants={typewriterVariants}
+            custom={{
+              delay: index * 0.05,
+              duration: 0.1,
+            }}
+            className={cn(
+              "font-mono tracking-tight text-slate-400/80",
+              "font-medium antialiased"
+            )}
+            style={{
+              fontFamily: "JetBrains Mono, Menlo, Monaco, Consolas, monospace",
+              textShadow: "0 0 10px rgba(56, 189, 248, 0.1)",
+            }}
+          >
+            {char === " " ? "\u00A0" : char}
+          </motion.span>
+        ))}
+      </div>
+    </motion.div>
+  );
 };
 
 export function UrlBar({
@@ -111,11 +173,43 @@ export function UrlBar({
   const [cursorPosition, setCursorPosition] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Add state for environment variable suggestions
   const [showEnvSuggestions, setShowEnvSuggestions] = useState(false);
   const [searchPrefix, setSearchPrefix] = useState("");
 
-  // Helper to resolve variables in URL
+  const [isIdle, setIsIdle] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
+
+  const [[page, direction], setPage] = useState([0, 0]);
+  const typingTimeout = useRef<NodeJS.Timeout>();
+
+  const debouncedHandleInput = useMemo(
+    () =>
+      debounce((value: string, cursorPos: number) => {
+        propsOnUrlChange(value);
+        setCursorPosition(cursorPos);
+        setIsTyping(true);
+        clearTimeout(typingTimeout.current);
+        typingTimeout.current = setTimeout(() => {
+          setIsTyping(false);
+          setIsIdle(!value);
+        }, 1000);
+      }, 50),
+    [propsOnUrlChange]
+  );
+
+  useEffect(() => {
+    if (!url && isIdle) {
+      const interval = setInterval(() => {
+        setPage(([prevPage, prevDirection]) => {
+          const nextPage = (prevPage + 1) % placeholderTexts.length;
+          return [nextPage, 1];
+        });
+      }, 4000);
+
+      return () => clearInterval(interval);
+    }
+  }, [url, isIdle]);
+
   const resolveVariables = (urlString: string): string => {
     return urlString.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
       const variable = variables.find((v) => v.key === key);
@@ -123,14 +217,12 @@ export function UrlBar({
     });
   };
 
-  const urlType = detectUrlType(url);
-  const wsProtocol = detectWebSocketProtocol(url);
+  const urlType = useMemo(() => detectUrlType(url), [url]);
+  const wsProtocol = useMemo(() => detectWebSocketProtocol(url), [url]);
 
-  // Modify URL validation to include WebSocket URLs
   const isValidUrl = (urlString: string): boolean => {
     if (!urlString) return false;
 
-    // Basic protocol check
     if (
       urlString === "http://" ||
       urlString === "https://" ||
@@ -140,26 +232,22 @@ export function UrlBar({
       return false;
     }
 
-    // Check if there are any variables in the URL
     const hasVariables = urlString.includes("{{");
     if (hasVariables) {
-      // Check for unclosed variables
       const hasUnclosedVariables =
         (urlString.match(/\{\{/g) || []).length !==
         (urlString.match(/\}\}/g) || []).length;
       if (hasUnclosedVariables) return false;
 
-      // Check if all variables are defined
       const variableMatches = urlString.match(/\{\{([^}]+)\}\}/g) || [];
-      const allVariablesDefined = variableMatches.every(match => {
+      const allVariablesDefined = variableMatches.every((match) => {
         const varName = match.slice(2, -2);
-        return variables.some(v => v.key === varName);
+        return variables.some((v) => v.key === varName);
       });
 
       if (!allVariablesDefined) return false;
     }
 
-    // Use the resolved URL for final validation
     const resolvedUrl = resolveVariables(urlString);
     const httpPattern =
       /^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
@@ -168,13 +256,6 @@ export function UrlBar({
 
     return httpPattern.test(resolvedUrl) || wsPattern.test(resolvedUrl);
   };
-
-  const resolvedUrl = useMemo(() => {
-    return url.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
-      const variable = variables.find((v) => v.key === key);
-      return variable ? variable.value : `{{${key}}}`;
-    });
-  }, [url, variables]);
 
   const getMethodColor = (method: string) => {
     const colors = {
@@ -191,10 +272,8 @@ export function UrlBar({
     const newValue = e.target.value;
     const cursorPos = e.target.selectionStart || 0;
 
-    propsOnUrlChange(newValue);
-    setCursorPosition(cursorPos);
+    debouncedHandleInput(newValue, cursorPos);
 
-    // Check for variable typing
     const beforeCursor = newValue.slice(0, cursorPos);
     const match = beforeCursor.match(/\{\{([^}]*)$/);
 
@@ -205,6 +284,8 @@ export function UrlBar({
     } else {
       setShowEnvSuggestions(false);
     }
+
+    setIsIdle(false);
   };
 
   const insertVariable = (varKey: string) => {
@@ -229,41 +310,33 @@ export function UrlBar({
     }, 0);
   };
 
-  // Add WebSocket context
   const {
     connect: wsConnect,
     disconnect: wsDisconnect,
     isConnected,
     connectionStatus,
     onUrlChange: wsUrlChange,
-    url: wsUrl, // Add this
+    url: wsUrl,
   } = useWebSocket();
 
-  // Combine URL change handlers with proper type checking
-  // Update URL handling to auto-switch modes consistently
   const handleUrlChange = (newUrl: string) => {
     const urlProtocol = detectUrlType(newUrl);
     propsOnUrlChange(newUrl);
 
-    // If URL is cleared or changed to HTTP while in WebSocket mode, switch back
     if ((!newUrl || urlProtocol === "http") && isWebSocketMode) {
       if (wsConnected) {
         wsDisconnect();
       }
       onWebSocketToggle();
-    }
-    // Only switch to WebSocket mode if there's a valid WebSocket URL
-    else if (newUrl && urlProtocol === "websocket" && !isWebSocketMode) {
+    } else if (newUrl && urlProtocol === "websocket" && !isWebSocketMode) {
       onWebSocketToggle();
     }
 
-    // Update WebSocket URL if in WS mode
     if (isWebSocketMode) {
       wsUrlChange(newUrl);
     }
   };
 
-  // Handle WebSocket connection
   const handleWebSocketAction = () => {
     if (!url) return;
 
@@ -281,10 +354,8 @@ export function UrlBar({
                 : `ws://${url}`;
 
         handleUrlChange(formattedUrl);
-        // Connect with detected protocol, but don't toggle tab visibility
         const protocol = detectWebSocketProtocol(formattedUrl);
         wsConnect([protocol]);
-        // Note: Removed onWebSocketToggle() from here
       } catch (error) {
         console.error("WebSocket setup error:", error);
         toast.error("Failed to setup WebSocket connection");
@@ -313,8 +384,8 @@ export function UrlBar({
                   ? isConnected
                     ? "bg-blue-500 hover:bg-red-600 text-white after:absolute after:inset-0 after:animate-pulse"
                     : "bg-slate-900 hover:bg-slate-700 text-slate-400"
-                  : isLoading 
-                    ? "bg-slate-900 text-slate-400 cursor-not-allowed overflow-hidden" 
+                  : isLoading
+                    ? "bg-slate-900 text-slate-400 cursor-not-allowed overflow-hidden"
                     : "bg-slate-900 hover:bg-slate-800 text-slate-400",
                 (!isValidUrl(url) || isLoading) &&
                   "opacity-50 cursor-not-allowed"
@@ -334,11 +405,13 @@ export function UrlBar({
                   <PlugZap2 className="h-5 w-5" />
                 )
               ) : (
-                <Send className={cn(
-                  "h-5 w-5",
-                  "transition-transform duration-200",
-                  "group-hover:translate-x-1"
-                )} />
+                <Send
+                  className={cn(
+                    "h-5 w-5",
+                    "transition-transform duration-200",
+                    "group-hover:translate-x-1"
+                  )}
+                />
               )}
             </Button>
           </TooltipTrigger>
@@ -356,28 +429,90 @@ export function UrlBar({
     </div>
   );
 
-  // Update URL input to show protocol badge
+  const handleEnterKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (urlType === "websocket") {
+        handleWebSocketAction();
+      } else {
+        if (isValidUrl(url)) {
+          onSendRequest();
+        }
+      }
+    }
+  };
+
   const renderUrlInput = () => (
     <div className="w-full relative flex-1">
-      <Input
-        ref={inputRef}
-        value={url}
-        onChange={handleInputChange}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") setShowEnvSuggestions(false);
-        }}
-        placeholder={
-          urlType === "websocket" ? "Enter WebSocket URL" : "Enter API endpoint"
-        }
-        disabled={isConnected}
-        className={cn(
-          "pr-20 font-mono text-sm bg-slate-900 border border-slate-700 text-slate-400 rounded-lg transition-all",
-          `focus:border-${getMethodColor(method)}-500/50`,
-          !isValidUrl(url) && url && "border-red-500/50",
-          isMobile ? "text-xs" : "text-sm",
-          isConnected && "opacity-75 cursor-not-allowed"
-        )}
+      <motion.div
+        variants={idleAnimationVariants}
+        animate={isIdle && !url ? "idle" : "active"}
+        className="absolute inset-0 rounded-lg pointer-events-none"
       />
+
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          value={url}
+          disabled={isConnected}
+          onChange={handleInputChange}
+          onKeyDown={(e) => {
+            if (!isConnected) {
+              if (e.key === "Escape") setShowEnvSuggestions(false);
+              setIsIdle(false);
+              handleEnterKey(e);
+            }
+          }}
+          onFocus={() => setIsIdle(false)}
+          onBlur={() => {
+            if (!url) {
+              setTimeout(() => setIsIdle(true), 100);
+            }
+          }}
+          className={cn(
+            "pr-20 font-mono bg-slate-900",
+            "border border-slate-700 text-slate-500 rounded-lg",
+            "transition-all duration-300 ease-out",
+            "placeholder:text-slate-500 placeholder:font-mono",
+            "focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/30",
+            `focus:border-${getMethodColor(method)}-500/50`,
+            !isValidUrl(url) && url && "border-red-500/50",
+            "text-xs sm:text-sm",
+            "tracking-tight leading-relaxed",
+            isConnected && "opacity-50 cursor-not-allowed bg-slate-800",
+            isIdle && !url && "border-blue-500/20",
+            isTyping &&
+              "border-blue-500/30 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]"
+          )}
+          style={{
+            fontFamily: "JetBrains Mono, Menlo, Monaco, Consolas, monospace",
+          }}
+        />
+
+        {!url && isIdle && (
+          <AnimatePresence mode="wait" initial={false}>
+            <AnimatedPlaceholder
+              key={page}
+              text={placeholderTexts[page]}
+              direction={direction}
+            />
+          </AnimatePresence>
+        )}
+      </div>
+
+      {isIdle && !url && (
+        <motion.div
+          animate={{
+            opacity: [0.1, 0.15, 0.1],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute inset-0 -z-10 bg-blue-500/5 rounded-lg blur-lg"
+        />
+      )}
 
       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
         {variables && variables.length > 0 && (
@@ -392,7 +527,6 @@ export function UrlBar({
         )}
       </div>
 
-      {/* Environment Variables Dropdown */}
       {showEnvSuggestions && (
         <div className="absolute top-full left-0 z-50 w-full mt-1 rounded-lg border border-slate-700 bg-slate-900 shadow-md max-h-[300px] overflow-y-auto">
           <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-2">
@@ -453,7 +587,6 @@ export function UrlBar({
       if (historyItem.type === "websocket") {
         handleUrlChange(historyItem.url);
 
-        // If there was an active connection, disconnect first
         if (isConnected) {
           wsDisconnect();
         }
@@ -470,7 +603,6 @@ export function UrlBar({
     [isConnected, wsDisconnect, handleUrlChange, onWebSocketToggle]
   );
 
-  // Update useEffect to handle history events
   useEffect(() => {
     const handleHistorySelect = (event: CustomEvent) => {
       const { item, url: historyUrl } = event.detail;
@@ -485,7 +617,6 @@ export function UrlBar({
       if (historyUrl) {
         handleUrlChange(historyUrl);
         if (item?.type === "websocket" && !isWebSocketMode) {
-          // Only toggle to WebSocket tab if we're not already in it
           onWebSocketToggle();
         }
       }
@@ -503,7 +634,6 @@ export function UrlBar({
     };
   }, [handleUrlChange, onWebSocketToggle, isConnected, isWebSocketMode]);
 
-  // Add protocol badge render function
   const renderProtocolBadge = (protocol: string) => (
     <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 h-10">
       <Badge
@@ -520,20 +650,17 @@ export function UrlBar({
     </div>
   );
 
-  // Filter variables based on search
   const filteredVariables = useMemo(() => {
     if (!showEnvSuggestions) return [];
-    
-    // Ensure variables is an array and has items
+
     const validVariables = Array.isArray(variables) ? variables : [];
-    
+
     return validVariables
       .filter((v) => {
         const searchTerm = searchPrefix.toLowerCase().trim();
         return v.key.toLowerCase().includes(searchTerm);
       })
       .sort((a, b) => {
-        // Sort exact matches first
         const aStartsWith = a.key
           .toLowerCase()
           .startsWith(searchPrefix.toLowerCase());
@@ -556,11 +683,9 @@ export function UrlBar({
     const varStart = beforeCursor.lastIndexOf("{{");
 
     if (varStart === -1) {
-      // If no variable start found, just insert at cursor
       const newUrl = beforeCursor + `{{${varKey}}}` + afterCursor;
       handleUrlChange(newUrl);
     } else {
-      // Replace partial variable with selected one
       const newUrl =
         beforeCursor.slice(0, varStart) + `{{${varKey}}}` + afterCursor;
       handleUrlChange(newUrl);
@@ -568,7 +693,6 @@ export function UrlBar({
 
     setShowEnvSuggestions(false);
 
-    // Position cursor after inserted variable
     setTimeout(() => {
       const newPosition = varStart + varKey.length + 4;
       input.setSelectionRange(newPosition, newPosition);
@@ -576,7 +700,6 @@ export function UrlBar({
     }, 0);
   };
 
-  // Add this new helper function after other helper functions
   const highlightMatch = (text: string, query: string) => {
     if (!query) return text;
     const parts = text.split(new RegExp(`(${query})`, "gi"));
@@ -594,6 +717,22 @@ export function UrlBar({
       </span>
     );
   };
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, []);
 
   return (
     <div className="flex-1 flex items-center gap-2">
@@ -640,6 +779,18 @@ export function UrlBar({
     </div>
   );
 }
+
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
 const getWebSocketClasses = (connected: boolean) =>
   cn(
     "w-10 h-10 rounded-lg transition-all relative overflow-hidden bg-slate-900 hover:bg-slate-800",

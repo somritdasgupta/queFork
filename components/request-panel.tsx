@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { KeyValueEditor } from "./key-value-editor";
@@ -21,6 +21,7 @@ import { ConnectionTab } from "./websocket/connection-tab";
 import { useWebSocket } from "./websocket/websocket-context";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { NavigableElement, useKeyboardNavigation } from './keyboard-navigation';
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -145,6 +146,36 @@ export function RequestPanel({
     })),
   ];
 
+  const navigableElements = useRef<NavigableElement[]>([]);
+
+  const { setFocus } = useKeyboardNavigation(
+    navigableElements.current,
+    (direction, currentId) => {
+      const currentTab = tabs.findIndex(tab => tab.id === currentId);
+      let nextId: string | undefined;
+
+      switch (direction) {
+        case 'right':
+          nextId = tabs[(currentTab + 1) % tabs.length]?.id;
+          break;
+        case 'left':
+          nextId = tabs[currentTab === 0 ? tabs.length - 1 : currentTab - 1]?.id;
+          break;
+      }
+
+      if (nextId) {
+        setFocus(nextId);
+      }
+    },
+    (id) => {
+      // Handle tab selection
+      const tabTrigger = document.querySelector(`[data-state][value="${id}"]`);
+      if (tabTrigger instanceof HTMLElement) {
+        tabTrigger.click();
+      }
+    }
+  );
+
   return (
     <div className="h-full flex flex-col bg-slate-800">
       <AnimatePresence mode="wait">
@@ -170,6 +201,15 @@ export function RequestPanel({
                           <TabsTrigger
                             key={tab.id}
                             value={tab.id}
+                            ref={el => {
+                              if (el) {
+                                navigableElements.current.push({
+                                  id: tab.id,
+                                  ref: el,
+                                  type: 'tab'
+                                });
+                              }
+                            }}
                             className="flex-1 h-10 rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs text-slate-400 whitespace-nowrap 
                               data-[state=active]:border-blue-400 
                               data-[state=active]:text-blue-400 
@@ -196,21 +236,6 @@ export function RequestPanel({
                 <div className="p-0">
                   {/* Query Parameters Tab */}
                   <TabsContent value="params" className="m-0 min-h-0">
-                    <div className="flex border-b-2 border-slate-700 items-center justify-between p-2">
-                      <div className="flex items-center gap-2 text-slate-400">
-                        <SearchCode className="h-4 w-4" />
-                        <h3 className="text-sm font-semibold">
-                          Query Parameters
-                        </h3>
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="bg-slate-800 text-slate-400"
-                      >
-                        {props.params.filter((p) => p.enabled && p.key).length}{" "}
-                        Active
-                      </Badge>
-                    </div>
                     <div className="bg-slate-900 flex-1">
                       <KeyValueEditor
                         pairs={props.params}
@@ -227,21 +252,6 @@ export function RequestPanel({
 
                   {/* Headers Tab */}
                   <TabsContent value="headers" className="m-0 min-h-0">
-                    <div className="flex border-b-2 border-slate-700 items-center justify-between p-2">
-                      <div className="flex items-center gap-2 text-slate-400">
-                        <List className="h-4 w-4" />
-                        <h3 className="text-sm font-semibold">
-                          Request Headers
-                        </h3>
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="bg-slate-800 text-slate-400"
-                      >
-                        {props.headers.filter((h) => h.enabled && h.key).length}{" "}
-                        Active
-                      </Badge>
-                    </div>
                     <div className="bg-slate-900">
                       <KeyValueEditor
                         pairs={props.headers}
@@ -264,32 +274,6 @@ export function RequestPanel({
                       value={`body-${type}`}
                       className="m-0 min-h-0"
                     >
-                      <div className="flex border-b-2 border-slate-700 items-center justify-between p-2">
-                        <div className="flex items-center gap-2 text-slate-400">
-                          {getBodyIcon(type)}
-                          <h3 className="text-sm font-semibold">
-                            {type === "form-data"
-                              ? "Form Data"
-                              : type === "x-www-form-urlencoded"
-                                ? "URL Encoded"
-                                : type.charAt(0).toUpperCase() +
-                                  type.slice(1)}
-                            Body
-                          </h3>
-                        </div>
-                        {(type === "form-data" ||
-                          type === "x-www-form-urlencoded") && (
-                          <Badge
-                            variant="secondary"
-                            className="bg-slate-800 text-slate-400"
-                          >
-                            {(props.body.content as KeyValuePair[])?.filter?.(
-                              (p) => p.enabled && p.key
-                            )?.length || 0}{" "}
-                            Fields
-                          </Badge>
-                        )}
-                      </div>
                       <div className="bg-slate-900">
                         <div
                           className={cn(
@@ -313,22 +297,6 @@ export function RequestPanel({
 
                   {/* Auth Tab */}
                   <TabsContent value="auth" className="m-0 min-h-0">
-                    <div className="flex border-b-2 border-slate-700 items-center justify-between p-2">
-                      <div className="flex items-center gap-2 text-slate-400">
-                        <KeyRound className="h-4 w-4" />
-                        <h3 className="text-sm font-semibold">
-                          Authentication
-                        </h3>
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="bg-slate-800 text-slate-400"
-                      >
-                        {props.auth.type !== "none"
-                          ? props.auth.type.toUpperCase()
-                          : "NONE"}
-                      </Badge>
-                    </div>
                     <div className="bg-slate-800">
                       <div>
                         <AuthSection

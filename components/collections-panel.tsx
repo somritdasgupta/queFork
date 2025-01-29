@@ -30,7 +30,7 @@ import {
   FolderOpen,
   X,
 } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Collection,
   SavedRequest,
@@ -41,6 +41,7 @@ import {
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { cn } from "@/lib/utils";
+import { NavigableElement, useKeyboardNavigation } from './keyboard-navigation';
 
 interface CollectionsPanelProps {
   collections: Collection[];
@@ -211,8 +212,39 @@ export function CollectionsPanel({
   };
 
   const handleDeleteCollection = (collectionId: string) => {
-    onDeleteCollection(collectionId);
-    toast.success("Collection deleted successfully");
+    if (confirm('Are you sure you want to delete this collection?')) {
+      // Clean up navigable elements
+      navigableElements.current = navigableElements.current.filter(
+        el => el.id !== collectionId && el.parentId !== collectionId
+      );
+      onDeleteCollection(collectionId);
+      toast.success("Collection deleted successfully");
+      
+      // Focus next available item
+      const nextElement = navigableElements.current[0];
+      if (nextElement) {
+        setFocus(nextElement.id);
+      }
+    }
+  };
+
+  const handleDeleteRequest = (collectionId: string, requestId: string) => {
+    if (confirm('Are you sure you want to delete this request?')) {
+      // Clean up navigable elements
+      navigableElements.current = navigableElements.current.filter(
+        el => el.id !== requestId
+      );
+      onDeleteRequest(collectionId, requestId);
+      toast.success("Request deleted");
+
+      // Focus collection after request deletion
+      const collectionElement = navigableElements.current.find(
+        el => el.id === collectionId
+      );
+      if (collectionElement) {
+        setFocus(collectionElement.id);
+      }
+    }
   };
 
   const filteredCollections = useMemo(() => {
@@ -242,9 +274,90 @@ export function CollectionsPanel({
       });
   }, [collections, search, filterBy, sortBy]);
 
+  
+  const navigableElements = useRef<NavigableElement[]>([]);
+
+  const { setFocus } = useKeyboardNavigation(
+    navigableElements.current,
+    (direction, currentId) => {
+      const currentElement = navigableElements.current.find(el => el.id === currentId);
+      if (!currentElement) return;
+
+      let nextId: string | undefined;
+
+      switch (direction) {
+        case 'down':
+          nextId = navigableElements.current.find(
+            el => el.parentId === currentElement.parentId && 
+            navigableElements.current.indexOf(el) > navigableElements.current.indexOf(currentElement)
+          )?.id;
+          break;
+        case 'up':
+          // Find previous element in same context
+          const reversedElements = [...navigableElements.current].reverse();
+          nextId = reversedElements.find(
+            el => el.parentId === currentElement.parentId && 
+            navigableElements.current.indexOf(el) < navigableElements.current.indexOf(currentElement)
+          )?.id;
+          break;
+        case 'right':
+          // If collection, expand it
+          if (currentElement.type === 'collection') {
+            // Trigger accordion expand
+          }
+          break;
+        case 'left':
+          // If in request, go to parent collection
+          if (currentElement.type === 'request') {
+            nextId = currentElement.parentId;
+          }
+          break;
+      }
+
+      if (nextId) {
+        setFocus(nextId);
+      }
+    },
+    (id) => {
+      const element = navigableElements.current.find(el => el.id === id);
+      if (element?.type === 'request') {
+        const request = collections
+          .flatMap(c => c.requests)
+          .find(r => r.id === id);
+        if (request) {
+          onSelectRequest(request);
+        }
+      }
+    },
+    (id) => {
+      // Handle Delete key press
+      const element = navigableElements.current.find(el => el.id === id);
+      if (element?.type === 'collection') {
+        handleDeleteCollection(id);
+      } else if (element?.type === 'request' && element.parentId) {
+        handleDeleteRequest(element.parentId, id);
+      }
+    }
+  );
+
   // Replace the nested button structure in the request item rendering
   const renderRequestItem = (request: SavedRequest, collection: Collection) => (
-    <div key={request.id} className="group border-t border-slate-700/50">
+    <div
+      key={request.id}
+      ref={el => {
+        if (el) {
+          navigableElements.current.push({
+            id: request.id,
+            ref: el,
+            type: 'request',
+            parentId: collection.id
+          });
+        }
+      }}
+      tabIndex={0}
+      className="group border-t border-slate-700/50 outline-none focus:bg-slate-800"
+      // ...existing props
+    >
       <div
         className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer"
         onClick={() => onSelectRequest(request)}
@@ -299,78 +412,78 @@ export function CollectionsPanel({
       <div className="h-full flex flex-col bg-slate-800">
         <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
           <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            setSortBy((prev) =>
+          prev === "name" ? "date" : prev === "date" ? "method" : "name"
+            )
+          }
+          className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+        >
+          <SortAsc className="h-4 w-4 text-blue-400" />
+          <span className="text-xs capitalize">{sortBy}</span>
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                setSortBy((prev) =>
-                  prev === "name" ? "date" : prev === "date" ? "method" : "name"
-                )
-              }
-              className="flex items-center h-10 w-full border-2 border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+          variant="ghost"
+          size="sm"
+          className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
             >
-              <SortAsc className="h-4 w-4 text-blue-400" />
-              <span className="text-xs capitalize">{sortBy}</span>
+          <Filter className="h-4 w-4 text-purple-400" />
+          <span className="text-xs">{filterBy || "All"}</span>
             </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            className="bg-slate-800 border border-slate-700"
+          >
+            <DropdownMenuItem onClick={() => setFilterBy("")}>
+          All Methods
+            </DropdownMenuItem>
+            {["GET", "POST", "PUT", "DELETE", "PATCH"].map((method) => (
+          <DropdownMenuItem
+            key={method}
+            onClick={() => setFilterBy(method)}
+          >
+            {method}
+          </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center h-10 w-full border-2 border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-                >
-                  <Filter className="h-4 w-4 text-purple-400" />
-                  <span className="text-xs">{filterBy || "All"}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                className="bg-slate-800 border-2 border-slate-700"
-              >
-                <DropdownMenuItem onClick={() => setFilterBy("")}>
-                  All Methods
-                </DropdownMenuItem>
-                {["GET", "POST", "PUT", "DELETE", "PATCH"].map((method) => (
-                  <DropdownMenuItem
-                    key={method}
-                    onClick={() => setFilterBy(method)}
-                  >
-                    {method}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+        <div className="flex">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onExportCollections}
+            className="h-10 w-full rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+          >
+            <ArrowDownToLine className="h-4 w-4 text-emerald-400" />
+          </Button>
 
-            <div className="flex">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onExportCollections}
-                className="h-10 w-full rounded-none border-2 border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-              >
-                <ArrowDownToLine className="h-4 w-4 text-emerald-400" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsCreating(true)}
-                className="h-10 w-full border-2 border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-              >
-                <Plus className="h-4 w-4 text-cyan-400" />
-              </Button>
-            </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCreating(true)}
+            className="h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+          >
+            <Plus className="h-4 w-4 text-cyan-400" />
+          </Button>
+        </div>
           </div>
 
           {/* Search Input */}
           <div className="relative">
-            <Input
-              placeholder="Search collections"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 rounded-none w-full bg-slate-900 border-y-2 border-slate-700 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
-            />
+        <Input
+          placeholder="Search collections"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 rounded-none w-full bg-slate-900 border-y border-slate-700 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
+        />
           </div>
         </div>
 
