@@ -4,10 +4,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { KeyValueEditor } from "./key-value-editor";
 import { AuthSection } from "./auth-section";
 import { Button } from "@/components/ui/button";
-import { KeyValuePair, RequestBody, Environment, TestResult } from "@/types";
 import {
-  SearchCode,
-  List,
+  KeyValuePair,
+  RequestBody,
+  Environment,
+  TestResult,
+  ContentType,
+} from "@/types";
+import {
   FileJson,
   FormInput,
   Link,
@@ -17,6 +21,16 @@ import {
   PlugZap2,
   FileCode,
   TestTube2,
+  CheckCircle,
+  XCircle,
+  X,
+  Eraser,
+  SquareFunctionIcon,
+  SquareAsteriskIcon,
+  SquareCodeIcon,
+  SquareChartGanttIcon,
+  SquarePlay,
+  SquareActivityIcon,
 } from "lucide-react";
 import { Textarea } from "./ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -24,8 +38,19 @@ import { ConnectionTab } from "./websocket/connection-tab";
 import { useWebSocket } from "./websocket/websocket-context";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { NavigableElement, useKeyboardNavigation } from './keyboard-navigation';
-import { Editor } from '@monaco-editor/react';
+import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
+import { Editor } from "@monaco-editor/react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -80,6 +105,83 @@ interface TabItem {
   hidden?: boolean;
 }
 
+interface ContentTypeOption {
+  value: ContentType; // Update to use ContentType type
+  label: string;
+  category: "None" | "Text" | "Structured" | "Binary" | "Others";
+  icon?: React.ReactNode;
+  editor: "none" | "text" | "json" | "form" | "binary";
+}
+
+const contentTypeOptions: Record<string, ContentTypeOption[]> = {
+  None: [{ value: "none", label: "None", category: "None", editor: "none" }],
+  Text: [
+    { value: "json", label: "JSON", category: "Text", editor: "json" },
+    {
+      value: "application/json",
+      label: "JSON (application/json)",
+      category: "Text",
+      editor: "json",
+    },
+    {
+      value: "application/ld+json",
+      label: "JSON-LD",
+      category: "Text",
+      editor: "json",
+    },
+    {
+      value: "application/hal+json",
+      label: "HAL+JSON",
+      category: "Text",
+      editor: "json",
+    },
+    {
+      value: "application/vnd.api+json",
+      label: "JSON:API",
+      category: "Text",
+      editor: "json",
+    },
+    {
+      value: "application/xml",
+      label: "XML",
+      category: "Text",
+      editor: "text",
+    },
+    { value: "text/xml", label: "Text XML", category: "Text", editor: "text" },
+  ],
+  Structured: [
+    {
+      value: "application/x-www-form-urlencoded",
+      label: "URL Encoded",
+      category: "Structured",
+      editor: "form",
+    },
+    {
+      value: "multipart/form-data",
+      label: "Form Data",
+      category: "Structured",
+      editor: "form",
+    },
+  ],
+  Binary: [
+    {
+      value: "application/octet-stream",
+      label: "Binary",
+      category: "Binary",
+      editor: "binary",
+    },
+  ],
+  Others: [
+    { value: "text/html", label: "HTML", category: "Others", editor: "text" },
+    {
+      value: "text/plain",
+      label: "Plain Text",
+      category: "Others",
+      editor: "text",
+    },
+  ],
+};
+
 export function RequestPanel({
   isWebSocketMode,
   environments,
@@ -112,8 +214,8 @@ export function RequestPanel({
     }
   };
 
-  const [preRequestScript, setPreRequestScript] = useState('');
-  const [testScript, setTestScript] = useState('');
+  const [preRequestScript, setPreRequestScript] = useState("");
+  const [testScript, setTestScript] = useState("");
   const [scriptLogs, setScriptLogs] = useState<string[]>([]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
 
@@ -121,8 +223,8 @@ export function RequestPanel({
     const updateScriptsFromActiveRequest = () => {
       const activeRequest = (window as any).__ACTIVE_REQUEST__;
       if (activeRequest) {
-        setPreRequestScript(activeRequest.preRequestScript || '');
-        setTestScript(activeRequest.testScript || '');
+        setPreRequestScript(activeRequest.preRequestScript || "");
+        setTestScript(activeRequest.testScript || "");
         setScriptLogs(activeRequest.scriptLogs || []);
         setTestResults(activeRequest.testResults || []);
       }
@@ -132,10 +234,16 @@ export function RequestPanel({
     updateScriptsFromActiveRequest();
 
     // Listen for changes to active request
-    window.addEventListener("activeRequestUpdated", updateScriptsFromActiveRequest);
+    window.addEventListener(
+      "activeRequestUpdated",
+      updateScriptsFromActiveRequest
+    );
 
     return () => {
-      window.removeEventListener("activeRequestUpdated", updateScriptsFromActiveRequest);
+      window.removeEventListener(
+        "activeRequestUpdated",
+        updateScriptsFromActiveRequest
+      );
     };
   }, []);
 
@@ -144,22 +252,62 @@ export function RequestPanel({
     const handleHistoryLoad = (event: CustomEvent) => {
       const { item } = event.detail;
       if (item.request) {
-        setPreRequestScript(item.request.preRequestScript || '');
-        setTestScript(item.request.testScript || '');
+        setPreRequestScript(item.request.preRequestScript || "");
+        setTestScript(item.request.testScript || "");
         setScriptLogs(item.request.scriptLogs || []);
         setTestResults(item.request.testResults || []);
       }
     };
 
-    window.addEventListener("loadHistoryItem", handleHistoryLoad as EventListener);
+    window.addEventListener(
+      "loadHistoryItem",
+      handleHistoryLoad as EventListener
+    );
     return () => {
-      window.removeEventListener("loadHistoryItem", handleHistoryLoad as EventListener);
+      window.removeEventListener(
+        "loadHistoryItem",
+        handleHistoryLoad as EventListener
+      );
     };
   }, []);
 
+  useEffect(() => {
+    const handleLoadHistory = (event: CustomEvent) => {
+      const { item } = event.detail;
+      if (item && item.request) {
+        // Update script states directly
+        setPreRequestScript(item.request.preRequestScript || "");
+        setTestScript(item.request.testScript || "");
+        setScriptLogs(item.request.scriptLogs || []);
+        setTestResults(item.request.testResults || []);
+      }
+    };
+
+    window.addEventListener(
+      "loadHistoryItem",
+      handleLoadHistory as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "loadHistoryItem",
+        handleLoadHistory as EventListener
+      );
+    };
+  }, []);
+
+  // Update scripts in __ACTIVE_REQUEST__ when they change
+  useEffect(() => {
+    if ((window as any).__ACTIVE_REQUEST__) {
+      (window as any).__ACTIVE_REQUEST__.preRequestScript = preRequestScript;
+      (window as any).__ACTIVE_REQUEST__.testScript = testScript;
+      (window as any).__ACTIVE_REQUEST__.testResults = testResults;
+      (window as any).__ACTIVE_REQUEST__.scriptLogs = scriptLogs;
+    }
+  }, [preRequestScript, testScript, testResults, scriptLogs]);
+
   // Add script change handlers
   const handlePreRequestScriptChange = (value: string | undefined) => {
-    const newValue = value || '';
+    const newValue = value || "";
     setPreRequestScript(newValue);
     // Update the active request
     if ((window as any).__ACTIVE_REQUEST__) {
@@ -168,7 +316,7 @@ export function RequestPanel({
   };
 
   const handleTestScriptChange = (value: string | undefined) => {
-    const newValue = value || '';
+    const newValue = value || "";
     setTestScript(newValue);
     // Update the active request
     if ((window as any).__ACTIVE_REQUEST__) {
@@ -186,42 +334,37 @@ export function RequestPanel({
     {
       id: "params",
       label: "Query",
-      icon: <SearchCode className="h-4 w-4 text-emerald-500" />,
+      icon: <SquareChartGanttIcon className="h-4 w-4 text-emerald-500" />,
       disabled: isWebSocketMode,
     },
     {
       id: "headers",
       label: "Headers",
-      icon: <List className="h-4 w-4 text-blue-500" />,
+      icon: <SquareCodeIcon className="h-4 w-4 text-blue-500" />,
       disabled: isWebSocketMode,
     },
     {
       id: "auth",
       label: "Auth",
-      icon: <KeyRound className="h-4 w-4 text-red-500" />,
+      icon: <SquareAsteriskIcon className="h-4 w-4 text-red-500" />,
       disabled: isWebSocketMode,
     },
-    ...bodyTabs.map((type) => ({
-      id: `body-${type}`,
-      label:
-        type === "form-data"
-          ? "Form"
-          : type === "x-www-form-urlencoded"
-            ? "URL"
-            : type.charAt(0).toUpperCase() + type.slice(1),
-      icon: getBodyIcon(type),
+    {
+      id: "body",
+      label: "Body",
+      icon: <SquareActivityIcon className="h-4 w-4 text-blue-500" />,
       disabled: isWebSocketMode,
-    })),
+    },
     {
       id: "pre-request",
-      label: "Pre-request Script",
-      icon: <FileCode className="h-4 w-4 text-yellow-500" />,
+      label: "Pre-request",
+      icon: <SquareFunctionIcon className="h-4 w-4 text-yellow-500" />,
       disabled: isWebSocketMode,
     },
     {
       id: "tests",
       label: "Tests",
-      icon: <TestTube2 className="h-4 w-4 text-green-500" />,
+      icon: <SquarePlay className="h-4 w-4 text-green-500" />,
       disabled: isWebSocketMode,
     },
   ];
@@ -231,15 +374,16 @@ export function RequestPanel({
   const { setFocus } = useKeyboardNavigation(
     navigableElements.current,
     (direction, currentId) => {
-      const currentTab = tabs.findIndex(tab => tab.id === currentId);
+      const currentTab = tabs.findIndex((tab) => tab.id === currentId);
       let nextId: string | undefined;
 
       switch (direction) {
-        case 'right':
+        case "right":
           nextId = tabs[(currentTab + 1) % tabs.length]?.id;
           break;
-        case 'left':
-          nextId = tabs[currentTab === 0 ? tabs.length - 1 : currentTab - 1]?.id;
+        case "left":
+          nextId =
+            tabs[currentTab === 0 ? tabs.length - 1 : currentTab - 1]?.id;
           break;
       }
 
@@ -262,7 +406,7 @@ export function RequestPanel({
     // Dispatch response event
     window.dispatchEvent(
       new CustomEvent("apiResponse", {
-        detail: response
+        detail: response,
       })
     );
   };
@@ -282,39 +426,41 @@ export function RequestPanel({
             <Tabs defaultValue="params" className="flex-1 flex flex-col">
               <div className="bg-slate-900 border-b border-slate-700">
                 <div
-                  className="overflow-x-auto scrollbar-none "
+                  className="overflow-x-auto scrollbar-none"
                   style={{ WebkitOverflowScrolling: "touch" }}
                 >
-                  <TabsList className="flex w-max min-w-full justify-start rounded-none bg-slate-900 p-0">
+                  <TabsList className="flex w-max min-w-full justify-center rounded-none bg-slate-900 p-0">
                     {tabs.map(
                       (tab) =>
                         !tab.hidden && (
                           <TabsTrigger
                             key={tab.id}
                             value={tab.id}
-                            ref={el => {
+                            ref={(el) => {
                               if (el) {
                                 navigableElements.current.push({
                                   id: tab.id,
                                   ref: el,
-                                  type: 'tab'
+                                  type: "tab",
                                 });
                               }
                             }}
-                            className="flex-1 h-10 rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs text-slate-400 whitespace-nowrap 
-                              data-[state=active]:border-blue-400 
-                              data-[state=active]:text-blue-400 
-                              data-[state=active]:bg-slate-800
-                              hover:text-slate-300
-                              hover:bg-slate-800
-                              disabled:opacity-50
-                              disabled:cursor-not-allowed
-                              transition-colors"
+                            className={cn(
+                              "w-full flex h-10 rounded-none border-b-4 border-transparent",
+                              "px-6 sm:px-2 py-1 font-medium text-[11px] sm:text-xs text-slate-400",
+                              "whitespace-nowrap min-w-[80px] sm:min-w-[100px]",
+                              "data-[state=active]:border-blue-400",
+                              "data-[state=active]:text-blue-400",
+                              "data-[state=active]:bg-slate-800",
+                              "hover:text-slate-300 hover:bg-slate-800",
+                              "disabled:opacity-50 disabled:cursor-not-allowed",
+                              "transition-colors"
+                            )}
                             disabled={tab.disabled}
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
                               {tab.icon}
-                              {tab.label}
+                              <span className="truncate">{tab.label}</span>
                             </div>
                           </TabsTrigger>
                         )
@@ -358,33 +504,25 @@ export function RequestPanel({
                     </div>
                   </TabsContent>
 
-                  {/* Body Tabs */}
-                  {bodyTabs.map((type) => (
-                    <TabsContent
-                      key={type}
-                      value={`body-${type}`}
-                      className="m-0 min-h-0"
-                    >
-                      <div className="bg-slate-900">
-                        <div
-                          className={cn(
-                            type === "json" || type === "raw" ? "" : "p-0"
-                          )}
-                        >
-                          <RequestBodyContent
-                            type={type as RequestBody["type"]}
-                            body={props.body}
-                            onChange={props.onBodyChange}
-                            environments={environments}
-                            currentEnvironment={currentEnvironment}
-                            onEnvironmentChange={onEnvironmentChange}
-                            onEnvironmentsUpdate={onEnvironmentsUpdate}
-                            onAddToEnvironment={onAddToEnvironment}
-                          />
-                        </div>
+                  {/* Body Tab */}
+                  <TabsContent value="body" className="m-0 min-h-0">
+                    <div className="bg-slate-900">
+                      <div className={cn("p-0")}>
+                        <RequestBodyContent
+                          type={props.body.type}
+                          body={props.body}
+                          onChange={props.onBodyChange}
+                          environments={environments}
+                          currentEnvironment={currentEnvironment}
+                          onEnvironmentChange={onEnvironmentChange}
+                          onEnvironmentsUpdate={onEnvironmentsUpdate}
+                          onAddToEnvironment={onAddToEnvironment}
+                          headers={props.headers} // Pass headers to RequestBodyContent
+                          onHeadersChange={props.onHeadersChange} // Pass onHeadersChange to RequestBodyContent
+                        />
                       </div>
-                    </TabsContent>
-                  ))}
+                    </div>
+                  </TabsContent>
 
                   {/* Auth Tab */}
                   <TabsContent value="auth" className="m-0 min-h-0">
@@ -400,18 +538,24 @@ export function RequestPanel({
 
                   <TabsContent value="pre-request" className="m-0 min-h-0">
                     <div className="h-full flex flex-col bg-slate-900">
-                      <div className="h-10 border-b border-slate-700 flex items-center justify-between">
-                        <span className="text-xs text-slate-400">Pre-request Script</span>
+                      <div className="h-10 border-b border-slate-700 flex items-center justify-between px-3">
+                        <div className="flex items-center gap-2">
+                          <SquareFunctionIcon className="h-4 w-4 text-yellow-500" />
+                          <span className="text-xs font-medium text-slate-400">
+                            Pre-request Script
+                          </span>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handlePreRequestScriptChange('')}
-                          className="h-7 px-2 text-xs"
+                          onClick={() => handlePreRequestScriptChange("")}
+                          className="h-7 px-2 text-xs hover:bg-slate-800"
                         >
+                          <Eraser className="h-3.5 w-3.5 mr-1.5" />
                           Clear
                         </Button>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 bg-slate-800">
                         <Editor
                           height="300px"
                           defaultLanguage="javascript"
@@ -419,20 +563,26 @@ export function RequestPanel({
                           onChange={handlePreRequestScriptChange}
                           theme="vs-dark"
                           options={{
-                            minimap: { enabled: true},
+                            minimap: { enabled: false },
                             fontSize: 12,
-                            lineNumbers: 'on',
+                            lineNumbers: "on",
                             folding: true,
                             tabSize: 2,
+                            scrollBeyondLastLine: false,
                           }}
                         />
                       </div>
                       {scriptLogs.length > 0 && (
-                        <div className="border-t border-slate-700">
-                          <div className="p-2">
-                            <h3 className="text-xs font-medium text-slate-400">Console Output</h3>
-                            <pre className="mt-2 text-xs text-slate-300 max-h-32 overflow-auto">
-                              {scriptLogs.join('\n')}
+                        <div className="border-t border-slate-700 bg-slate-900">
+                          <div className="p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <SquareActivityIcon className="h-4 w-4 text-blue-400" />
+                              <h3 className="text-xs font-medium text-slate-400">
+                                Console Output
+                              </h3>
+                            </div>
+                            <pre className="text-xs text-slate-300 bg-slate-800 p-3 rounded-md max-h-32 overflow-auto">
+                              {scriptLogs.join("\n")}
                             </pre>
                           </div>
                         </div>
@@ -442,18 +592,24 @@ export function RequestPanel({
 
                   <TabsContent value="tests" className="m-0 min-h-0">
                     <div className="h-full flex flex-col bg-slate-900">
-                      <div className="h-10 border-b border-slate-700 flex items-center justify-between">
-                        <span className="text-xs text-slate-400">Test Script</span>
+                      <div className="h-10 border-b border-slate-700 flex items-center justify-between px-3">
+                        <div className="flex items-center gap-2">
+                          <SquarePlay className="h-4 w-4 text-green-500" />
+                          <span className="text-xs font-medium text-slate-400">
+                            Test Script
+                          </span>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleTestScriptChange('')}
-                          className="h-7 px-2 text-xs"
+                          onClick={() => handleTestScriptChange("")}
+                          className="h-7 px-2 text-xs hover:bg-slate-800"
                         >
+                          <Eraser className="h-3.5 w-3.5 mr-1.5" />
                           Clear
                         </Button>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 bg-slate-800">
                         <Editor
                           height="300px"
                           defaultLanguage="javascript"
@@ -461,35 +617,52 @@ export function RequestPanel({
                           onChange={handleTestScriptChange}
                           theme="vs-dark"
                           options={{
-                            minimap: { enabled: true},
+                            minimap: { enabled: false },
                             fontSize: 12,
-                            lineNumbers: 'on',
+                            lineNumbers: "on",
                             folding: true,
                             tabSize: 2,
+                            scrollBeyondLastLine: false,
                           }}
                         />
                       </div>
                       {testResults.length > 0 && (
-                        <div className="border-t border-slate-700">
-                          <div className="p-2">
-                            <h3 className="text-xs font-medium text-slate-400">Test Results</h3>
-                            <div className="mt-2 space-y-2">
+                        <div className="border-t border-slate-700 bg-slate-900">
+                          <div className="p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <TestTube2 className="h-4 w-4 text-emerald-400" />
+                              <h3 className="text-xs font-medium text-slate-400">
+                                Test Results
+                              </h3>
+                            </div>
+                            <div className="space-y-2">
                               {testResults.map((result, index) => (
                                 <div
                                   key={index}
                                   className={cn(
-                                    'p-2 rounded-md text-xs',
+                                    "p-3 rounded-md text-xs bg-slate-800",
                                     result.passed
-                                      ? 'bg-green-500/10 text-green-400'
-                                      : 'bg-red-500/10 text-red-400'
+                                      ? "text-emerald-400"
+                                      : "text-red-400"
                                   )}
                                 >
                                   <div className="flex items-center justify-between">
-                                    <span>{result.name}</span>
-                                    <span>{result.duration.toFixed(2)}ms</span>
+                                    <div className="flex items-center gap-2">
+                                      {result.passed ? (
+                                        <CheckCircle className="h-4 w-4" />
+                                      ) : (
+                                        <XCircle className="h-4 w-4" />
+                                      )}
+                                      <span>{result.name}</span>
+                                    </div>
+                                    <span className="text-slate-500">
+                                      {result.duration.toFixed(2)}ms
+                                    </span>
                                   </div>
                                   {result.error && (
-                                    <p className="mt-1 text-xs opacity-80">{result.error}</p>
+                                    <p className="mt-2 text-xs text-slate-400 bg-slate-900/50 p-2 rounded">
+                                      {result.error}
+                                    </p>
                                   )}
                                 </div>
                               ))}
@@ -579,8 +752,10 @@ function RequestBodyContent({
   onEnvironmentChange,
   onEnvironmentsUpdate,
   onAddToEnvironment,
+  headers,
+  onHeadersChange,
 }: {
-  type: RequestBody["type"];
+  type: ContentType;
   body: RequestBody;
   onChange: (body: RequestBody) => void;
   environments?: Environment[];
@@ -588,52 +763,30 @@ function RequestBodyContent({
   onEnvironmentChange?: (environmentId: string) => void;
   onEnvironmentsUpdate?: (environments: Environment[]) => void;
   onAddToEnvironment?: (key: string, value: string) => void;
+  headers: KeyValuePair[];
+  onHeadersChange: (headers: KeyValuePair[]) => void;
 }) {
-  const [params, setParams] = useState<KeyValuePair[]>([
-    { key: "", value: "", type: "text", showSecrets: false },
-  ]);
+  const [selectedContentType, setSelectedContentType] =
+    useState<ContentType>(type);
   const [isValidJson, setIsValidJson] = useState(true);
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const editorRef = useRef<any>(null);
 
-  function onParamsChange(pairs: KeyValuePair[]): void {
-    setParams(pairs);
-    onChange({ ...body, content: pairs });
-  }
+  const contentTypeOption = Object.values(contentTypeOptions)
+    .flat()
+    .find((opt) => opt.value === selectedContentType);
 
-  const validateAndFormatJson = (content: string) => {
-    try {
-      if (!content.trim()) {
-        setIsValidJson(true);
-        setJsonError(null);
-        return content;
-      }
-
-      const parsed = JSON.parse(content);
-      const formatted = JSON.stringify(parsed, null, 2);
-      setIsValidJson(true);
-      setJsonError(null);
-      return formatted;
-    } catch (e) {
-      setIsValidJson(false);
-      setJsonError((e as Error).message);
-      return content;
-    }
-  };
-
-  const handleBodyChange = (value: string) => {
-    if (type === "json") {
-      const formattedValue = validateAndFormatJson(value);
-      onChange({ ...body, content: formattedValue });
-    } else {
-      onChange({ ...body, content: value });
-    }
+  const handleContentTypeChange = (newType: ContentType) => {
+    setSelectedContentType(newType);
+    onChange({ type: newType as ContentType, content: "" }); // Cast to ensure type safety
   };
 
   const handleEditorChange = (value: string | undefined) => {
-    const newValue = value || '';
-    if (type === "json") {
+    const newValue = value || "";
+
+    if (contentTypeOption?.editor === "json") {
       try {
-        // Attempt to parse JSON to validate it
         JSON.parse(newValue);
         setIsValidJson(true);
         setJsonError(null);
@@ -642,90 +795,415 @@ function RequestBodyContent({
         setJsonError((e as Error).message);
       }
     }
-    onChange({ ...body, content: newValue });
+
+    onChange({ type: selectedContentType, content: newValue });
   };
 
-  if (type === "json" || type === "raw") {
-    return (
-      <div className="h-full flex flex-col bg-slate-900">
-        <div className="p-2 border-b border-slate-700 flex items-center justify-between">
-          <span className="text-xs text-slate-400">
-            {type === "json" ? "JSON Body" : "Raw Body"}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onChange({ ...body, content: "" })}
-            className="h-7 px-2 text-xs"
-          >
-            Clear
-          </Button>
-        </div>
-        <div className="flex-1">
-          <Editor
-            height="300px"
-            defaultLanguage={type === "json" ? "json" : "text"}
-            value={typeof body.content === "string" 
-              ? body.content 
-              : JSON.stringify(body.content, null, 2)}
-            onChange={handleEditorChange}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: true},
-              fontSize: 12,
-              lineNumbers: 'on',
-              folding: true,
-              foldingStrategy: 'indentation',
-              formatOnPaste: true,
-              formatOnType: true,
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 2,
-              wordWrap: 'on',
-              wrappingIndent: 'deepIndent',
-            }}
-          />
-        </div>
-        {type === "json" && (
-          <div className="border-t border-slate-700">
-            <div className="p-2">
-              {!isValidJson && jsonError ? (
-                <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 bg-red-950/20 rounded-md">
-                  <span className="font-medium">Invalid JSON:</span>
-                  <span className="font-mono">{jsonError}</span>
-                </div>
-              ) : (
-                body.content && (
-                  <div className="flex items-center justify-between px-3 py-1.5 text-xs text-slate-400">
-                    <span>Valid JSON</span>
-                    <span className="font-mono">
-                      {JSON.stringify(body.content).length.toLocaleString()} bytes
-                    </span>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+  const handleFormatJson = () => {
+    if (editorRef.current && contentTypeOption?.editor === "json") {
+      try {
+        const value = editorRef.current.getValue();
+        const formatted = JSON.stringify(JSON.parse(value), null, 2);
+        editorRef.current.setValue(formatted);
+        setIsValidJson(true);
+        setJsonError(null);
+      } catch (e) {
+        toast.error("Invalid JSON - cannot format");
+      }
+    }
+  };
+
+  const handleOverrideContentType = () => {
+    // Find the headers tab element and switch to it
+    const headersTab = document.querySelector(
+      '[data-state][value="headers"]'
+    ) as HTMLElement;
+    if (headersTab) {
+      headersTab.click();
+    }
+
+    // Add/update Content-Type header
+    const updatedHeaders = [...headers];
+    const contentTypeHeaderIndex = updatedHeaders.findIndex(
+      (h) => h.key.toLowerCase() === "content-type"
     );
-  }
+
+    const newHeader = {
+      key: "Content-Type",
+      value: selectedContentType,
+      enabled: true,
+      type: "text",
+      showSecrets: false,
+    };
+
+    if (contentTypeHeaderIndex !== -1) {
+      updatedHeaders[contentTypeHeaderIndex] = newHeader;
+    } else {
+      updatedHeaders.push(newHeader);
+    }
+
+    onHeadersChange(updatedHeaders);
+    toast.success("Content-Type header updated");
+  };
+
+  // Add onEditorMount handler
+  const handleEditorDidMount = (editor: any) => {
+    editorRef.current = editor;
+  };
 
   return (
-    <KeyValueEditor
-      pairs={
-        params.length === 0
-          ? [{ key: "", value: "", type: "text", showSecrets: false }]
-          : params
-      }
-      onChange={onParamsChange}
-      addButtonText={type === "form-data" ? "Add Form Field" : "Add Parameter"}
-      showDescription={type === "form-data"}
-      environments={environments}
-      currentEnvironment={currentEnvironment}
-      onEnvironmentChange={onEnvironmentChange}
-      onEnvironmentsUpdate={onEnvironmentsUpdate}
-      onAddToEnvironment={onAddToEnvironment}
-    />
+    <div className="h-full flex flex-col bg-slate-900">
+      {/* Responsive Content Type Header */}
+      <div className="sticky top-0 border-b border-slate-700 bg-slate-900/95 backdrop-blur-sm z-10">
+        <div className="p-2 sm:p-3">
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <Select
+                value={selectedContentType}
+                onValueChange={(value) => {
+                  handleContentTypeChange(value as ContentType);
+                }}
+              >
+                <SelectTrigger className="w-full h-8 bg-slate-800 border-slate-700 text-xs sm:text-sm text-slate-200">
+                  <div className="flex items-center gap-2 truncate">
+                    {getIconForContentType(selectedContentType)}
+                    <span className="truncate">
+                      {contentTypeOption?.label || "Select type"}
+                    </span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent
+                  align="start"
+                  className="w-[200px] sm:w-[260px] bg-slate-800 border-slate-700"
+                >
+                  {Object.entries(contentTypeOptions).map(
+                    ([category, options]) => (
+                      <SelectGroup key={category}>
+                        <SelectLabel className="px-2 py-1.5 text-[10px] font-semibold text-slate-400 bg-slate-800/50">
+                          {category}
+                        </SelectLabel>
+                        <div className="p-1 space-y-0.5">
+                          {options.map((option) => (
+                            <SelectItem
+                              key={option.value}
+                              value={option.value}
+                              className="text-xs rounded-sm text-slate-200 data-[highlighted]:bg-slate-700"
+                            >
+                              <div className="flex items-center gap-2">
+                                {getIconForContentType(option.value)}
+                                <span className="truncate">{option.label}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </div>
+                      </SelectGroup>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleOverrideContentType}
+              className="h-8 sm:h-9 px-3 bg-slate-800 border-slate-700 text-xs"
+            >
+              <SquareCodeIcon className="h-3.5 w-3.5 text-blue-400" />
+              <span className="ml-2 hidden lg:inline">Set Header</span>
+            </Button>
+
+            {contentTypeOption?.editor === "json" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleFormatJson}
+                className="h-8 sm:h-9 px-3 bg-slate-800 border-slate-700 text-xs"
+              >
+                <FileJson className="h-3.5 w-3.5 text-emerald-400" />
+                <span className="ml-2 hidden lg:inline">Format</span>
+              </Button>
+            )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                onChange({ type: selectedContentType, content: "" })
+              }
+              className="h-8 sm:h-9 px-3 bg-slate-800 border-slate-700 text-xs"
+            >
+              <Eraser className="h-3.5 w-3.5 text-red-400" />
+              <span className="ml-2 hidden lg:inline">Clear</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-hidden bg-slate-800">
+        <AnimatePresence mode="wait">
+          {contentTypeOption?.editor === "none" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-center justify-center h-full text-slate-500"
+            >
+              <div className="text-center space-y-3 p-6 mt-12 bg-slate-800 rounded-lg border-dashed border-slate-900">
+                <FileText className="h-8 w-8 mx-auto text-slate-400 opacity-50" />
+                <span className="text-sm block">No body content</span>
+                <p className="text-xs text-slate-500">
+                  Select content type above
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {contentTypeOption?.editor === "form" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="h-full"
+            >
+              <KeyValueEditor
+                pairs={Array.isArray(body.content) ? body.content : []}
+                onChange={(pairs) => onChange({ ...body, content: pairs })}
+                addButtonText={
+                  selectedContentType === "multipart/form-data"
+                    ? "Add Form Field"
+                    : "Add Parameter"
+                }
+                showDescription={selectedContentType === "multipart/form-data"}
+                environments={environments}
+                currentEnvironment={currentEnvironment}
+                onEnvironmentChange={onEnvironmentChange}
+                onEnvironmentsUpdate={onEnvironmentsUpdate}
+                onAddToEnvironment={onAddToEnvironment}
+                expandedItemId={expandedItemId}
+                onExpandedChange={setExpandedItemId}
+                className="border-none rounded-none"
+                isMobile={true}
+              />
+            </motion.div>
+          )}
+
+          {contentTypeOption?.editor === "binary" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-center justify-center h-full p-4"
+            >
+              <div className="w-full max-w-2xl">
+                <div className="group relative">
+                  {/* Drop zone */}
+                  <div
+                    className="flex flex-col items-center justify-center p-8 sm:p-12 
+                    border-2 border-dashed border-slate-700 rounded-lg
+                    bg-slate-800/50 hover:bg-slate-800/80 hover:border-slate-600 
+                    transition-all duration-300"
+                  >
+                    {/* Upload icon with animation */}
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      className="mb-4 p-4 rounded-full bg-slate-700/50 
+                        group-hover:bg-slate-700 transition-colors"
+                    >
+                      <FileText
+                        className="h-8 w-8 sm:h-10 sm:w-10 text-slate-400 
+                        group-hover:text-blue-400 transition-colors"
+                      />
+                    </motion.div>
+
+                    {/* Upload text */}
+                    <div className="text-center space-y-2">
+                      <p className="text-sm sm:text-base font-medium text-slate-300">
+                        Drop your file here, or
+                        <label className="mx-2 text-blue-400 hover:text-blue-300 cursor-pointer">
+                          browse
+                          <Input
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                onChange({
+                                  type: selectedContentType,
+                                  content: file,
+                                });
+                                toast.success(`Selected: ${file.name}`);
+                              }
+                            }}
+                          />
+                        </label>
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Supported file types: All
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Selected file info */}
+                  {body.content instanceof File && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-4 p-4 rounded-lg bg-slate-800 border border-slate-700"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="p-2 rounded bg-blue-500/10">
+                            <FileText className="h-4 w-4 text-blue-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-300 truncate">
+                              {(body.content as File).name}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {(body.content as File).type ||
+                                "application/octet-stream"}{" "}
+                              • {Math.round((body.content as File).size / 1024)}{" "}
+                              KB
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            onChange({ type: selectedContentType, content: "" })
+                          }
+                          className="h-8 w-8 p-0 hover:bg-slate-700"
+                        >
+                          <X className="h-4 w-4 text-slate-400 hover:text-red-400" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Text/Code Editors with consistent styling */}
+          {(contentTypeOption?.editor === "json" ||
+            contentTypeOption?.editor === "text") && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="h-full"
+            >
+              <Editor
+                height="300px"
+                defaultLanguage={getEditorLanguage(contentTypeOption.value)}
+                value={getEditorContent(body.content, contentTypeOption.value)}
+                onChange={handleEditorChange}
+                onMount={handleEditorDidMount}
+                theme="vs-dark"
+                options={{
+                  fontSize: 12,
+                  minimap: { enabled: false },
+                  lineNumbers: "on",
+                  renderWhitespace: "selection",
+                  folding: true,
+                  tabSize: 2,
+                  wordWrap: "on",
+                  wrappingIndent: "indent",
+                  automaticLayout: true,
+                  padding: { top: 8, bottom: 8 },
+                  scrollBeyondLastLine: false,
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Status Footer */}
+      {contentTypeOption?.editor === "json" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="px-3 py-1.5 border-t border-slate-700 bg-slate-800/50"
+        >
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              {!isValidJson && jsonError ? (
+                <>
+                  <XCircle className="h-3.5 w-3.5 text-red-400" />
+                  <span className="text-red-400 font-medium">Invalid JSON</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-slate-400">Valid JSON</span>
+                </>
+              )}
+            </div>
+            {body.content && (
+              <span className="font-mono text-slate-500">
+                {JSON.stringify(body.content).length.toLocaleString()} bytes
+              </span>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </div>
   );
+}
+
+// Helper functions
+function getIconForContentType(type: string) {
+  switch (true) {
+    case type.includes("json"):
+      return <FileJson className="h-4 w-4 text-blue-400" />;
+    case type.includes("xml"):
+      return <FileCode className="h-4 w-4 text-orange-400" />;
+    case type.includes("html"):
+      return <FileCode className="h-4 w-4 text-purple-400" />;
+    case type.includes("form"):
+      return <FormInput className="h-4 w-4 text-green-400" />;
+    default:
+      return <FileText className="h-4 w-4 text-slate-400" />;
+  }
+}
+
+function getEditorLanguage(type: string): string {
+  if (type.includes("json")) return "json";
+  if (type.includes("xml")) return "xml";
+  if (type.includes("html")) return "html";
+  return "plaintext";
+}
+
+function getEditorContent(content: any, type: string): string {
+  if (type.includes("json")) {
+    return typeof content === "string"
+      ? content
+      : JSON.stringify(content, null, 2);
+  }
+  return typeof content === "string" ? content : String(content);
+}
+
+// Add type guard to validate ContentType
+function isContentType(value: string): value is ContentType {
+  const validContentTypes: ContentType[] = [
+    "none",
+    "json",
+    "form-data",
+    "x-www-form-urlencoded",
+    "raw",
+    "application/json",
+    "application/ld+json",
+    "application/hal+json",
+    "application/vnd.api+json",
+    "application/xml",
+    "text/xml",
+    "application/x-www-form-urlencoded",
+    "multipart/form-data",
+    "application/octet-stream",
+    "text/html",
+    "text/plain",
+  ];
+  return validContentTypes.includes(value as ContentType);
 }

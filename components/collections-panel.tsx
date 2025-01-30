@@ -170,6 +170,10 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
           body: initialRequest.body || { type: "none", content: "" },
           auth: initialRequest.auth || { type: "none" },
           response: initialRequest.response,
+          preRequestScript: initialRequest.preRequestScript || "",
+          testScript: initialRequest.testScript || "",
+          testResults: initialRequest.testResults || [],
+          scriptLogs: initialRequest.scriptLogs || [],
         }
       : undefined;
 
@@ -511,9 +515,9 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
               </div>
             </div>
           </div>
-          {deleteConfirm?.id === request.id && deleteConfirm.type === "request" && (
-            renderDeleteConfirmation("request", request.id, collection.id)
-          )}
+          {deleteConfirm?.id === request.id &&
+            deleteConfirm.type === "request" &&
+            renderDeleteConfirmation("request", request.id, collection.id)}
         </div>
       );
     },
@@ -743,11 +747,12 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
         </div>
         {renderCollectionActions(collection)}
       </div>
-      {deleteConfirm?.id === collection.id && deleteConfirm.type === "collection" && (
-        <div className="w-full">
-          {renderDeleteConfirmation("collection", collection.id)}
-        </div>
-      )}
+      {deleteConfirm?.id === collection.id &&
+        deleteConfirm.type === "collection" && (
+          <div className="w-full">
+            {renderDeleteConfirmation("collection", collection.id)}
+          </div>
+        )}
     </div>
   );
 
@@ -757,9 +762,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
       value={collection.id}
       className="px-0 border-b border-slate-700"
     >
-      <AccordionTrigger 
-        className="w-full p-0 text-slate-500 hover:no-underline hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors [&>svg]:hidden"
-      >
+      <AccordionTrigger className="w-full p-0 text-slate-500 hover:no-underline hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors [&>svg]:hidden">
         {renderCollectionContent(collection)}
       </AccordionTrigger>
       <AccordionContent className="pt-0 pb-0">
@@ -785,10 +788,15 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     props.onSaveRequest(collectionId, {
       ...request,
       // Preserve scripts and results from the active request
-      preRequestScript: (window as any).__ACTIVE_REQUEST__?.preRequestScript || request.preRequestScript,
-      testScript: (window as any).__ACTIVE_REQUEST__?.testScript || request.testScript,
-      testResults: (window as any).__ACTIVE_REQUEST__?.testResults || request.testResults,
-      scriptLogs: (window as any).__ACTIVE_REQUEST__?.scriptLogs || request.scriptLogs,
+      preRequestScript:
+        (window as any).__ACTIVE_REQUEST__?.preRequestScript ||
+        request.preRequestScript,
+      testScript:
+        (window as any).__ACTIVE_REQUEST__?.testScript || request.testScript,
+      testResults:
+        (window as any).__ACTIVE_REQUEST__?.testResults || request.testResults,
+      scriptLogs:
+        (window as any).__ACTIVE_REQUEST__?.scriptLogs || request.scriptLogs,
       runConfig: {
         iterations: 1,
         delay: 0,
@@ -852,26 +860,25 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      
+
       // Validate if the text is valid JSON or contains specific markers
       let isValidData = false;
       try {
         const parsed = JSON.parse(text);
-        isValidData = (
+        isValidData =
           // Check for common collection format markers
-          parsed.info?.schema?.includes('postman') || // Postman
+          parsed.info?.schema?.includes("postman") || // Postman
           parsed._type === "hoppscotch" || // Hoppscotch
           parsed.openapi || // OpenAPI
           parsed.swagger || // Swagger
           Array.isArray(parsed) || // Array of requests
-          (parsed.requests && Array.isArray(parsed.requests)) // Generic collection format
-        );
+          (parsed.requests && Array.isArray(parsed.requests)); // Generic collection format
       } catch (e) {
-        throw new Error('Invalid JSON format');
+        throw new Error("Invalid JSON format");
       }
 
       if (!isValidData) {
-        throw new Error('Unsupported collection format');
+        throw new Error("Unsupported collection format");
       }
 
       await props.onImportCollections("clipboard", text);
@@ -885,52 +892,69 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   return (
     <div className="h-full flex flex-col bg-slate-800">
       <div className="h-full flex flex-col bg-slate-800">
+        <Input
+          placeholder="Search collections"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 rounded-none border-x-0 text-xs bg-slate-900 border-slate-700"
+        />
         <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                setSortBy((prev) =>
-                  prev === "name" ? "date" : prev === "date" ? "method" : "name"
-                )
-              }
-              className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-            >
-              <SortAsc className="h-4 w-4 text-blue-400" />
-              <span className="text-xs capitalize">{sortBy}</span>
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-                >
-                  <Filter className="h-4 w-4 text-purple-400" />
-                  <span className="text-xs">{filterBy || "All"}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                className="bg-slate-800 border border-slate-700 text-slate-400 hover:text-blue-500 hover:bg-slate-800"
+          <div className="flex items-center p-2 gap-2">
+            {/* All controls in a single flex container */}
+            <div className="flex items-center gap-1 w-full">
+              {/* Sort button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  setSortBy((prev) =>
+                    prev === "name"
+                      ? "date"
+                      : prev === "date"
+                        ? "method"
+                        : "name"
+                  )
+                }
+                className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
               >
-                <DropdownMenuItem onClick={() => setFilterBy("")}>
-                  All Methods
-                </DropdownMenuItem>
-                {["GET", "POST", "PUT", "DELETE", "PATCH"].map((method) => (
-                  <DropdownMenuItem
-                    key={method}
-                    onClick={() => setFilterBy(method)}
-                  >
-                    {method}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <SortAsc className="h-4 w-4 text-blue-400" />
+                <span className="ml-2 hidden lg:inline capitalize">
+                  {sortBy}
+                </span>
+              </Button>
 
-            <div className="flex">
+              {/* Filter dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
+                  >
+                    <Filter className="h-4 w-4 text-purple-400" />
+                    <span className="ml-2 hidden lg:inline">
+                      {filterBy || "All"}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-32 bg-slate-800 border-slate-700"
+                >
+                  <DropdownMenuItem onClick={() => setFilterBy("")}>
+                    All Methods
+                  </DropdownMenuItem>
+                  {["GET", "POST", "PUT", "DELETE", "PATCH"].map((method) => (
+                    <DropdownMenuItem
+                      key={method}
+                      onClick={() => setFilterBy(method)}
+                    >
+                      {method}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <input
                 type="file"
                 ref={fileInputRef}
@@ -943,38 +967,22 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsImporting(true)}
-                className="h-10 w-full rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
               >
                 <Upload className="h-4 w-4 text-yellow-400" />
+                <span className="ml-2 hidden lg:inline">Import</span>
               </Button>
 
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={props.onExportCollections}
-                className="h-10 w-full rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
+                className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
               >
                 <DownloadIcon className="h-4 w-4 text-emerald-400" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsCreating(true)}
-                className="h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-              >
-                <Plus className="h-4 w-4 text-cyan-400" />
+                <span className="ml-2 hidden lg:inline">Export</span>
               </Button>
             </div>
-          </div>
-
-          <div className="relative">
-            <Input
-              placeholder="Search collections"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 rounded-none w-full bg-slate-900 border-y border-slate-700 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
-            />
           </div>
         </div>
 
@@ -1259,7 +1267,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             <div>
               {" "}
               <Accordion type="multiple">
-                {filteredCollections.map((collection: Collection) => 
+                {filteredCollections.map((collection: Collection) =>
                   renderCollectionItem(collection)
                 )}
               </Accordion>

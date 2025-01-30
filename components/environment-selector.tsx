@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PackagePlus } from "lucide-react";
+import { NetworkStatusIndicator } from "@/app/components/NetworkStatusIndicator";
 
 interface EnvironmentSelectorProps {
   environments: Environment[];
@@ -27,9 +28,10 @@ export function EnvironmentSelector({
         <SelectValue>
           {currentEnvironment ? (
             <div className="flex items-center gap-2">
-              <span className={currentEnvironment.global ? "text-blue-400" : "text-slate-200"}>
+              <span className={currentEnvironment.global ? "text-blue-400" : "text-yellow-400"}>
                 {currentEnvironment.name}
               </span>
+              <NetworkStatusIndicator />
             </div>
           ) : (
             <div className="flex items-center gap-2 text-slate-400">

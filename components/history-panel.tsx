@@ -129,7 +129,6 @@ export function HistoryPanel({
     item.url.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Group history items
   const groupedHistory = useMemo(() => {
     if (groupBy === "none") return { ungrouped: filteredHistory };
 
@@ -147,7 +146,6 @@ export function HistoryPanel({
     );
   }, [filteredHistory, groupBy]);
 
-  // Calculate group stats with proper type checking
   const groupStats = useMemo(() => {
     return Object.entries(groupedHistory).reduce(
       (stats, [key, items]) => {
@@ -159,7 +157,6 @@ export function HistoryPanel({
           (i) => i.response!.status >= 400
         );
 
-        // Calculate average response time only for items with valid time values
         const itemsWithTime = items.filter((i) => {
           const timeStr = i.response?.time;
           return (
@@ -223,7 +220,14 @@ export function HistoryPanel({
   };
 
   const handleHistoryItemClick = (item: HistoryItem) => {
-    // Create the active request object with scripts
+    if (isConnected) {
+      toast.error(
+        "Please disconnect current WebSocket before loading a new URL"
+      );
+      return;
+    }
+
+    // Update __ACTIVE_REQUEST__ with scripts
     (window as any).__ACTIVE_REQUEST__ = {
       method: item.method,
       url: item.url,
@@ -232,24 +236,29 @@ export function HistoryPanel({
       body: item.request.body,
       auth: item.request.auth,
       response: item.response,
-      preRequestScript: item.request.preRequestScript || "",
-      testScript: item.request.testScript || "",
-      testResults: item.request.testResults || [],
-      scriptLogs: item.request.scriptLogs || []
+      // Add scripts
+      preRequestScript: item.request.preRequestScript,
+      testScript: item.request.testScript,
+      testResults: item.request.testResults,
+      scriptLogs: item.request.scriptLogs,
     };
-  
-    window.dispatchEvent(new CustomEvent("loadHistoryItem", {
-      detail: {
-        item,
-        url: item.url,
-        scripts: {
-          preRequestScript: item.request.preRequestScript,
-          testScript: item.request.testScript,
-          testResults: item.request.testResults,
-          scriptLogs: item.request.scriptLogs
-        }
-      }
-    }));
+
+    window.dispatchEvent(
+      new CustomEvent("loadHistoryItem", {
+        detail: {
+          item,
+          url: item.url,
+          scripts: {
+            preRequestScript: item.request.preRequestScript || "",
+            testScript: item.request.testScript || "",
+            testResults: item.request.testResults || [],
+            scriptLogs: item.request.scriptLogs || [],
+          },
+        },
+      })
+    );
+
+    onSelectItem(item);
   };
 
   const renderHistoryItem = (item: HistoryItem) => {
@@ -387,71 +396,72 @@ export function HistoryPanel({
 
   return (
     <div className="h-full flex flex-col bg-slate-800">
-      <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
-      <div className="flex items-center justify-between">
-        <Button
-        variant="ghost"
-        size="sm"
-        onClick={() =>
-          setGroupBy((g) =>
-          g === "none" ? "domain" : g === "domain" ? "date" : "none"
-          )
-        }
-        className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-        >
-        {groupBy === "domain" ? (
-          <Globe className="h-4 w-4 text-blue-400 mr-2" />
-        ) : groupBy === "date" ? (
-          <CalendarDays className="h-4 w-4 text-purple-400 mr-2" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-slate-400 mr-2" />
-        )}
-        <span className="text-xs capitalize">
-          {groupBy === "none" ? "No Groups" : `${groupBy}`}
-        </span>
-        </Button>
-
-        <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
-        className="flex items-center h-10 w-full border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-        >
-        <History className="h-4 w-4 text-cyan-400 mr-2" />
-        <span className="text-xs capitalize">
-          {isHistorySavingEnabled ? "Saving" : "Off"}
-        </span>
-        </Button>
-
-        <div className="flex">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onExportHistory}
-          className="h-10 rounded-none border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-        >
-          <DownloadIcon className="h-4 w-4 text-emerald-400" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClearHistory}
-          className="h-10 border border-slate-700 rounded-none bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-        >
-          <Trash2 className="h-4 w-4 text-red-400" />
-        </Button>
-        </div>
-      </div>
-
-      {/* Search Input */}
-      <div className="relative">
-        <Input
+      {/* Search input */}
+      <Input
         placeholder="Search history"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="h-8 rounded-none w-full bg-slate-900 border border-slate-700 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
-        />
-      </div>
+        className="h-8 rounded-none border-x-0 text-xs bg-slate-900 border-slate-700"
+      />
+      <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
+        <div className="flex items-center p-2 gap-2">
+          {/* All controls in a single flex container */}
+          <div className="flex items-center gap-1 w-full">
+            {/* Group by button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                setGroupBy((g) =>
+                  g === "none" ? "domain" : g === "domain" ? "date" : "none"
+                )
+              }
+              className="w-full h-8 px-2 sm:px-3 text-xs bg-slate-800 border border-slate-700"
+            >
+              <Clock className="h-4 w-4 text-blue-400" />
+              <span className="ml-2 hidden lg:inline">
+                {groupBy === "none" ? "None" : `${groupBy}`}
+              </span>
+            </Button>
+
+            {/* Save toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
+              className={cn(
+                "w-full h-8 px-2 sm:px-3 text-xs bg-slate-800 border border-slate-700",
+                isHistorySavingEnabled ? "text-emerald-400" : "text-slate-400"
+              )}
+            >
+              <History className="h-4 w-4" />
+              <span className="ml-2 hidden lg:inline">
+                {isHistorySavingEnabled ? "Saving" : "Off"}
+              </span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onExportHistory}
+              className="w-full h-8 px-2 sm:px-3 text-xs bg-slate-800 border border-slate-700"
+            >
+              <DownloadIcon className="h-4 w-4 text-emerald-400" />
+              <span className="ml-2 hidden lg:inline">Export</span>
+            </Button>
+
+            {/* Clear button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearHistory}
+              className="w-full h-8 px-2 sm:px-3 text-xs bg-slate-800 border border-slate-700"
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+              <span className="ml-2 hidden lg:inline">Clear</span>
+            </Button>
+          </div>
+        </div>
       </div>
 
       <ScrollArea className="flex-1">

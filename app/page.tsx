@@ -33,7 +33,8 @@ import { UrlBar } from "@/components/url-bar";
 import SidePanel from "@/components/side-panel";
 import { EnvironmentSelector } from "@/components/environment-selector";
 import { importFromUrl, parseImportData } from "@/lib/import-utils";
-import { ScriptRunner } from '@/lib/script-runner';
+import { ScriptRunner } from "@/lib/script-runner";
+import { NetworkStatusIndicator } from "./components/NetworkStatusIndicator";
 
 export default function Page() {
   const [method, setMethod] = useState("GET");
@@ -238,18 +239,27 @@ export default function Page() {
     try {
       // Run pre-request script
       if (preRequestScript) {
-        const scriptRunner = new ScriptRunner({
-          request: {
-            method,
-            url,
-            headers,
-            body
+        const scriptRunner = new ScriptRunner(
+          {
+            request: {
+              method,
+              url,
+              headers,
+              body,
+            },
+            environment: mergedEnvVariables.reduce(
+              (acc, v) => ({ ...acc, [v.key]: v.value }),
+              {}
+            ),
+            variables: {},
           },
-          environment: mergedEnvVariables.reduce((acc, v) => ({ ...acc, [v.key]: v.value }), {}),
-          variables: {}
-        }, (type, ...args) => {
-          setScriptLogs(logs => [...logs, `[${type.toUpperCase()}] ${args.join(' ')}`]);
-        });
+          (type, ...args) => {
+            setScriptLogs((logs) => [
+              ...logs,
+              `[${type.toUpperCase()}] ${args.join(" ")}`,
+            ]);
+          }
+        );
 
         const result = await scriptRunner.runScript(preRequestScript);
         if (!result.success) {
@@ -292,6 +302,64 @@ export default function Page() {
       const fullUrl = `${replaceEnvironmentVariables(url)}${
         queryString ? `?${queryString}` : ""
       }`;
+
+      const requestBody = (() => {
+        if (!body.content || body.type === "none") {
+          return undefined;
+        }
+
+        switch (body.type) {
+          case "json":
+          case "application/json":
+          case "application/ld+json":
+          case "application/hal+json":
+          case "application/vnd.api+json":
+            return typeof body.content === "string"
+              ? JSON.parse(body.content)
+              : body.content;
+
+          case "form-data":
+          case "multipart/form-data":
+            const formData = new FormData();
+            if (Array.isArray(body.content)) {
+              body.content.forEach((item) => {
+                if (item.key && item.value) {
+                  formData.append(item.key, item.value);
+                }
+              });
+            }
+            return formData;
+
+          case "x-www-form-urlencoded":
+          case "application/x-www-form-urlencoded":
+            if (Array.isArray(body.content)) {
+              return new URLSearchParams(
+                body.content
+                  .filter((item) => item.key && item.value)
+                  .map((item) => [item.key, item.value])
+              ).toString();
+            }
+            return body.content;
+
+          default:
+            return body.content;
+        }
+      })();
+
+      // Add Content-Type header if not present
+      if (
+        body.type !== "none" &&
+        !headers.some((h) => h.key.toLowerCase() === "content-type")
+      ) {
+        headers.push({
+          key: "Content-Type",
+          value: body.type,
+          enabled: true,
+          showSecrets: false,
+          type: "text",
+        });
+      }
+
       const response = await fetch("/api/proxy", {
         method: "POST",
         headers: {
@@ -301,10 +369,7 @@ export default function Page() {
           method,
           url: fullUrl,
           headers: requestHeaders,
-          body:
-            body.type !== "none"
-              ? replaceEnvironmentVariables(body.content as string)
-              : undefined,
+          body: requestBody,
         }),
       });
 
@@ -329,29 +394,38 @@ export default function Page() {
 
       // Run test script
       if (testScript && response) {
-        const scriptRunner = new ScriptRunner({
-          request: {
-            method,
-            url,
-            headers: requestHeaders,
-            body
+        const scriptRunner = new ScriptRunner(
+          {
+            request: {
+              method,
+              url,
+              headers: requestHeaders,
+              body,
+            },
+            response: {
+              status: response.status,
+              statusText: response.statusText,
+              headers: response.headers,
+              body: response.body,
+            },
+            environment: mergedEnvVariables.reduce(
+              (acc, v) => ({ ...acc, [v.key]: v.value }),
+              {}
+            ),
+            variables: {},
           },
-          response: {
-            status: response.status,
-            statusText: response.statusText,
-            headers: response.headers,
-            body: response.body
-          },
-          environment: mergedEnvVariables.reduce((acc, v) => ({ ...acc, [v.key]: v.value }), {}),
-          variables: {}
-        }, (type, ...args) => {
-          setScriptLogs(logs => [...logs, `[${type.toUpperCase()}] ${args.join(' ')}`]);
-        });
+          (type, ...args) => {
+            setScriptLogs((logs) => [
+              ...logs,
+              `[${type.toUpperCase()}] ${args.join(" ")}`,
+            ]);
+          }
+        );
 
         const results = await scriptRunner.runTests(testScript);
         setTestResults(results);
 
-        const failedTests = results.filter(r => !r.passed).length;
+        const failedTests = results.filter((r) => !r.passed).length;
         if (failedTests > 0) {
           toast.error(`${failedTests} test(s) failed`);
         } else {
@@ -371,11 +445,11 @@ export default function Page() {
             params,
             body,
             auth,
-            // Include scripts in history
-            preRequestScript: (window as any).__ACTIVE_REQUEST__?.preRequestScript,
-            testScript: (window as any).__ACTIVE_REQUEST__?.testScript,
-            testResults: (window as any).__ACTIVE_REQUEST__?.testResults,
-            scriptLogs: (window as any).__ACTIVE_REQUEST__?.scriptLogs
+            // Include the actual script values from state
+            preRequestScript: String(preRequestScript),
+            testScript: String(testScript),
+            testResults,
+            scriptLogs,
           },
           response: finalResponse,
           type: "rest",
@@ -383,6 +457,7 @@ export default function Page() {
 
         setHistory((prev) => {
           const newHistory = [historyItem, ...prev];
+          // Save to localStorage with scripts included
           localStorage.setItem("apiHistory", JSON.stringify(newHistory));
           return newHistory;
         });
@@ -511,6 +586,23 @@ export default function Page() {
         setResponse(item.response);
       }
     }
+
+    // Add these lines to restore scripts
+    if (item.request) {
+      setPreRequestScript(item.request.preRequestScript || "");
+      setTestScript(item.request.testScript || "");
+      setTestResults(item.request.testResults || []);
+      setScriptLogs(item.request.scriptLogs || []);
+
+      // Update active request
+      (window as any).__ACTIVE_REQUEST__ = {
+        ...item.request,
+        preRequestScript: item.request.preRequestScript,
+        testScript: item.request.testScript,
+        testResults: item.request.testResults,
+        scriptLogs: item.request.scriptLogs,
+      };
+    }
   };
 
   const saveCollections = (newCollections: Collection[]) => {
@@ -545,6 +637,10 @@ export default function Page() {
       auth,
       statusCode: undefined,
       timestamp: 0,
+      preRequestScript: "",
+      testScript: "",
+      testResults: [],
+      scriptLogs: [],
     };
     const newCollections = collections.map((collection) => {
       if (collection.id === collectionId) {
@@ -902,13 +998,14 @@ export default function Page() {
         <div className="w-full flex flex-col md:flex-row items-stretch gap-2 p-4">
           {/* Environment and Mobile Controls - Full width on mobile, fixed width on desktop */}
           <div className="flex gap-2 md:w-[280px] shrink-0">
+            
             <div className="flex-1">
               <EnvironmentSelector
                 environments={environments}
                 currentEnvironment={currentEnvironment}
                 onEnvironmentChange={handleEnvironmentChange}
                 className="h-10 w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 
-                  text-slate-300 rounded-md transition-colors"
+                  text-slate-300 rounded-lg transition-colors"
               />
             </div>
             <div className="md:hidden">

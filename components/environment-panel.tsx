@@ -1,9 +1,24 @@
-import React, { useState, forwardRef, useImperativeHandle, useRef, useEffect } from "react";
+import React, {
+  useState,
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useEffect,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Edit2, Download, Upload, Copy, X, BoxIcon } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  Download,
+  Upload,
+  Copy,
+  X,
+  BoxIcon,
+} from "lucide-react";
 import { KeyValueEditor } from "./key-value-editor";
 import { Environment, EnvironmentVariable, KeyValuePair } from "@/types";
 import { v4 as uuidv4 } from "uuid";
@@ -15,7 +30,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { NavigableElement, useKeyboardNavigation } from './keyboard-navigation';
+import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
 
 interface EnvironmentPanelProps {
   environments: Environment[];
@@ -38,7 +53,9 @@ export const EnvironmentPanel = forwardRef<
   const [search, setSearch] = useState("");
   const [expandedEnv, setExpandedEnv] = useState<string | null>(null);
   const navigableElements = useRef<NavigableElement[]>([]);
-  const [expandedEnvironments, setExpandedEnvironments] = useState<Set<string>>(new Set());
+  const [expandedEnvironments, setExpandedEnvironments] = useState<Set<string>>(
+    new Set()
+  );
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [pendingVariable, setPendingVariable] = useState<{
     key: string;
@@ -53,16 +70,22 @@ export const EnvironmentPanel = forwardRef<
       setShowSaveForm(true);
     };
 
-    window.addEventListener("showEnvironmentSaveForm", handleShowSaveForm as EventListener);
+    window.addEventListener(
+      "showEnvironmentSaveForm",
+      handleShowSaveForm as EventListener
+    );
     return () => {
-      window.removeEventListener("showEnvironmentSaveForm", handleShowSaveForm as EventListener);
+      window.removeEventListener(
+        "showEnvironmentSaveForm",
+        handleShowSaveForm as EventListener
+      );
     };
   }, []); // Remove expandedEnvironments dependency
 
   const handleSaveToEnvironment = (environmentId: string) => {
     if (!pendingVariable) return;
 
-    const updatedEnvironments = environments.map(env => {
+    const updatedEnvironments = environments.map((env) => {
       if (env.id === environmentId) {
         return {
           ...env,
@@ -72,10 +95,10 @@ export const EnvironmentPanel = forwardRef<
               key: pendingVariable.key,
               value: pendingVariable.value,
               type: pendingVariable.type,
-              enabled: true
-            }
+              enabled: true,
+            },
           ],
-          lastModified: new Date().toISOString()
+          lastModified: new Date().toISOString(),
         };
       }
       return env;
@@ -88,15 +111,15 @@ export const EnvironmentPanel = forwardRef<
   };
 
   const handleDeleteEnvironment = (id: string) => {
-    const env = environments.find(e => e.id === id);
+    const env = environments.find((e) => e.id === id);
     if (env && !env.global) {
-      if (confirm('Are you sure you want to delete this environment?')) {
+      if (confirm("Are you sure you want to delete this environment?")) {
         // Clean up navigable elements
         navigableElements.current = navigableElements.current.filter(
-          el => el.id !== id
+          (el) => el.id !== id
         );
-        onEnvironmentsUpdate(environments.filter(e => e.id !== id));
-        toast.success('Environment deleted');
+        onEnvironmentsUpdate(environments.filter((e) => e.id !== id));
+        toast.success("Environment deleted");
 
         // Focus next available environment
         const nextElement = navigableElements.current[0];
@@ -110,29 +133,35 @@ export const EnvironmentPanel = forwardRef<
   const { setFocus } = useKeyboardNavigation(
     navigableElements.current,
     (direction, currentId) => {
-      const currentElement = navigableElements.current.find(el => el.id === currentId);
+      const currentElement = navigableElements.current.find(
+        (el) => el.id === currentId
+      );
       if (!currentElement) return;
 
       let nextId: string | undefined;
 
       switch (direction) {
-        case 'down':
+        case "down":
           nextId = navigableElements.current.find(
-            el => el.type === 'environment' && 
-            navigableElements.current.indexOf(el) > navigableElements.current.indexOf(currentElement)
+            (el) =>
+              el.type === "environment" &&
+              navigableElements.current.indexOf(el) >
+                navigableElements.current.indexOf(currentElement)
           )?.id;
           break;
-        case 'up':
+        case "up":
           const reversedElements = [...navigableElements.current].reverse();
           nextId = reversedElements.find(
-            el => el.type === 'environment' && 
-            navigableElements.current.indexOf(el) < navigableElements.current.indexOf(currentElement)
+            (el) =>
+              el.type === "environment" &&
+              navigableElements.current.indexOf(el) <
+                navigableElements.current.indexOf(currentElement)
           )?.id;
           break;
-        case 'right':
+        case "right":
           // Expand environment if collapsed
-          if (currentElement.type === 'environment') {
-            setExpandedEnvironments(prev => {
+          if (currentElement.type === "environment") {
+            setExpandedEnvironments((prev) => {
               const next = new Set(prev);
               next.add(currentElement.id);
               return next;
@@ -140,10 +169,10 @@ export const EnvironmentPanel = forwardRef<
             setExpandedEnv(currentElement.id);
           }
           break;
-        case 'left':
+        case "left":
           // Collapse environment
-          if (currentElement.type === 'environment') {
-            setExpandedEnvironments(prev => {
+          if (currentElement.type === "environment") {
+            setExpandedEnvironments((prev) => {
               const next = new Set(prev);
               next.delete(currentElement.id);
               return next;
@@ -156,15 +185,19 @@ export const EnvironmentPanel = forwardRef<
       if (nextId) {
         setFocus(nextId);
         // Scroll element into view
-        const element = navigableElements.current.find(el => el.id === nextId);
-        element?.ref.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const element = navigableElements.current.find(
+          (el) => el.id === nextId
+        );
+        element?.ref.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     },
     (id) => {
       // Handle environment selection
-      const element = navigableElements.current.find(el => el.id === id);
-      if (element?.type === 'environment') {
-        setEditingEnvironment(environments.find(env => env.id === id) || null);
+      const element = navigableElements.current.find((el) => el.id === id);
+      if (element?.type === "environment") {
+        setEditingEnvironment(
+          environments.find((env) => env.id === id) || null
+        );
       }
     },
     (id) => {
@@ -405,10 +438,9 @@ export const EnvironmentPanel = forwardRef<
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-800/95"> {/* Added proper background */}
-      {/* Show save form when needed */}
+    <div className="h-full flex flex-col bg-slate-800/95">
       {showSaveForm && pendingVariable && (
-        <div className="border-b border-slate-700 bg-slate-900/50">
+        <div className="bg-slate-900/50">
           <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium text-slate-300">
@@ -454,45 +486,42 @@ export const EnvironmentPanel = forwardRef<
           </div>
         </div>
       )}
-
       <div className="sticky top-0 z-10 bg-slate-900">
+        <Input
+          placeholder="Search environments"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 rounded-none bg-slate-900 border-1 border-t border-slate-700 focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
+        />
         <div className="flex w-full">
           <Input
             placeholder="Add new environment"
             value={newEnvironmentName}
             onChange={(e) => setNewEnvironmentName(e.target.value)}
-            className="h-10 w-full rounded-none bg-slate-900 border-2 border-slate-700 focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
+            className="h-12 w-full rounded-none bg-slate-900 border-2 border-slate-700 focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
           />
           <div className="flex">
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleImportEnvironment}
-              className="h-10 w-10 rounded-none border-2 border-l-0 border-slate-700 bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300"
+              onClick={handleCreateEnvironment}
+              disabled={!newEnvironmentName.trim()}
+              className="h-12 w-12 rounded-none border-2 border-l-0 border-slate-700/50 bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 disabled:border-slate-700 disabled:text-slate-500"
             >
-              <Upload className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleCreateEnvironment}
-              disabled={!newEnvironmentName.trim()}
-              className="h-10 w-10 rounded-none border-2 border-l-0 border-slate-700 bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 disabled:text-slate-500"
+              onClick={handleImportEnvironment}
+              className="h-12 w-12 rounded-none border-2 border-l-0 border-slate-700 bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300"
             >
-              <Plus className="h-4 w-4" />
+              <Upload className="h-4 w-4" />
             </Button>
           </div>
         </div>
-
-        <Input
-          placeholder="Search environments"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-8 rounded-none bg-slate-900 border-2 border-t-0 border-slate-700 focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
-        />
       </div>
-
-      <ScrollArea className="flex-1 overflow-hidden"> {/* Added flex-1 and overflow handling */}
+      <ScrollArea className="flex-1 overflow-hidden">
         <Accordion
           type="multiple"
           value={Array.from(expandedEnvironments)}
@@ -505,12 +534,12 @@ export const EnvironmentPanel = forwardRef<
             <AccordionItem
               key={env.id}
               value={env.id}
-              ref={el => {
+              ref={(el) => {
                 if (el) {
                   navigableElements.current.push({
                     id: env.id,
                     ref: el,
-                    type: 'environment'
+                    type: "environment",
                   });
                 }
               }}

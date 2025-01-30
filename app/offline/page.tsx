@@ -1,16 +1,6 @@
 'use client';
 
-import React from "react";
-
-interface OfflineProps {
-  connectionType?: string;
-}
-
-export default function Offline({ connectionType }: OfflineProps) {
-  const handleRetry = () => {
-    window.location.reload();
-  };
-
+export default function OfflinePage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-900 p-4">
       <div className="text-center">
@@ -18,15 +8,13 @@ export default function Offline({ connectionType }: OfflineProps) {
           Connection Lost
         </h1>
         <p className="text-slate-400 mb-2">
-          {connectionType ? 
-            `Network type: ${connectionType}` : 
-            'Unable to connect to the network'
-        }</p>
+          Unable to connect to the network
+        </p>
         <p className="text-slate-400 mb-6">
           Please check your internet connection
         </p>
         <button
-          onClick={handleRetry}
+          onClick={() => window.location.reload()}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
         >
           Reconnect

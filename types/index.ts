@@ -29,9 +29,27 @@ export interface EnvironmentSaveActionEvent extends CustomEvent {
   };
 }
 
+export type ContentType =
+  | 'none' 
+  | 'json'
+  | 'form-data'
+  | 'x-www-form-urlencoded'
+  | 'raw'
+  | 'application/json'
+  | 'application/ld+json'
+  | 'application/hal+json'
+  | 'application/vnd.api+json'
+  | 'application/xml'
+  | 'text/xml'
+  | 'application/x-www-form-urlencoded'
+  | 'multipart/form-data'
+  | 'application/octet-stream'
+  | 'text/html'
+  | 'text/plain';
+
 export interface RequestBody {
-  type: "json" | "form-data" | "x-www-form-urlencoded" | "raw" | "none";
-  content: string | KeyValuePair[];
+  type: ContentType;
+  content: string | KeyValuePair[] | File;
 }
 
 export interface CollectionVersion {
@@ -113,10 +131,10 @@ export interface SavedRequest {
     retryCount?: number;
     validateResponse?: boolean;
   };
-  preRequestScript?: string;  // Add this
-  testScript?: string;       // Add this
-  testResults?: TestResult[]; // Add this
-  scriptLogs?: string[];     // Add this
+  preRequestScript: string;  // Change to required string
+  testScript: string;       // Change to required string
+  testResults: TestResult[];
+  scriptLogs: string[];
 }
 
 export interface TestResult {
@@ -170,10 +188,10 @@ export interface HistoryItem {
     params: KeyValuePair[];
     body: RequestBody;
     auth: { type: string } & Record<string, any>;
-    preRequestScript?: string;  // Add this
-    testScript?: string;       // Add this
-    testResults?: TestResult[]; // Add this
-    scriptLogs?: string[];     // Add this
+    preRequestScript?: string;
+    testScript?: string;
+    testResults?: TestResult[];
+    scriptLogs?: string[];
   };
   wsStats?: WebSocketStats;
 }

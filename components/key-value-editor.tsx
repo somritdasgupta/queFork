@@ -20,6 +20,8 @@ import {
   Check,
   Eraser,
   EllipsisIcon,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { KeyValuePair, Environment } from "@/types";
 import { toast } from "sonner";
@@ -67,6 +69,8 @@ interface KeyValueEditorProps {
   autoSave?: boolean;
   isMobile?: boolean;
   className?: string;
+  expandedItemId?: string | null;
+  onExpandedChange?: (id: string | null) => void;
 }
 
 interface KeyValueInputProps {
@@ -265,12 +269,15 @@ export function KeyValueEditor({
   autoSave = false,
   isMobile = false,
   className,
+  expandedItemId,
+  onExpandedChange,
 }: KeyValueEditorProps) {
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkContent, setBulkContent] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const navigableElements = useRef<NavigableElement[]>([]);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   const { setFocus } = useKeyboardNavigation(
     navigableElements.current,
@@ -601,16 +608,18 @@ export function KeyValueEditor({
       return;
     }
 
-    window.dispatchEvent(new CustomEvent('environmentSaveAction', {
-      detail: {
-        key: pair.key,
-        value: pair.value,
-        type: pair.type || "text",
-        isMobile: window.innerWidth < 768,
-        switchPanel: true,
-        showForm: true
-      }
-    }));
+    window.dispatchEvent(
+      new CustomEvent("environmentSaveAction", {
+        detail: {
+          key: pair.key,
+          value: pair.value,
+          type: pair.type || "text",
+          isMobile: window.innerWidth < 768,
+          switchPanel: true,
+          showForm: true,
+        },
+      })
+    );
 
     // Provide immediate feedback
     toast.success("Opening environment selector...");
@@ -631,105 +640,105 @@ export function KeyValueEditor({
   };
 
   const renderItemActions = (pair: KeyValuePair, index: number) => {
-    const [isExpanded, setIsExpanded] = useState(false);
+    const isExpanded = expandedRowId === pair.id;
 
     return (
-      <>
-        {/* Desktop View - Show all buttons */}
-        <div className="hidden sm:flex border-l border-slate-700">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleSmartCopy(index)}
-            className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
-          >
-            {copiedIndex === index ? (
-              <Check className="h-4 w-4 text-green-400" />
-            ) : (
-              <Copy className="h-4 w-4 text-blue-400" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => updatePair(index, "enabled", !pair.enabled)}
-            className={cn(
-              "h-8 w-8 rounded-none border-y border-r border-slate-700",
-              pair.enabled ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-800"
-            )}
-          >
-            {pair.enabled ? (
-              <Eye className="h-4 w-4 text-emerald-400" />
-            ) : (
-              <EyeOff className="h-4 w-4 text-slate-500" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => removePair(index)}
-            className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
-          >
-            {pairs.length > 1 ? (
-              <Trash2 className="h-4 w-4 text-red-400" />
-            ) : (
-              <Eraser className="h-4 w-4 text-red-400" />
-            )}
-          </Button>
-          {!isEnvironmentEditor && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleAddToEnvironment(index)}
-              className="h-8 w-8 rounded-none border-y border-r border-slate-700 bg-slate-900 hover:bg-slate-800"
-            >
-              <PackagePlusIcon className="h-4 w-4 text-purple-400" />
-            </Button>
-          )}
-        </div>
-
-        {/* Mobile View - Expandable buttons */}
-        <div className="sm:hidden flex items-center relative border-l border-slate-700">
+      <div className="flex items-center gap-1 relative">
+        {/* Desktop buttons */}
+        <div className="hidden sm:flex items-center gap-1 p-0.5">
           <Button
             variant="ghost"
             size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
-            className="h-8 w-8 text-slate-400 hover:text-slate-300 hover:bg-transparent"
+            onClick={() => updatePair(index, "enabled", !pair.enabled)}
+            className={cn(
+              "h-7 w-7 p-0",
+              pair.enabled ? "text-emerald-400" : "text-slate-500"
+            )}
+            title={pair.enabled ? "Disable" : "Enable"}
           >
-            <EllipsisIcon className={cn(
-              "h-4 w-4 transition-transform duration-200",
-              isExpanded && "rotate-90"
-            )} />
+            {pair.enabled ? (
+              <CheckCircle className="h-4 w-4" />
+            ) : (
+              <XCircle className="h-4 w-4" />
+            )}
           </Button>
 
-          <div className={cn(
-            "flex absolute right-full top-0 gap-1 overflow-hidden transition-all duration-200",
-            isExpanded ? "w-auto opacity-100 mr-2" : "w-0 opacity-0"
-          )}>
-            {/* Mobile expanded buttons */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleSmartCopy(index)}
+            className="h-7 w-7 p-0 text-blue-400"
+            title="Copy pair"
+          >
+            {copiedIndex === index ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </Button>
+
+          {onAddToEnvironment && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 bg-slate-800 text-slate-400 hover:text-slate-300 shrink-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                removePair(index);
-              }}
+              onClick={() => handleAddToEnvironment(index)}
+              className="h-7 w-7 p-0 text-purple-400"
+              title="Save to environment"
             >
-              <Trash2 className="h-4 w-4 text-red-400" />
+              <PackagePlusIcon className="h-4 w-4" />
             </Button>
-            {!isEnvironmentEditor && (
+          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => removePair(index)}
+            className="h-7 w-7 p-0 text-red-400"
+            title="Remove"
+            disabled={preventFirstItemDeletion && index === 0}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Mobile buttons with animation */}
+        <div className="sm:hidden">
+          <div
+            className={cn(
+              "absolute bg-slate-900/80 right-full top-0 flex items-center transition-all duration-900 ease overflow-hidden",
+              isExpanded ? "w-[175px] opacity-100" : "w-0 opacity-0"
+            )}
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => updatePair(index, "enabled", !pair.enabled)}
+              className="h-7 w-7 p-0"
+            >
+              {pair.enabled ? (
+                <CheckCircle className="h-4 w-4 text-emerald-400" />
+              ) : (
+                <XCircle className="h-4 w-4 text-slate-500" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleSmartCopy(index)}
+              className="h-7 w-7 p-0"
+            >
+              {copiedIndex === index ? (
+                <Check className="h-4 w-4 text-emerald-400" />
+              ) : (
+                <Copy className="h-4 w-4 text-blue-400" />
+              )}
+            </Button>
+            {onAddToEnvironment && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 bg-slate-800 text-slate-400 hover:text-slate-300 shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAddToEnvironment(index);
-                }}
+                onClick={() => handleAddToEnvironment(index)}
+                className="h-7 w-7 p-0"
               >
                 <PackagePlusIcon className="h-4 w-4 text-purple-400" />
               </Button>
@@ -737,36 +746,30 @@ export function KeyValueEditor({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 bg-slate-800 text-slate-400 hover:text-slate-300 shrink-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSmartCopy(index);
-              }}
+              onClick={() => removePair(index)}
+              disabled={preventFirstItemDeletion && index === 0}
+              className="h-7 w-7 p-0"
             >
-              {copiedIndex === index ? (
-                <Check className="h-4 w-4 text-green-400" />
-              ) : (
-                <Copy className="h-4 w-4 text-blue-400" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 bg-slate-800 text-slate-400 hover:text-slate-300 shrink-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                updatePair(index, "enabled", !pair.enabled);
-              }}
-            >
-              {pair.enabled ? (
-                <Eye className="h-4 w-4 text-emerald-400" />
-              ) : (
-                <EyeOff className="h-4 w-4 text-slate-500" />
-              )}
+              <Trash2 className="h-4 w-4 text-red-400" />
             </Button>
           </div>
+
+          {/* Toggle button - only visible control on mobile */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setExpandedRowId(isExpanded ? null : pair.id || null)
+            }
+            className={cn(
+              "h-7 w-7 p-0 transition-transform duration-200",
+              isExpanded && "rotate-90"
+            )}
+          >
+            <EllipsisIcon className="h-4 w-4 text-slate-400" />
+          </Button>
         </div>
-      </>
+      </div>
     );
   };
 

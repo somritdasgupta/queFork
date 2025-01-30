@@ -1,4 +1,4 @@
-import { Collection, SavedRequest, ImportSource } from "@/types";
+import { Collection, SavedRequest, ImportSource, ContentType } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 
 interface PostmanCollection {
@@ -147,7 +147,7 @@ function convertPostmanRequest(item: PostmanRequest): SavedRequest {
     item.request.url : 
     item.request.url.raw;
 
-  const bodyType = item.request.body?.mode === 'raw' ? 'raw' :
+  const bodyType: ContentType = item.request.body?.mode === 'raw' ? 'raw' :
                   item.request.body?.mode === 'formdata' ? 'form-data' :
                   item.request.body?.mode === 'urlencoded' ? 'x-www-form-urlencoded' :
                   'none';
@@ -170,7 +170,11 @@ function convertPostmanRequest(item: PostmanRequest): SavedRequest {
       content: item.request.body?.raw || ''
     },
     statusCode: 0,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    preRequestScript: '',
+    testScript: '',
+    testResults: [],
+    scriptLogs: []
   };
 }
 
@@ -208,6 +212,11 @@ function convertHoppscotchToCollections(data: HoppscotchCollection): Collection[
 }
 
 function convertHoppscotchRequest(req: HoppscotchRequest): SavedRequest {
+  const bodyType: ContentType = req.body?.contentType === 'application/json' ? 'application/json' :
+                               req.body?.contentType === 'multipart/form-data' ? 'multipart/form-data' :
+                               req.body?.contentType === 'application/x-www-form-urlencoded' ? 'application/x-www-form-urlencoded' :
+                               req.body?.contentType ? 'raw' : 'none';
+
   return {
     id: uuidv4(),
     name: req.name,
@@ -228,15 +237,16 @@ function convertHoppscotchRequest(req: HoppscotchRequest): SavedRequest {
       showSecrets: false
     })),
     body: {
-      type: req.body?.contentType === 'application/json' ? 'json' :
-            req.body?.contentType === 'multipart/form-data' ? 'form-data' :
-            req.body?.contentType === 'application/x-www-form-urlencoded' ? 'x-www-form-urlencoded' :
-            req.body?.contentType ? 'raw' : 'none',
+      type: bodyType,
       content: req.body?.body || ''
     },
     statusCode: 0,
     timestamp: Date.now(),
-    auth: convertHoppscotchAuth(req.auth)
+    auth: convertHoppscotchAuth(req.auth),
+    preRequestScript: '',
+    testScript: '',
+    testResults: [],
+    scriptLogs: []
   };
 }
 
@@ -281,7 +291,11 @@ function convertGenericRequest(req: any): SavedRequest {
       content: ''
     },
     statusCode: 0,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    preRequestScript: '',
+    testScript: '',
+    testResults: [],
+    scriptLogs: []
   };
 }
 
@@ -309,12 +323,16 @@ function convertOpenAPIToCollections(data: any): Collection[] {
         params: [],
         body: {
           type: details.requestBody ? 'json' : 'none',
-          content: details.requestBody ? 
-            JSON.stringify(details.requestBody.content['application/json']?.schema, null, 2) : 
+          content: details.requestBody ?
+            JSON.stringify(details.requestBody.content['application/json']?.schema, null, 2) :
             ''
         },
         statusCode: 0,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        preRequestScript: "",
+        testScript: "",
+        testResults: [],
+        scriptLogs: []
       });
     }
   }

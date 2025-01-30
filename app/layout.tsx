@@ -2,6 +2,8 @@ import "@/styles/globals.css";
 import { Inter } from "next/font/google";
 import { WebSocketWrapper } from "@/components/websocket/websocket-wrapper";
 import { Preloader } from "@/components/preloader";
+import { ServiceWorkerRegistration } from "./components/ServiceWorkerRegistration";
+import OfflineDetector from './components/OfflineDetector';
 import type { Metadata, Viewport } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -136,9 +138,14 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} antialiased`}>
+        <ServiceWorkerRegistration />
         <Preloader />
         <div className="contents animate-unblur">
-          <WebSocketWrapper>{children}</WebSocketWrapper>
+          <WebSocketWrapper>
+            <OfflineDetector>
+              {children}
+            </OfflineDetector>
+          </WebSocketWrapper>
         </div>
       </body>
     </html>

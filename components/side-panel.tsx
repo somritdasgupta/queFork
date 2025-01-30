@@ -149,7 +149,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
                 value={tab.id}
                 onClick={() => setActivePanel(tab.id)}
                 className={cn(
-                  "flex-1 h-10 rounded-none border-b-4 border-transparent px-4 py-2 font-medium text-xs text-slate-400 whitespace-nowrap",
+                  "flex-1 h-10 rounded-none border-b-4 border-transparent px-2 lg:px-4 py-2 font-medium text-xs text-slate-400",
                   "data-[state=active]:border-blue-400",
                   "data-[state=active]:text-blue-400",
                   "data-[state=active]:bg-slate-800",
@@ -160,7 +160,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
               >
                 <div className="flex items-center justify-center gap-2">
                   {tab.icon}
-                  {tab.label}
+                  <span className="hidden lg:inline truncate">{tab.label}</span>
                 </div>
               </TabsTrigger>
             ))}
