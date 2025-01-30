@@ -220,43 +220,79 @@ export function HistoryPanel({
   };
 
   const handleHistoryItemClick = (item: HistoryItem) => {
-    if (isConnected) {
-      toast.error(
-        "Please disconnect current WebSocket before loading a new URL"
+    // Clear existing request data and response first
+    window.dispatchEvent(new CustomEvent('resetActiveRequest'));
+    
+    // First switch modes if necessary
+    if (item.type === 'websocket') {
+      // Switch to WebSocket mode first before loading
+      window.dispatchEvent(
+        new CustomEvent('setRequestMode', {
+          detail: { mode: 'websocket' },
+        })
       );
-      return;
-    }
-
-    // Update __ACTIVE_REQUEST__ with scripts
-    (window as any).__ACTIVE_REQUEST__ = {
-      method: item.method,
-      url: item.url,
-      headers: item.request.headers,
-      params: item.request.params,
-      body: item.request.body,
-      auth: item.request.auth,
-      response: item.response,
-      // Add scripts
-      preRequestScript: item.request.preRequestScript,
-      testScript: item.request.testScript,
-      testResults: item.request.testResults,
-      scriptLogs: item.request.scriptLogs,
-    };
-
-    window.dispatchEvent(
-      new CustomEvent("loadHistoryItem", {
-        detail: {
-          item,
+      
+      // Short delay to allow mode switch to complete
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('loadHistoryItem', {
+            detail: {
+              item,
+              url: item.url,
+              type: 'websocket',
+              messages: item.wsStats?.messages || [],
+              stats: {
+                messagesSent: item.wsStats?.messagesSent || 0,
+                messagesReceived: item.wsStats?.messagesReceived || 0,
+                avgLatency: item.wsStats?.avgLatency || 0,
+              },
+            },
+          })
+        );
+      }, 100);
+    } else {
+      // Switch to HTTP mode first before loading
+      window.dispatchEvent(
+        new CustomEvent('setRequestMode', {
+          detail: { mode: 'http' },
+        })
+      );
+      
+      // Short delay to allow mode switch to complete
+      setTimeout(() => {
+        // Update __ACTIVE_REQUEST__ with scripts
+        (window as any).__ACTIVE_REQUEST__ = {
+          method: item.method,
           url: item.url,
-          scripts: {
-            preRequestScript: item.request.preRequestScript || "",
-            testScript: item.request.testScript || "",
-            testResults: item.request.testResults || [],
-            scriptLogs: item.request.scriptLogs || [],
-          },
-        },
-      })
-    );
+          headers: item.request.headers,
+          params: item.request.params,
+          body: item.request.body,
+          auth: item.request.auth,
+          response: item.response,
+          type: 'http',
+          preRequestScript: item.request.preRequestScript,
+          testScript: item.request.testScript,
+          testResults: item.request.testResults,
+          scriptLogs: item.request.scriptLogs,
+        };
+
+        window.dispatchEvent(
+          new CustomEvent('loadHistoryItem', {
+            detail: {
+              item,
+              type: 'http',
+              url: item.url,
+              scripts: {
+                preRequestScript: item.request.preRequestScript || '',
+                testScript: item.request.testScript || '',
+                testResults: item.request.testResults || [],
+                scriptLogs: item.request.scriptLogs || [],
+              },
+            },
+          })
+        );
+      }, 100);
+    }
 
     onSelectItem(item);
   };

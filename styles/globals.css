@@ -92,6 +92,8 @@ body {
   select {
     font-size: 16px !important; /* Prevent iOS zoom */
     touch-action: manipulation;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
   }
 }
 
@@ -344,4 +346,71 @@ body {
   --header-height: 40px; /* Matches the h-10 class */
   position: relative;
   contain: paint;
+}
+
+/* Mobile Touch Scrolling Fixes */
+.touch-pan-y {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.overscroll-y-contain {
+  overscroll-behavior-y: contain;
+}
+
+/* Enable smooth scrolling on iOS */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  height: 100%;
+  position: relative;
+  contain: paint;
+}
+
+/* Prevent body scroll when scrolling inside container */
+.overflow-scroll {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Add momentum scrolling for iOS */
+@supports (-webkit-touch-callout: none) {
+  .scroll-container {
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-momentum {
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    height: 100%;
+  }
+}
+
+/* Ensure proper touch handling for scrollable areas */
+[data-radix-scroll-area-viewport] {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  height: 100% !important;
+}
+
+/* Add touch-specific overrides */
+.no-zoom-input {
+  font-size: 16px !important;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+}
+
+/* Ensure mobile inputs don't zoom */
+@media (max-width: 768px) {
+  .touch-input {
+    font-size: 16px !important;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+  }
 }

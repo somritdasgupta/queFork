@@ -156,11 +156,16 @@ const KeyValueInput = React.memo(
             "h-8 bg-slate-900 border-slate-700 text-slate-300 placeholder:text-slate-500",
             "focus:border-slate-600 focus:ring-slate-700",
             "rounded-none text-xs font-medium transition-colors",
+            "no-zoom-input touch-input text-xs",
             typeof window !== "undefined" && window.innerWidth < 640
               ? "pl-3"
               : "pl-9",
             props.className
           )}
+          style={{
+            fontSize: "16px",
+            touchAction: "manipulation",
+          }}
           onKeyDown={(e) => {
             if (e.key === "Tab" && !e.shiftKey) {
               e.preventDefault();
@@ -225,11 +230,9 @@ const SortableItem = React.memo(
         {...attributes}
       >
         <div className="group flex items-start min-w-0 relative">
-          {" "}
-          {/* Add relative positioning */}
           <button
             {...listeners}
-            className="flex items-center justify-center w-8 h-8 absolute left-0 -ml-8 text-slate-200 opacity-30 group-hover:opacity-100 transition-opacity border-r border-slate-700"
+            className="flex items-center justify-center w-8 h-8 absolute -ml-10 sm:-ml-8 left-0 text-slate-200 opacity-30 group-hover:opacity-100 transition-opacity"
             title="Drag to reorder"
           >
             <GripVertical className="h-4 w-4" />
@@ -433,17 +436,6 @@ export function KeyValueEditor({
 
   const removePair = useCallback(
     (index: number) => {
-      if (preventFirstItemDeletion && index === 0) {
-        const clearedPair = {
-          ...pairs[0],
-          key: "",
-          value: "",
-          description: "",
-        };
-        onChange([clearedPair, ...pairs.slice(1)]);
-        return;
-      }
-
       if (pairs.length <= 1) {
         const clearedPair = {
           ...pairs[0],
@@ -453,6 +445,18 @@ export function KeyValueEditor({
           enabled: true,
         };
         onChange([clearedPair]);
+        toast.success("Cleared pair");
+        return;
+      }
+
+      if (preventFirstItemDeletion && index === 0) {
+        const clearedPair = {
+          ...pairs[0],
+          key: "",
+          value: "",
+          description: "",
+        };
+        onChange([clearedPair, ...pairs.slice(1)]);
         return;
       }
 
@@ -641,6 +645,7 @@ export function KeyValueEditor({
 
   const renderItemActions = (pair: KeyValuePair, index: number) => {
     const isExpanded = expandedRowId === pair.id;
+    const isSinglePair = pairs.length === 1;
 
     return (
       <div className="flex items-center gap-1 relative">
@@ -694,10 +699,14 @@ export function KeyValueEditor({
             size="sm"
             onClick={() => removePair(index)}
             className="h-7 w-7 p-0 text-red-400"
-            title="Remove"
+            title={isSinglePair ? "Clear" : "Remove"}
             disabled={preventFirstItemDeletion && index === 0}
           >
-            <Trash2 className="h-4 w-4" />
+            {isSinglePair ? (
+              <Eraser className="h-4 w-4" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
           </Button>
         </div>
 
@@ -750,7 +759,11 @@ export function KeyValueEditor({
               disabled={preventFirstItemDeletion && index === 0}
               className="h-7 w-7 p-0"
             >
-              <Trash2 className="h-4 w-4 text-red-400" />
+              {isSinglePair ? (
+                <Eraser className="h-4 w-4 text-red-400" />
+              ) : (
+                <Trash2 className="h-4 w-4 text-red-400" />
+              )}
             </Button>
           </div>
 
@@ -815,14 +828,24 @@ export function KeyValueEditor({
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden touch-pan-y overscroll-y-contain">
         <ScrollArea
           className={cn(
-            "w-full transition-all duration-200 bg-slate-900/50 backdrop-blur-sm scroll-container touch-scroll",
+            "w-full transition-all duration-200 bg-slate-900/50 backdrop-blur-sm",
+            "touch-pan-y overscroll-y-contain overflow-scroll -webkit-overflow-scrolling-touch",
             pairs.length > 6 ? "h-[192px]" : "h-auto"
           )}
+          style={{
+            WebkitOverflowScrolling: "touch",
+            touchAction: "pan-y",
+          }}
         >
-          <div className="divide-y divide-slate-700/50">
+          <div
+            className="divide-y divide-slate-700/50"
+            style={{
+              minHeight: pairs.length > 6 ? "192px" : "auto",
+            }}
+          >
             {isBulkMode ? (
               <Textarea
                 value={bulkContent}
@@ -835,7 +858,7 @@ export function KeyValueEditor({
                   font-mono"
               />
             ) : (
-              <div className="relative min-h-[32px]">
+              <div className="relative min-h-[32px] touch-pan-y">
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -846,7 +869,7 @@ export function KeyValueEditor({
                     items={pairs.map((p) => p.id || `temp-${Math.random()}`)} // Ensure unique IDs
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="divide-y divide-slate-700/50">
+                    <div className="divide-y divide-slate-700/50 touch-pan-y">
                       {pairs.map((pair, index) => (
                         <SortableItem
                           key={pair.id || `temp-${index}`}
@@ -856,7 +879,7 @@ export function KeyValueEditor({
                           <div className="flex w-full hover:bg-slate-800/50 transition-colors">
                             <div
                               className={cn(
-                                "grid flex-1 gap-px",
+                                "grid flex-1",
                                 showDescription
                                   ? "grid-cols-[1fr_1fr_1fr]"
                                   : "grid-cols-[1fr_1fr]",
@@ -874,7 +897,7 @@ export function KeyValueEditor({
                                 onPaste={(e) =>
                                   handleSmartPaste(e, index, "key")
                                 }
-                                className="flex-1 bg-slate-900 border-slate-700 text-slate-300 
+                                className="text-xs flex-1 bg-slate-900 border-slate-700 text-slate-300 
                                   placeholder:text-slate-500 focus:border-slate-800 
                                   focus:ring-0 focus:ring-slate-800 
                                   transition-colors"
@@ -893,7 +916,7 @@ export function KeyValueEditor({
                                 onPaste={(e) =>
                                   handleSmartPaste(e, index, "value")
                                 }
-                                className="flex-1 bg-slate-900 border-slate-700 text-slate-300 
+                                className="text-xs flex-1 bg-slate-900 border-slate-700 text-slate-300 
                                   placeholder:text-slate-500 focus:border-slate-800 
                                   focus:ring-0 focus:ring-slate-800 
                                   transition-colors"

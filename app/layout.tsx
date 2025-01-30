@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import { WebSocketWrapper } from "@/components/websocket/websocket-wrapper";
 import { Preloader } from "@/components/preloader";
 import { ServiceWorkerRegistration } from "./components/ServiceWorkerRegistration";
-import OfflineDetector from './components/OfflineDetector';
 import type { Metadata, Viewport } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -80,17 +79,17 @@ export const metadata: Metadata = {
     google: "i will add this later",
   },
   alternates: {
-    canonical: 'https://quefork.somrit.in',
+    canonical: "https://quefork.somrit.in",
     languages: {
-      'en-US': 'https://quefork.somrit.in',
+      "en-US": "https://quefork.somrit.in",
     },
   },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#1e293b" },
-    { media: "(prefers-color-scheme: dark)", color: "#1e293b" },
+    { media: "(prefers-color-scheme: light)", color: "#0f172a" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -111,7 +110,11 @@ export default function RootLayout({
       <head>
         <link rel="canonical" href="https://quefork.somrit.in" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
         <meta name="robots" content="index, follow" />
         <meta name="googlebot" content="index, follow" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -121,19 +124,19 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#1e293b" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
         <meta name="format-detection" content="telephone=no" />
-        <script 
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebApplication",
-              "name": "queFork",
-              "applicationCategory": "DeveloperApplication",
-              "browserRequirements": "Requires JavaScript",
-              "operatingSystem": "All",
-              "permissions": "API Testing",
-              "url": "https://quefork.somrit.in"
-            })
+              name: "queFork",
+              applicationCategory: "DeveloperApplication",
+              browserRequirements: "Requires JavaScript",
+              operatingSystem: "All",
+              permissions: "API Testing",
+              url: "https://quefork.somrit.in",
+            }),
           }}
         />
       </head>
@@ -141,11 +144,7 @@ export default function RootLayout({
         <ServiceWorkerRegistration />
         <Preloader />
         <div className="contents animate-unblur">
-          <WebSocketWrapper>
-            <OfflineDetector>
-              {children}
-            </OfflineDetector>
-          </WebSocketWrapper>
+          <WebSocketWrapper>{children}</WebSocketWrapper>
         </div>
       </body>
     </html>

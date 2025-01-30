@@ -966,6 +966,14 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => setIsCreating(true)}
+                className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
+              >
+                <Plus className="h-4 w-4 text-emerald-400" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsImporting(true)}
                 className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
               >
@@ -1259,9 +1267,17 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
               <h3 className="text-lg font-medium text-slate-300 mb-2">
                 No Collections Yet
               </h3>
-              <p className="text-sm text-slate-400 max-w-sm">
+              <p className="text-sm text-slate-400 max-w-sm mb-4">
                 Create your first collection to organize your API requests.
               </p>
+              <Button
+                variant="outline"
+                onClick={() => setIsCreating(true)}
+                className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Collection
+              </Button>
             </div>
           ) : (
             <div>

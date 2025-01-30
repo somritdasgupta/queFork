@@ -1,74 +1,64 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Wifi, WifiOff, Loader2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { WifiIcon, WifiOff, WifiOffIcon } from "lucide-react";
 
 export function NetworkStatusIndicator({ className }: { className?: string }) {
-  const [status, setStatus] = useState<"online" | "offline" | "reconnecting">(
-    "online"
-  );
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    let reconnectingTimeout: NodeJS.Timeout;
-
-    const handleOnline = () => {
-      clearTimeout(reconnectingTimeout);
-      setStatus("online");
-    };
-
     const handleOffline = () => {
-      setStatus("offline");
-      // Show reconnecting status after 2 seconds of being offline
-      reconnectingTimeout = setTimeout(() => {
-        setStatus("reconnecting");
-      }, 2000);
+      setIsOnline(false);
+      document.body.classList.add("connection-lost");
     };
 
-    setStatus(navigator.onLine ? "online" : "offline");
-    window.addEventListener("online", handleOnline);
+    const handleOnline = async () => {
+      try {
+        const response = await fetch("/api/health", {
+          method: "HEAD",
+          cache: "no-store",
+        });
+
+        if (response.ok) {
+          setIsOnline(true);
+          document.body.classList.remove("connection-lost");
+        }
+      } catch (error) {
+        console.log("Connection not fully restored yet");
+      }
+    };
+
     window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+
+    // Initial check
+    if (!navigator.onLine) {
+      handleOffline();
+    }
 
     return () => {
-      clearTimeout(reconnectingTimeout);
-      window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
     };
   }, []);
 
   return (
-    <div className={cn("relative", className)}>
-      <AnimatePresence>
-        {status !== "online" ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="flex items-center gap-2 px-2 py-1 rounded-md bg-slate-800 border border-slate-700/50 text-xs"
-          >
-            {status === "offline" && (
-              <>
-                <WifiOff className="w-3 h-3 text-red-400" />
-              </>
-            )}
-            {status === "reconnecting" && (
-              <>
-                <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
-              </>
-            )}
-          </motion.div>
+    <div className="relative">
+      <div
+        className={`flex items-center gap-2 transition-all duration-300 rounded-full px-2 bg-slate-800 ${className}`}
+        title={isOnline ? "Connected" : "Connection Lost"}
+      >
+        {isOnline ? (
+          <WifiIcon className="h-4 w-3 text-green-500 animate-pulse" />
         ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="flex items-center gap-2 px-2 rounded-lg bg-slate-800/50 border border-slate-700/30 text-xs"
-          >
-            <Wifi className="h-4 text-green-400" />
-          </motion.div>
+          <>
+            <WifiOff className="h-4 w-3 text-red-500 animate-pulse" />
+            <span className="text-red-500 text-sm font-medium animate-pulse">
+              queFork offline
+            </span>
+          </>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }

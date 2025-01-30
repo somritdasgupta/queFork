@@ -1,11 +1,11 @@
 {
-  "name": "queFork - Modern API Testing Tool",
+  "name": "queFork / API Testing",
   "short_name": "queFork",
   "description": "A modern, open-source API testing tool for developers",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1e293b",
-  "theme_color": "#1e293b",
+  "theme_color": "#0f172a",
   "orientation": "any",
   "icons": [
     {

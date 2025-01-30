@@ -34,7 +34,6 @@ import SidePanel from "@/components/side-panel";
 import { EnvironmentSelector } from "@/components/environment-selector";
 import { importFromUrl, parseImportData } from "@/lib/import-utils";
 import { ScriptRunner } from "@/lib/script-runner";
-import { NetworkStatusIndicator } from "./components/NetworkStatusIndicator";
 
 export default function Page() {
   const [method, setMethod] = useState("GET");
@@ -226,6 +225,40 @@ export default function Page() {
       setRecentUrls(JSON.parse(saved));
     }
   }, []);
+
+  useEffect(() => {
+    const handleResetActiveRequest = () => {
+      setMethod('GET');
+      setUrl('');
+      setHeaders([{ key: '', value: '', enabled: true, showSecrets: false, type: '' }]);
+      setParams([{ key: '', value: '', enabled: true, showSecrets: false, type: '' }]);
+      setBody({ type: 'none', content: '' });
+      setAuth({ type: 'none' });
+      setResponse(null);
+      setPreRequestScript(null);
+      setTestScript(null);
+      setScriptLogs([]);
+      setTestResults([]);
+    };
+
+    const handleSetRequestMode = (e: CustomEvent) => {
+      const { mode } = e.detail;
+      setIsWebSocketMode(mode === 'websocket');
+      
+      // Disconnect WebSocket if switching to HTTP mode
+      if (mode === 'http' && wsConnected) {
+        disconnect();
+      }
+    };
+
+    window.addEventListener('resetActiveRequest', handleResetActiveRequest);
+    window.addEventListener('setRequestMode', handleSetRequestMode as EventListener);
+
+    return () => {
+      window.removeEventListener('resetActiveRequest', handleResetActiveRequest);
+      window.removeEventListener('setRequestMode', handleSetRequestMode as EventListener);
+    };
+  }, [wsConnected, disconnect]);
 
   const executeRequest = async () => {
     if (!url) {
@@ -998,7 +1031,6 @@ export default function Page() {
         <div className="w-full flex flex-col md:flex-row items-stretch gap-2 p-4">
           {/* Environment and Mobile Controls - Full width on mobile, fixed width on desktop */}
           <div className="flex gap-2 md:w-[280px] shrink-0">
-            
             <div className="flex-1">
               <EnvironmentSelector
                 environments={environments}
