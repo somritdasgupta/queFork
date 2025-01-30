@@ -371,6 +371,11 @@ export default function Page() {
             params,
             body,
             auth,
+            // Include scripts in history
+            preRequestScript: (window as any).__ACTIVE_REQUEST__?.preRequestScript,
+            testScript: (window as any).__ACTIVE_REQUEST__?.testScript,
+            testResults: (window as any).__ACTIVE_REQUEST__?.testResults,
+            scriptLogs: (window as any).__ACTIVE_REQUEST__?.scriptLogs
           },
           response: finalResponse,
           type: "rest",

@@ -90,25 +90,42 @@ export function parseImportData(source: ImportSource, data: string): Collection[
   try {
     const parsed = JSON.parse(data);
     
-    // Enhanced format detection
-    if (parsed.v && (parsed.folders || parsed.requests)) {
-      // This is a Hoppscotch format
+    // Handle different collection formats
+    if (parsed._type === "hoppscotch") {
       return convertHoppscotchToCollections(parsed);
-    } else if (parsed.info?.schema?.includes('postman')) {
+    } 
+    
+    if (parsed.info?.schema?.includes('postman')) {
       return convertPostmanToCollections(parsed);
-    } else if (parsed.openapi || parsed.swagger) {
+    } 
+    
+    if (parsed.openapi || parsed.swagger) {
       return convertOpenAPIToCollections(parsed);
-    } else if (Array.isArray(parsed)) {
+    } 
+    
+    if (Array.isArray(parsed)) {
       // Handle array of requests
       return [{
         id: uuidv4(),
-        name: 'Imported Collection',
+        name: 'Imported Requests',
         requests: parsed.map(convertGenericRequest),
         lastModified: new Date().toISOString()
       }];
     }
     
-    throw new Error('Unsupported format');
+    if (parsed.requests && Array.isArray(parsed.requests)) {
+      // Handle generic collection format
+      return [{
+        id: uuidv4(),
+        name: parsed.name || 'Imported Collection',
+        description: parsed.description,
+        apiVersion: parsed.version,
+        requests: parsed.requests.map(convertGenericRequest),
+        lastModified: new Date().toISOString()
+      }];
+    }
+    
+    throw new Error('Unsupported collection format');
   } catch (error) {
     console.error('Parse error:', error);
     throw new Error('Failed to parse import data');

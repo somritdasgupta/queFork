@@ -17,21 +17,10 @@ import {
   Save,
   AlertCircle,
   FileJson,
-  FileText,
-  Send,
-  MessageSquare,
   List,
   FileCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -117,6 +106,12 @@ export function ResponsePanel({
   isWebSocketMode,
   ...props
 }: ResponsePanelProps) {
+  // Add state for scripts and results
+  const [scriptLogs, setScriptLogs] = useState<string[]>([]);
+  const [testResults, setTestResults] = useState<any[]>([]);
+  const [preRequestScript, setPreRequestScript] = useState<string>("");
+  const [testScript, setTestScript] = useState<string>("");
+
   // Only hide the response panel (not other panels)
   if (!response && !isWebSocketMode) {
     return null;
@@ -230,7 +225,7 @@ export function ResponsePanel({
   const handleSaveRequest = () => {
     if (!response) return;
 
-    // Create event detail
+    // Create event detail with scripts
     const requestToSave = {
       method: props.method,
       url: props.url,
@@ -245,19 +240,24 @@ export function ResponsePanel({
         time: response?.time,
         size: response?.size,
       },
+      // Use state values for scripts and results
+      preRequestScript: preRequestScript,
+      testScript: testScript,
+      testResults: testResults,
+      scriptLogs: scriptLogs,
       runConfig: {
         iterations: 1,
         delay: 0,
         parallel: false,
         environment: null,
-        timeout: 30000, // Default 30s timeout
+        timeout: 30000,
         stopOnError: true,
         retryCount: 0,
-        validateResponse: false, // For future response validation
+        validateResponse: false,
       },
     };
 
-    // Dispatch a single event with all the data and flags
+    // Dispatch event with all the data
     window.dispatchEvent(
       new CustomEvent("saveAndShowRequest", {
         detail: {
@@ -268,6 +268,17 @@ export function ResponsePanel({
       })
     );
   };
+
+  // Add effect to update script state from active request
+  useEffect(() => {
+    if ((window as any).__ACTIVE_REQUEST__) {
+      const activeRequest = (window as any).__ACTIVE_REQUEST__;
+      setPreRequestScript(activeRequest.preRequestScript || "");
+      setTestScript(activeRequest.testScript || "");
+      setTestResults(activeRequest.testResults || []);
+      setScriptLogs(activeRequest.scriptLogs || []);
+    }
+  }, [response]); // Update when response changes
 
   const renderStatusBar = () =>
     !isWebSocketMode ? (
@@ -415,7 +426,10 @@ export function ResponsePanel({
           value={selectedLanguage}
           onValueChange={(value: CodeGenLanguage) => setSelectedLanguage(value)}
         >
-          <SelectTrigger className="text-xs border-0 focus:ring-0 focus:ring-offset-0 bg-transparent text-slate-400 px-0">
+          <SelectTrigger
+            showChevron={false}
+            className="text-xs border-0 focus:ring-0 focus:ring-offset-0 bg-transparent text-slate-400 p-0 w-full h-full flex items-center justify-center"
+          >
             <SelectValue>
               {React.createElement(languageConfigs[selectedLanguage].icon, {
                 className:
@@ -482,17 +496,22 @@ export function ResponsePanel({
                       <TabsTrigger
                         value={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className="h-10 rounded-none border-b-4 border-transparent px-3 sm:px-4 py-2 font-medium text-xs text-slate-400 
-                          data-[state=active]:bg-transparent 
-                          data-[state=active]:border-blue-400 
-                          data-[state=active]:text-blue-400
-                          hover:text-slate-300
-                          transition-colors
-                          disabled:opacity-50
-                          disabled:cursor-not-allowed
-                          group"
+                        className={cn(
+                          "h-10 rounded-none border-b-4 border-transparent font-medium text-xs text-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group",
+
+                          tab.id === "code"
+                            ? "w-8 p-0 flex items-center justify-center"
+                            : "px-3 sm:px-4 py-2",
+                          "data-[state=active]:bg-transparent data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 hover:text-slate-300"
+                        )}
                       >
-                        <div className="flex items-center">
+                        <div
+                          className={cn(
+                            "flex items-center",
+                            tab.id === "code" &&
+                              "w-full h-full flex justify-center"
+                          )}
+                        >
                           {typeof tab.label === "string" ? (
                             <span className="truncate max-w-[80px] sm:max-w-none group-hover:text-slate-300">
                               {tab.label}

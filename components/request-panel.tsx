@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { KeyValueEditor } from "./key-value-editor";
@@ -116,6 +116,65 @@ export function RequestPanel({
   const [testScript, setTestScript] = useState('');
   const [scriptLogs, setScriptLogs] = useState<string[]>([]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
+
+  useEffect(() => {
+    const updateScriptsFromActiveRequest = () => {
+      const activeRequest = (window as any).__ACTIVE_REQUEST__;
+      if (activeRequest) {
+        setPreRequestScript(activeRequest.preRequestScript || '');
+        setTestScript(activeRequest.testScript || '');
+        setScriptLogs(activeRequest.scriptLogs || []);
+        setTestResults(activeRequest.testResults || []);
+      }
+    };
+
+    // Update immediately
+    updateScriptsFromActiveRequest();
+
+    // Listen for changes to active request
+    window.addEventListener("activeRequestUpdated", updateScriptsFromActiveRequest);
+
+    return () => {
+      window.removeEventListener("activeRequestUpdated", updateScriptsFromActiveRequest);
+    };
+  }, []);
+
+  // Add handler for history item loading
+  useEffect(() => {
+    const handleHistoryLoad = (event: CustomEvent) => {
+      const { item } = event.detail;
+      if (item.request) {
+        setPreRequestScript(item.request.preRequestScript || '');
+        setTestScript(item.request.testScript || '');
+        setScriptLogs(item.request.scriptLogs || []);
+        setTestResults(item.request.testResults || []);
+      }
+    };
+
+    window.addEventListener("loadHistoryItem", handleHistoryLoad as EventListener);
+    return () => {
+      window.removeEventListener("loadHistoryItem", handleHistoryLoad as EventListener);
+    };
+  }, []);
+
+  // Add script change handlers
+  const handlePreRequestScriptChange = (value: string | undefined) => {
+    const newValue = value || '';
+    setPreRequestScript(newValue);
+    // Update the active request
+    if ((window as any).__ACTIVE_REQUEST__) {
+      (window as any).__ACTIVE_REQUEST__.preRequestScript = newValue;
+    }
+  };
+
+  const handleTestScriptChange = (value: string | undefined) => {
+    const newValue = value || '';
+    setTestScript(newValue);
+    // Update the active request
+    if ((window as any).__ACTIVE_REQUEST__) {
+      (window as any).__ACTIVE_REQUEST__.testScript = newValue;
+    }
+  };
 
   const tabs: TabItem[] = [
     {
@@ -346,7 +405,7 @@ export function RequestPanel({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setPreRequestScript('')}
+                          onClick={() => handlePreRequestScriptChange('')}
                           className="h-7 px-2 text-xs"
                         >
                           Clear
@@ -357,7 +416,7 @@ export function RequestPanel({
                           height="300px"
                           defaultLanguage="javascript"
                           value={preRequestScript}
-                          onChange={(value) => setPreRequestScript(value || '')}
+                          onChange={handlePreRequestScriptChange}
                           theme="vs-dark"
                           options={{
                             minimap: { enabled: true},
@@ -388,7 +447,7 @@ export function RequestPanel({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setTestScript('')}
+                          onClick={() => handleTestScriptChange('')}
                           className="h-7 px-2 text-xs"
                         >
                           Clear
@@ -399,7 +458,7 @@ export function RequestPanel({
                           height="300px"
                           defaultLanguage="javascript"
                           value={testScript}
-                          onChange={(value) => setTestScript(value || '')}
+                          onChange={handleTestScriptChange}
                           theme="vs-dark"
                           options={{
                             minimap: { enabled: true},

@@ -113,9 +113,10 @@ export interface SavedRequest {
     retryCount?: number;
     validateResponse?: boolean;
   };
-  preRequestScript?: string;
-  testScript?: string;
-  testResults?: TestResult[];
+  preRequestScript?: string;  // Add this
+  testScript?: string;       // Add this
+  testResults?: TestResult[]; // Add this
+  scriptLogs?: string[];     // Add this
 }
 
 export interface TestResult {
@@ -166,12 +167,13 @@ export interface HistoryItem {
   };
   request: {
     headers: KeyValuePair[];
-
     params: KeyValuePair[];
-
     body: RequestBody;
-
     auth: { type: string } & Record<string, any>;
+    preRequestScript?: string;  // Add this
+    testScript?: string;       // Add this
+    testResults?: TestResult[]; // Add this
+    scriptLogs?: string[];     // Add this
   };
   wsStats?: WebSocketStats;
 }

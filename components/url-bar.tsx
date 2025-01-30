@@ -735,7 +735,7 @@ export function UrlBar({
   }, []);
 
   const handleSendRequest = () => {
-    // Store the active request data on the window object
+    // Store the active request data with scripts on the window object
     (window as any).__ACTIVE_REQUEST__ = {
       method,
       url,
@@ -743,11 +743,40 @@ export function UrlBar({
       params: [], // Add your actual params here
       body: {}, // Add your actual body here
       auth: {}, // Add your actual auth here
+      preRequestScript: "", // Will be populated when script runs
+      testScript: "", // Will be populated when script runs
+      testResults: [], // Will be populated after tests run
+      scriptLogs: [], // Will be populated during script execution
       response: null // This will be updated after the response
     };
     
     onSendRequest();
   };
+
+  // Update scripts and results after execution
+  useEffect(() => {
+    const handleScriptUpdate = (e: CustomEvent) => {
+      const { type, data } = e.detail;
+      if ((window as any).__ACTIVE_REQUEST__) {
+        switch(type) {
+          case 'preRequestScript':
+            (window as any).__ACTIVE_REQUEST__.preRequestScript = data.script;
+            (window as any).__ACTIVE_REQUEST__.scriptLogs = [...((window as any).__ACTIVE_REQUEST__.scriptLogs || []), ...data.logs];
+            break;
+          case 'testScript':
+            (window as any).__ACTIVE_REQUEST__.testScript = data.script;
+            (window as any).__ACTIVE_REQUEST__.testResults = data.results;
+            (window as any).__ACTIVE_REQUEST__.scriptLogs = [...((window as any).__ACTIVE_REQUEST__.scriptLogs || []), ...data.logs];
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('scriptUpdate', handleScriptUpdate as EventListener);
+    return () => {
+      window.removeEventListener('scriptUpdate', handleScriptUpdate as EventListener);
+    };
+  }, []);
 
   // Update the response after receiving it
   useEffect(() => {

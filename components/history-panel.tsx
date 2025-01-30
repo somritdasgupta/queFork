@@ -222,6 +222,36 @@ export function HistoryPanel({
     onSelectItem(item);
   };
 
+  const handleHistoryItemClick = (item: HistoryItem) => {
+    // Create the active request object with scripts
+    (window as any).__ACTIVE_REQUEST__ = {
+      method: item.method,
+      url: item.url,
+      headers: item.request.headers,
+      params: item.request.params,
+      body: item.request.body,
+      auth: item.request.auth,
+      response: item.response,
+      preRequestScript: item.request.preRequestScript || "",
+      testScript: item.request.testScript || "",
+      testResults: item.request.testResults || [],
+      scriptLogs: item.request.scriptLogs || []
+    };
+  
+    window.dispatchEvent(new CustomEvent("loadHistoryItem", {
+      detail: {
+        item,
+        url: item.url,
+        scripts: {
+          preRequestScript: item.request.preRequestScript,
+          testScript: item.request.testScript,
+          testResults: item.request.testResults,
+          scriptLogs: item.request.scriptLogs
+        }
+      }
+    }));
+  };
+
   const renderHistoryItem = (item: HistoryItem) => {
     if (item.type === "websocket") {
       const isActive = item.url === currentUrl;
@@ -290,7 +320,7 @@ export function HistoryPanel({
         <div
           key={item.id}
           className="group flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
-          onClick={() => handleHistoryClick(item)} // Uses full URL from item
+          onClick={() => handleHistoryItemClick(item)} // Uses full URL from item
         >
           <Badge
             variant="outline"

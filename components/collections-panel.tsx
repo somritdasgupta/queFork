@@ -82,6 +82,17 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     parentId?: string;
   } | null>(null);
 
+  const [activeRequest, setActiveRequest] = useState<any>(null);
+
+  useEffect(() => {
+    // Access window only after component is mounted (client-side)
+    setActiveRequest((window as any).__ACTIVE_REQUEST__);
+  }, []);
+
+  const hasActiveRequest = useMemo(() => {
+    return activeRequest?.url && activeRequest?.method;
+  }, [activeRequest]);
+
   useEffect(() => {
     const handleSaveRequest = (e: CustomEvent) => {
       const requestData = e.detail;
@@ -317,6 +328,42 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     }
   );
 
+  const renderDeleteConfirmation = (
+    type: "collection" | "request",
+    id: string,
+    parentId?: string
+  ) => (
+    <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
+      <span className="text-xs text-slate-400">Delete {type}?</span>
+      <div className="flex items-center gap-1 ml-auto">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDeleteConfirm(null);
+          }}
+          className="h-6 w-6 p-0"
+        >
+          <X className="h-4 w-4 text-slate-400" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            type === "collection"
+              ? handleDeleteCollection(id)
+              : handleDeleteRequest(parentId!, id);
+          }}
+          className="h-6 w-6 p-0"
+        >
+          <Check className="h-4 w-4 text-emerald-400" />
+        </Button>
+      </div>
+    </div>
+  );
+
   const renderRequestItem = useCallback(
     (request: SavedRequest, collection: Collection) => {
       const [isEditing, setIsEditing] = useState(false);
@@ -448,7 +495,14 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDeleteRequest(collection.id, request.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteConfirm({
+                      id: request.id,
+                      type: "request",
+                      parentId: collection.id,
+                    });
+                  }}
                   className="h-7 w-7 p-0"
                   title="Delete request"
                 >
@@ -457,43 +511,16 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
               </div>
             </div>
           </div>
-          {deleteConfirm?.id === request.id && (
-            <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
-              <span className="text-xs text-slate-400">Delete request?</span>
-              <div className="flex items-center gap-1 ml-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteConfirm(null);
-                  }}
-                  className="h-6 w-6 p-0"
-                >
-                  <X className="h-4 w-4 text-slate-400" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteRequest(collection.id, request.id);
-                  }}
-                  className="h-6 w-6 p-0"
-                >
-                  <Check className="h-4 w-4 text-emerald-400" />
-                </Button>
-              </div>
-            </div>
+          {deleteConfirm?.id === request.id && deleteConfirm.type === "request" && (
+            renderDeleteConfirmation("request", request.id, collection.id)
           )}
         </div>
       );
     },
-    [props.collections, props.onUpdateCollections]
+    [props.collections, props.onUpdateCollections, deleteConfirm]
   );
 
   const handleQuickSave = (collectionId: string) => {
-    const activeRequest = (window as any).__ACTIVE_REQUEST__;
     if (!activeRequest?.url) {
       toast.error("No active request to save");
       return;
@@ -530,9 +557,8 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   };
 
   const canQuickSave = useMemo(() => {
-    const activeRequest = (window as any).__ACTIVE_REQUEST__;
     return activeRequest?.url && activeRequest?.method;
-  }, [(window as any).__ACTIVE_REQUEST__]);
+  }, [activeRequest]);
 
   const handleDuplicateCollection = useCallback(
     (collection: Collection) => {
@@ -596,7 +622,10 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleDeleteCollection(collection.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteConfirm({ id: collection.id, type: "collection" });
+              }}
               className="h-8 w-8 hover:text-slate-300"
               title="Delete collection"
             >
@@ -624,7 +653,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
 
             <div
               className={cn(
-                "flex absolute left-full top-0 overflow-hidden transition-all duration-200",
+                "flex absolute right-full top-0 overflow-hidden transition-all duration-200",
                 isExpanded ? "w-auto opacity-100" : "w-0 opacity-70"
               )}
             >
@@ -676,7 +705,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 className="h-8 w-8 hover:text-slate-300"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteCollection(collection.id);
+                  setDeleteConfirm({ id: collection.id, type: "collection" });
                 }}
               >
                 <Trash2 className="h-4 w-4 text-red-400" />
@@ -694,8 +723,8 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   };
 
   const renderCollectionContent = (collection: Collection) => (
-    <div className="flex flex-col">
-      <div className="flex items-center justify-between w-full group px-2">
+    <div className="flex flex-col w-full">
+      <div className="flex items-center justify-between w-full group px-4 py-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-sm font-medium text-slate-400 truncate">
             {collection.name}
@@ -714,37 +743,39 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
         </div>
         {renderCollectionActions(collection)}
       </div>
-      {deleteConfirm?.id === collection.id &&
-        deleteConfirm.type === "collection" && (
-          <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
-            <span className="text-xs text-slate-400">Delete collection?</span>
-            <div className="flex items-center gap-1 ml-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteConfirm(null);
-                }}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4 text-slate-400" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteCollection(collection.id);
-                }}
-                className="h-6 w-6 p-0"
-              >
-                <Check className="h-4 w-4 text-emerald-400" />
-              </Button>
-            </div>
-          </div>
-        )}
+      {deleteConfirm?.id === collection.id && deleteConfirm.type === "collection" && (
+        <div className="w-full">
+          {renderDeleteConfirmation("collection", collection.id)}
+        </div>
+      )}
     </div>
+  );
+
+  const renderCollectionItem = (collection: Collection) => (
+    <AccordionItem
+      key={collection.id}
+      value={collection.id}
+      className="px-0 border-b border-slate-700"
+    >
+      <AccordionTrigger 
+        className="w-full p-0 text-slate-500 hover:no-underline hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors [&>svg]:hidden"
+      >
+        {renderCollectionContent(collection)}
+      </AccordionTrigger>
+      <AccordionContent className="pt-0 pb-0">
+        <div className="bg-slate-900/50">
+          {collection.requests?.length > 0 ? (
+            collection.requests.map((request) =>
+              renderRequestItem(request, collection)
+            )
+          ) : (
+            <div className="py-3 text-sm text-slate-500 text-center border-t border-slate-700/50">
+              No requests in this collection
+            </div>
+          )}
+        </div>
+      </AccordionContent>
+    </AccordionItem>
   );
 
   const handleSaveToCollection = (
@@ -753,6 +784,11 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   ) => {
     props.onSaveRequest(collectionId, {
       ...request,
+      // Preserve scripts and results from the active request
+      preRequestScript: (window as any).__ACTIVE_REQUEST__?.preRequestScript || request.preRequestScript,
+      testScript: (window as any).__ACTIVE_REQUEST__?.testScript || request.testScript,
+      testResults: (window as any).__ACTIVE_REQUEST__?.testResults || request.testResults,
+      scriptLogs: (window as any).__ACTIVE_REQUEST__?.scriptLogs || request.scriptLogs,
       runConfig: {
         iterations: 1,
         delay: 0,
@@ -816,10 +852,33 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
+      
+      // Validate if the text is valid JSON or contains specific markers
+      let isValidData = false;
+      try {
+        const parsed = JSON.parse(text);
+        isValidData = (
+          // Check for common collection format markers
+          parsed.info?.schema?.includes('postman') || // Postman
+          parsed._type === "hoppscotch" || // Hoppscotch
+          parsed.openapi || // OpenAPI
+          parsed.swagger || // Swagger
+          Array.isArray(parsed) || // Array of requests
+          (parsed.requests && Array.isArray(parsed.requests)) // Generic collection format
+        );
+      } catch (e) {
+        throw new Error('Invalid JSON format');
+      }
+
+      if (!isValidData) {
+        throw new Error('Unsupported collection format');
+      }
+
       await props.onImportCollections("clipboard", text);
       toast.success("Collection imported successfully");
-    } catch (error) {
-      toast.error("Failed to import from clipboard");
+      setIsImporting(false); // Close import dialog after success
+    } catch (error: any) {
+      toast.error(error.message || "Failed to import from clipboard");
     }
   };
 
@@ -999,58 +1058,14 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
 
           {isCreating && (
             <div className="p-4 bg-slate-900/50 border-b border-slate-700">
-              <div className="space-y-3">
-                <Input
-                  placeholder="Collection Name"
-                  value={newCollection.name}
-                  maxLength={15}
-                  onChange={(e) =>
-                    setNewCollection((prev) => ({
-                      ...prev,
-                      name: e.target.value.slice(0, 15),
-                    }))
-                  }
-                  className="bg-slate-800 border-slate-700"
-                />
-                <Input
-                  placeholder="API Version (e.g., 1.0.0)"
-                  value={newCollection.apiVersion}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (
-                      /^[0-9.]*$/.test(value) &&
-                      (value.match(/\./g) || []).length <= 3
-                    ) {
-                      const groups = value.split(".");
-                      const isValid = groups.every(
-                        (group) =>
-                          !group ||
-                          (parseInt(group) <= 999 && group.length <= 3)
-                      );
-                      if (isValid) {
-                        setNewCollection((prev) => ({
-                          ...prev,
-                          apiVersion: value,
-                        }));
-                      }
-                    }
-                  }}
-                  className="bg-slate-800 border-slate-700"
-                />
-                <Textarea
-                  placeholder="Description (optional)"
-                  value={newCollection.description}
-                  onChange={(e) =>
-                    setNewCollection((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                  className="bg-slate-800 border-slate-700"
-                />
-                <div className="flex gap-2">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-slate-300">
+                    Create Collection
+                  </h3>
                   <Button
-                    variant="outline"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setIsCreating(false);
                       setNewCollection({
@@ -1059,19 +1074,91 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                         apiVersion: "",
                       });
                     }}
-                    className="flex-1"
+                    className="h-7 w-7 p-0 hover:bg-slate-800"
                   >
-                    Cancel
+                    <X className="h-4 w-4 text-slate-400" />
                   </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-400">
+                      Collection Name
+                    </label>
+                    <Input
+                      placeholder="Enter collection name"
+                      value={newCollection.name}
+                      maxLength={15}
+                      onChange={(e) =>
+                        setNewCollection((prev) => ({
+                          ...prev,
+                          name: e.target.value.slice(0, 15),
+                        }))
+                      }
+                      className="h-8 bg-slate-800 border-slate-700 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-400">
+                      API Version
+                    </label>
+                    <Input
+                      placeholder="e.g., 1.0.0"
+                      value={newCollection.apiVersion}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (
+                          /^[0-9.]*$/.test(value) &&
+                          (value.match(/\./g) || []).length <= 3
+                        ) {
+                          const groups = value.split(".");
+                          const isValid = groups.every(
+                            (group) =>
+                              !group ||
+                              (parseInt(group) <= 999 && group.length <= 3)
+                          );
+                          if (isValid) {
+                            setNewCollection((prev) => ({
+                              ...prev,
+                              apiVersion: value,
+                            }));
+                          }
+                        }
+                      }}
+                      className="h-8 bg-slate-800 border-slate-700 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-400">
+                      Description (Optional)
+                    </label>
+                    <Textarea
+                      placeholder="Enter collection description"
+                      value={newCollection.description}
+                      onChange={(e) =>
+                        setNewCollection((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
+                      className="bg-slate-800 border-slate-700 min-h-[80px] text-sm"
+                    />
+                  </div>
+
                   <Button
                     onClick={() => handleCreateCollection()}
                     disabled={
                       !newCollection.name.trim() ||
                       !newCollection.apiVersion.trim()
                     }
-                    className="flex-1"
+                    className={cn(
+                      "w-full h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700",
+                      "disabled:opacity-50"
+                    )}
                   >
-                    Create
+                    Create Collection
                   </Button>
                 </div>
               </div>
@@ -1172,31 +1259,9 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             <div>
               {" "}
               <Accordion type="multiple">
-                {filteredCollections.map((collection: Collection) => (
-                  <AccordionItem
-                    key={collection.id}
-                    value={collection.id}
-                    className="px-0 border-b border-slate-700"
-                  >
-                    <AccordionTrigger className="px-3 py-2 text-slate-500 hover:no-underline hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors">
-                      {renderCollectionContent(collection)}
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-0 pb-0">
-                      {" "}
-                      <div className="bg-slate-900/50">
-                        {collection.requests?.length > 0 ? (
-                          collection.requests.map((request) =>
-                            renderRequestItem(request, collection)
-                          )
-                        ) : (
-                          <div className="py-3 text-sm text-slate-500 text-center border-t border-slate-700/50">
-                            No requests in this collection
-                          </div>
-                        )}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
+                {filteredCollections.map((collection: Collection) => 
+                  renderCollectionItem(collection)
+                )}
               </Accordion>
             </div>
           )}
