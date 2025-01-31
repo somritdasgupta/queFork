@@ -22,9 +22,15 @@ export function NetworkStatusIndicator({ className }: { className?: string }) {
         if (response.ok) {
           setIsOnline(true);
           document.body.classList.remove("connection-lost");
+          // Only reload if we're on the offline page
+          if (window.location.pathname === '/offline') {
+            window.location.href = '/';  // Redirect to home instead of reload
+          }
         }
       } catch (error) {
         console.log("Connection not fully restored yet");
+        // Retry after 3 seconds if the connection check fails
+        setTimeout(handleOnline, 3000);
       }
     };
 

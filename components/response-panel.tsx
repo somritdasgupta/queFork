@@ -19,6 +19,7 @@ import {
   FileJson,
   List,
   FileCode,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,13 @@ import { cn } from "@/lib/utils";
 import { MessagesTab } from "./websocket/messages-tab";
 import { Checkbox } from "@/components/ui/checkbox"; // Add this import
 import { Editor } from "@monaco-editor/react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { CodeLanguageSelector } from "./code-language-selector";
 
 const getLanguage = (contentType: string): string => {
   switch (contentType) {
@@ -103,44 +111,65 @@ const getContentType = (headers: Record<string, string>): string => {
 
 export function ResponsePanel({
   response,
+  isLoading,
+  collections,
+  onSaveToCollection,
+  method,
+  url,
   isWebSocketMode,
-  ...props
 }: ResponsePanelProps) {
-  // Add state for scripts and results
+  // 1. All useState hooks
+  const [activeTab, setActiveTab] = useState("response");
+  const [isPrettyPrint, setIsPrettyPrint] = useState(true);
+  const [selectedLanguage, setSelectedLanguage] =
+    useState<CodeGenLanguage>("curl");
+  const [copyStatus, setCopyStatus] = useState<{ [key: string]: boolean }>({});
   const [scriptLogs, setScriptLogs] = useState<string[]>([]);
   const [testResults, setTestResults] = useState<any[]>([]);
   const [preRequestScript, setPreRequestScript] = useState<string>("");
   const [testScript, setTestScript] = useState<string>("");
-
-  // Only hide the response panel (not other panels)
-  if (!response && !isWebSocketMode) {
-    return null;
-  }
-
-  // If in WebSocket mode, show WebSocket interface
-  if (isWebSocketMode) {
-    return (
-      <div className="bg-slate-950 h-full flex flex-col">
-        <div className="flex-1 relative bg-slate-900/90">
-          <MessagesTab />
-        </div>
-      </div>
-    );
-  }
-
-  const [copyStatus, setCopyStatus] = useState<{ [key: string]: boolean }>({});
-  const [activeTab, setActiveTab] = useState("pretty");
   const [isOnline, setIsOnline] = useState(true);
-  const [selectedLanguage, setSelectedLanguage] =
-    useState<CodeGenLanguage>("curl");
-  const [isPrettyPrint, setIsPrettyPrint] = useState(true);
+
+  // 2. All useRef hooks
   const editorRef = useRef<any>(null);
 
+  // 3. All useMemo hooks
+  const contentType = useMemo(() => {
+    if (!response?.headers) return "text";
+    return getContentType(response.headers);
+  }, [response?.headers]);
+
+  const tabs: TabItem[] = useMemo(
+    () => [
+      {
+        id: "response",
+        label: contentType ? `${contentType.toUpperCase()}` : "Response",
+        icon: <FileJson className="h-4 w-4 text-blue-400" />,
+      },
+      {
+        id: "headers",
+        label: "Headers",
+        icon: <List className="h-4 w-4 text-emerald-500" />,
+      },
+      {
+        id: "code",
+        label: (
+          <CodeLanguageSelector
+            selectedLanguage={selectedLanguage}
+            onLanguageChange={setSelectedLanguage}
+          />
+        ),
+      },
+    ],
+    [contentType, selectedLanguage]
+  );
+
+  // 4. All useEffect hooks
   useEffect(() => {
-    setIsOnline(navigator.onLine);
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
+    setIsOnline(navigator.onLine);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
@@ -151,14 +180,42 @@ export function ResponsePanel({
   }, []);
 
   useEffect(() => {
-    // Reset active tab when switching modes
-    setActiveTab(isWebSocketMode ? "messages" : "pretty");
+    setActiveTab(isWebSocketMode ? "messages" : "response");
   }, [isWebSocketMode]);
 
-  const contentType = useMemo(() => {
-    if (!response?.headers) return "text";
-    return getContentType(response.headers);
-  }, [response?.headers]);
+  useEffect(() => {
+    if ((window as any).__ACTIVE_REQUEST__) {
+      const activeRequest = (window as any).__ACTIVE_REQUEST__;
+      setPreRequestScript(activeRequest.preRequestScript || "");
+      setTestScript(activeRequest.testScript || "");
+      setTestResults(activeRequest.testResults || []);
+      setScriptLogs(activeRequest.scriptLogs || []);
+    }
+  }, [response]);
+
+  useEffect(() => {
+    if (activeTab === "response" && response?.body) {
+      const editorContent = getFormattedContent(response.body, contentType);
+      if (editorRef.current) {
+        editorRef.current.setValue(editorContent);
+      }
+    }
+  }, [isPrettyPrint, contentType, activeTab, response]);
+
+  // Early returns
+  if (!response && !isWebSocketMode) {
+    return null;
+  }
+
+  if (isWebSocketMode) {
+    return (
+      <div className="bg-slate-950 h-full flex flex-col">
+        <div className="flex-1 relative bg-slate-900/90">
+          <MessagesTab />
+        </div>
+      </div>
+    );
+  }
 
   const getContentForTab = () => {
     if (!response) return "";
@@ -208,8 +265,8 @@ export function ResponsePanel({
     if (!response) return "";
 
     const options = {
-      url: props.url,
-      method: props.method,
+      url: url,
+      method: method,
       headers: response.headers || {},
       body: response.body ? JSON.stringify(response.body, null, 2) : undefined,
     };
@@ -227,8 +284,8 @@ export function ResponsePanel({
 
     // Create event detail with scripts
     const requestToSave = {
-      method: props.method,
-      url: props.url,
+      method: method,
+      url: url,
       headers: response?.headers || [],
       params: [], // Add URL params if available
       body: { type: "none", content: "" }, // Add actual request body if available
@@ -269,23 +326,12 @@ export function ResponsePanel({
     );
   };
 
-  // Add effect to update script state from active request
-  useEffect(() => {
-    if ((window as any).__ACTIVE_REQUEST__) {
-      const activeRequest = (window as any).__ACTIVE_REQUEST__;
-      setPreRequestScript(activeRequest.preRequestScript || "");
-      setTestScript(activeRequest.testScript || "");
-      setTestResults(activeRequest.testResults || []);
-      setScriptLogs(activeRequest.scriptLogs || []);
-    }
-  }, [response]); // Update when response changes
-
   const renderStatusBar = () =>
     !isWebSocketMode ? (
       <div className="sticky top-0 w-full px-4 py-3 border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Badge className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-blue-400 border-blue-500/30 px-3 py-1 rounded-lg">
-            {props.method}
+            {method}
           </Badge>
           <div
             className={cn(
@@ -399,89 +445,6 @@ export function ResponsePanel({
     </div>
   );
 
-  useEffect(() => {
-    if (activeTab === "response" && response?.body) {
-      const editorContent = getFormattedContent(response.body, contentType);
-      if (editorRef.current) {
-        editorRef.current.setValue(editorContent);
-      }
-    }
-  }, [isPrettyPrint, contentType]);
-
-  const tabs: TabItem[] = [
-    {
-      id: "response",
-      label: contentType ? `${contentType.toUpperCase()}` : "Response",
-      icon: <FileJson className="h-4 w-4 text-blue-400" />,
-    },
-    {
-      id: "headers",
-      label: "Headers",
-      icon: <List className="h-4 w-4 text-emerald-500" />,
-    },
-    {
-      id: "code",
-      label: (
-        <Select
-          value={selectedLanguage}
-          onValueChange={(value: CodeGenLanguage) => setSelectedLanguage(value)}
-        >
-          <SelectTrigger
-            showChevron={false}
-            className="text-xs border-0 focus:ring-0 focus:ring-offset-0 bg-transparent text-slate-400 p-0 w-full h-full flex items-center justify-center"
-          >
-            <SelectValue>
-              {React.createElement(languageConfigs[selectedLanguage].icon, {
-                className:
-                  "h-5 w-5 rounded-full bg-slate-700 text-slate-100 shadow-inner p-1",
-              })}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent
-            side="bottom"
-            align="center"
-            alignOffset={0}
-            position="popper"
-            className="w-[180px] p-0 bg-slate-900 border border-slate-700 gap-2"
-          >
-            <ScrollArea className="h-[200px]">
-              <SelectGroup>
-                {Object.entries(languageConfigs).map(([key, config]) => (
-                  <SelectItem
-                    key={key}
-                    value={key}
-                    className="text-xs text-slate-300 px-2.5 py-1.5 cursor-pointer hover:bg-slate-800 data-[state=checked]:bg-slate-800"
-                  >
-                    <div className="flex items-center gap-2">
-                      {React.createElement(config.icon, {
-                        className: cn(
-                          "h-3 w-3",
-                          key === selectedLanguage
-                            ? "text-blue-400"
-                            : "text-slate-400"
-                        ),
-                      })}
-                      <span
-                        className={cn(
-                          key === selectedLanguage
-                            ? "text-blue-400"
-                            : "text-slate-300"
-                        )}
-                      >
-                        {config.name}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </ScrollArea>
-          </SelectContent>
-        </Select>
-      ),
-      icon: <FileCode className="h-4 w-4 text-yellow-500" />,
-    },
-  ];
-
   return (
     <div className="bg-slate-900 h-full flex flex-col">
       {shouldShowContent ? (
@@ -492,36 +455,19 @@ export function ResponsePanel({
               <div className="flex items-center justify-between">
                 <TabsList className="h-10 w-auto justify-start rounded-none bg-slate-900 p-0">
                   {tabs.map((tab) => (
-                    <div key={tab.id} className="flex items-center">
-                      <TabsTrigger
-                        value={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={cn(
-                          "h-10 rounded-none border-b-4 border-transparent font-medium text-xs text-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group",
-
-                          tab.id === "code"
-                            ? "w-8 p-0 flex items-center justify-center"
-                            : "px-3 sm:px-4 py-2",
-                          "data-[state=active]:bg-transparent data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 hover:text-slate-300"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "flex items-center",
-                            tab.id === "code" &&
-                              "w-full h-full flex justify-center"
-                          )}
-                        >
-                          {typeof tab.label === "string" ? (
-                            <span className="truncate max-w-[80px] sm:max-w-none group-hover:text-slate-300">
-                              {tab.label}
-                            </span>
-                          ) : (
-                            tab.label
-                          )}
-                        </div>
-                      </TabsTrigger>
-                    </div>
+                    <TabsTrigger
+                      key={tab.id}
+                      value={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className="h-10 rounded-none border-b-4 border-transparent font-medium text-xs text-slate-400 transition-colors px-3 sm:px-4 py-2 data-[state=active]:bg-transparent data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 hover:text-slate-300"
+                    >
+                      <div className="flex items-center gap-2">
+                        {tab.icon}
+                        <span className="truncate max-w-[80px] sm:max-w-none">
+                          {tab.label}
+                        </span>
+                      </div>
+                    </TabsTrigger>
                   ))}
                 </TabsList>
 
@@ -589,7 +535,7 @@ export function ResponsePanel({
               </TabsContent>
 
               <TabsContent value="headers" className="absolute inset-0 m-0">
-                <ScrollArea className="h-full bg-slate-900/50 backdrop-blur-sm">
+                <ScrollArea direction="vertical" className="h-full">
                   <div className="p-4">
                     {response?.headers &&
                     Object.keys(response.headers).length > 0 ? (

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from "react";
 import { CollectionsPanel } from "@/components/collections-panel";
 import { HistoryPanel } from "@/components/history-panel";
@@ -5,7 +7,7 @@ import { SidePanelProps } from "@/types";
 import { FolderOpen, History, BoxIcon, Layers, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnvironmentPanel } from "@/components/environment-panel";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { EnvironmentSelector } from "@/components/environment-selector";
@@ -79,7 +81,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
             value: e.detail.value,
             type: e.detail.type
           }
-        }));
+        })); 
       }, 0);
     };
 
@@ -195,10 +197,13 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
             border-t-2 border-slate-800/60
             shadow-[0_-15px_50px_-15px_rgba(0,0,0,0.45)]
             animate-in slide-in-from-bottom duration-300
-            overflow-hidden flex flex-col"  // Added flex and overflow handling
+title for my sheet can i make it optional that i dont use title at all?            overflow-hidden flex flex-col"
         >
-          <div className="flex flex-col h-full overflow-hidden"> {/* Added overflow-hidden */}
-            <div className="rounded-t-2xl flex-1 overflow-hidden"> {/* Added flex-1 and overflow-hidden */}
+          <SheetTitle className="sr-only">
+            Side Panel
+          </SheetTitle>
+          <div className="flex flex-col h-full overflow-hidden">
+            <div className="rounded-t-2xl flex-1 overflow-hidden">
               <PanelContent />
             </div>
             <div className="mt-auto flex justify-center relative">

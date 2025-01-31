@@ -37,39 +37,39 @@ interface Message {
 
 const MESSAGE_STYLES = {
   sent: {
-    bg: "hover:bg-slate-800/50",
-    activeBg: "bg-slate-800",
+    bg: "hover:bg-zinc-900/50",
+    activeBg: "bg-zinc-900",
     icon: "text-blue-500",
-    text: "text-slate-300",
-    border: "border-slate-700/50",
+    text: "text-zinc-300",
+    border: "border-zinc-800",
   },
   received: {
-    bg: "hover:bg-slate-800/50",
-    activeBg: "bg-slate-800",
+    bg: "hover:bg-zinc-900/50",
+    activeBg: "bg-zinc-900",
     icon: "text-emerald-500",
-    text: "text-slate-300",
-    border: "border-slate-700/50",
+    text: "text-zinc-300",
+    border: "border-zinc-800",
   },
   connected: {
-    bg: "hover:bg-slate-800/50",
-    activeBg: "bg-slate-800",
+    bg: "hover:bg-zinc-900/50",
+    activeBg: "bg-zinc-900",
     icon: "text-yellow-500",
     text: "text-yellow-500",
-    border: "border-slate-700/50",
+    border: "border-zinc-800",
   },
   disconnected: {
-    bg: "hover:bg-slate-800/50",
-    activeBg: "bg-slate-800",
+    bg: "hover:bg-zinc-900/50",
+    activeBg: "bg-zinc-900",
     icon: "text-orange-500",
     text: "text-orange-500",
-    border: "border-slate-700/50",
+    border: "border-zinc-800",
   },
   error: {
-    bg: "hover:bg-slate-800/50",
-    activeBg: "bg-slate-800",
+    bg: "hover:bg-zinc-900/50",
+    activeBg: "bg-zinc-900",
     icon: "text-red-500",
     text: "text-red-500",
-    border: "border-slate-700/50",
+    border: "border-zinc-800",
   },
 };
 
@@ -86,13 +86,18 @@ export function MessagesTab() {
   const [message, setMessage] = useState("");
   const [messageFormat, setMessageFormat] = useState<"text" | "json">("text");
   const [expandedMessage, setExpandedMessage] = useState<number | null>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current && shouldAutoScroll) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, shouldAutoScroll]);
+
+  useEffect(() => {
+    setShouldAutoScroll(expandedMessage === null);
+  }, [expandedMessage]);
 
   const detectMessageFormat = (content: string) => {
     try {
@@ -249,23 +254,27 @@ export function MessagesTab() {
     return MESSAGE_STYLES[msg.type];
   };
 
+  const handleMessageClick = (index: number) => {
+    setExpandedMessage(expandedMessage === index ? null : index);
+  };
+
   return (
-    <div className="relative w-full h-full bg-slate-900 overflow-hidden">
+    <div className="relative w-full h-full bg-slate-900/50 overflow-hidden">
       {/* Header - Match REST header style */}
-      <div className="absolute top-0 left-0 right-0 z-0 border-b border-slate-700 bg-slate-800/50">
+      <div className="absolute top-0 left-0 right-0 z-0 border-b border-zinc-800 bg-zinc-900/50">
         <div className="h-14 px-3 flex items-center gap-2 overflow-x-auto">
           <Select
             value={messageFormat}
             onValueChange={(value: "text" | "json") => setMessageFormat(value)}
           >
-            <SelectTrigger className="w-24 h-8 bg-slate-900 border-slate-700 text-slate-400 font-medium">
+            <SelectTrigger className="w-24 h-8 bg-slate-900/50 border-zinc-800 text-zinc-400 font-medium">
               <SelectValue placeholder="Format" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-800 border-slate-700">
-              <SelectItem value="text" className="text-slate-400">
+            <SelectContent className="bg-zinc-900 border-zinc-800">
+              <SelectItem value="text" className="text-zinc-400">
                 Text
               </SelectItem>
-              <SelectItem value="json" className="text-slate-400">
+              <SelectItem value="json" className="text-zinc-400">
                 JSON
               </SelectItem>
             </SelectContent>
@@ -273,7 +282,7 @@ export function MessagesTab() {
 
           <Badge
             variant="outline"
-            className="h-8 border-slate-700 bg-slate-900 text-slate-400 font-medium"
+            className="h-8 border-zinc-800 bg-slate-900/50 text-zinc-400 font-medium"
           >
             {messages.length}
           </Badge>
@@ -329,10 +338,10 @@ export function MessagesTab() {
 
       {/* Messages Area - Match REST content style */}
       <div
-        className="absolute top-14 bottom-16 left-0 right-0 overflow-y-auto w-full bg-slate-900/90 text-slate-300
+        className="absolute top-14 bottom-16 left-0 right-0 overflow-y-auto w-full bg-slate-900/50/90 text-zinc-300
         [&::-webkit-scrollbar]:w-2 
-        [&::-webkit-scrollbar-thumb]:bg-slate-700 
-        [&::-webkit-scrollbar-track]:bg-slate-800/50"
+        [&::-webkit-scrollbar-thumb]:bg-zinc-800 
+        [&::-webkit-scrollbar-track]:bg-zinc-900/50"
       >
         <div className="divide-y divide-slate-700/50">
           {messages.length === 0 ? (
@@ -355,11 +364,7 @@ export function MessagesTab() {
                     )}
                   >
                     <div
-                      onClick={() =>
-                        setExpandedMessage(
-                          expandedMessage === index ? null : index
-                        )
-                      }
+                      onClick={() => handleMessageClick(index)}
                       className="flex items-center gap-3 px-3 md:px-4 py-2 transition-colors cursor-pointer"
                     >
                       <div className={cn("shrink-0", style.icon)}>
@@ -440,10 +445,10 @@ export function MessagesTab() {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 z-50 border-t-2 border-slate-700 bg-slate-800">
-        <div className="h-12 p-2 flex items-center gap-2">
+      <div className="absolute bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+        <div className="h-14 p-3 flex items-center gap-2">
           <div className="flex-1 relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs md:text-sm font-medium">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs md:text-sm font-medium">
               $
             </span>
             <Input
@@ -454,10 +459,10 @@ export function MessagesTab() {
                 e.key === "Enter" && !e.shiftKey && handleSend()
               }
               disabled={!isConnected}
-              className="pl-7 bg-slate-900 border-slate-700 rounded pr-12
-                text-xs md:text-sm text-slate-300 font-normal placeholder:text-slate-600 
-                focus-visible:ring-1 focus-visible:ring-slate-700 
-                focus-visible:ring-offset-0"
+              className="pl-7 bg-slate-900/50 border-zinc-800 rounded-lg pr-12
+                text-xs md:text-sm text-zinc-300 font-normal placeholder:text-zinc-600 
+                focus-visible:ring-1 focus-visible:ring-zinc-700 
+                focus-visible:ring-offset-0 h-10"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <span
@@ -465,7 +470,7 @@ export function MessagesTab() {
                   "px-2 py-0.5 rounded-full text-[10px] md:text-[11px] font-medium",
                   messageFormat === "json"
                     ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                    : "bg-slate-800 text-slate-400 border border-slate-700"
+                    : "bg-zinc-900 text-zinc-400 border border-zinc-800"
                 )}
               >
                 {messageFormat.toUpperCase()}
@@ -476,8 +481,8 @@ export function MessagesTab() {
             onClick={handleSend}
             disabled={!isConnected || !message.trim()}
             size="icon"
-            className="shrink-0 bg-slate-900 hover:bg-slate-800 rounded 
-              text-slate-400 disabled:bg-slate-900/50 disabled:text-slate-600 border border-slate-700"
+            className="shrink-0 h-10 w-10 bg-slate-900/50 hover:bg-zinc-900 rounded-lg
+              text-zinc-400 disabled:bg-slate-900/50/50 disabled:text-zinc-600 border border-zinc-800"
           >
             <Send className="h-4 w-4" />
           </Button>

@@ -12,6 +12,7 @@ import {
   Globe,
   CalendarDays,
   DownloadIcon,
+  Check,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { HistoryItem } from "@/types";
@@ -109,19 +110,7 @@ export function HistoryPanel({
   const urlContainerRef = useRef<HTMLDivElement>(null);
   const [groupBy, setGroupBy] = useState<"none" | "domain" | "date">("none");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!urlContainerRef.current) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
-      }
-    });
-
-    resizeObserver.observe(urlContainerRef.current);
-    return () => resizeObserver.disconnect();
-  }, []);
+  const [deleteConfirm, setDeleteConfirm] = useState<boolean>(false);
 
   const { url: currentUrl, isConnected } = useWebSocket();
 
@@ -220,79 +209,43 @@ export function HistoryPanel({
   };
 
   const handleHistoryItemClick = (item: HistoryItem) => {
-    // Clear existing request data and response first
-    window.dispatchEvent(new CustomEvent('resetActiveRequest'));
-    
-    // First switch modes if necessary
-    if (item.type === 'websocket') {
-      // Switch to WebSocket mode first before loading
-      window.dispatchEvent(
-        new CustomEvent('setRequestMode', {
-          detail: { mode: 'websocket' },
-        })
+    if (isConnected) {
+      toast.error(
+        "Please disconnect current WebSocket before loading a new URL"
       );
-      
-      // Short delay to allow mode switch to complete
-      setTimeout(() => {
-        window.dispatchEvent(
-          new CustomEvent('loadHistoryItem', {
-            detail: {
-              item,
-              url: item.url,
-              type: 'websocket',
-              messages: item.wsStats?.messages || [],
-              stats: {
-                messagesSent: item.wsStats?.messagesSent || 0,
-                messagesReceived: item.wsStats?.messagesReceived || 0,
-                avgLatency: item.wsStats?.avgLatency || 0,
-              },
-            },
-          })
-        );
-      }, 100);
-    } else {
-      // Switch to HTTP mode first before loading
-      window.dispatchEvent(
-        new CustomEvent('setRequestMode', {
-          detail: { mode: 'http' },
-        })
-      );
-      
-      // Short delay to allow mode switch to complete
-      setTimeout(() => {
-        // Update __ACTIVE_REQUEST__ with scripts
-        (window as any).__ACTIVE_REQUEST__ = {
-          method: item.method,
-          url: item.url,
-          headers: item.request.headers,
-          params: item.request.params,
-          body: item.request.body,
-          auth: item.request.auth,
-          response: item.response,
-          type: 'http',
-          preRequestScript: item.request.preRequestScript,
-          testScript: item.request.testScript,
-          testResults: item.request.testResults,
-          scriptLogs: item.request.scriptLogs,
-        };
-
-        window.dispatchEvent(
-          new CustomEvent('loadHistoryItem', {
-            detail: {
-              item,
-              type: 'http',
-              url: item.url,
-              scripts: {
-                preRequestScript: item.request.preRequestScript || '',
-                testScript: item.request.testScript || '',
-                testResults: item.request.testResults || [],
-                scriptLogs: item.request.scriptLogs || [],
-              },
-            },
-          })
-        );
-      }, 100);
+      return;
     }
+
+    // Update __ACTIVE_REQUEST__ with scripts
+    (window as any).__ACTIVE_REQUEST__ = {
+      method: item.method,
+      url: item.url,
+      headers: item.request.headers,
+      params: item.request.params,
+      body: item.request.body,
+      auth: item.request.auth,
+      response: item.response,
+      // Add scripts
+      preRequestScript: item.request.preRequestScript,
+      testScript: item.request.testScript,
+      testResults: item.request.testResults,
+      scriptLogs: item.request.scriptLogs,
+    };
+
+    window.dispatchEvent(
+      new CustomEvent("loadHistoryItem", {
+        detail: {
+          item,
+          url: item.url,
+          scripts: {
+            preRequestScript: item.request.preRequestScript || "",
+            testScript: item.request.testScript || "",
+            testResults: item.request.testResults || [],
+            scriptLogs: item.request.scriptLogs || [],
+          },
+        },
+      })
+    );
 
     onSelectItem(item);
   };
@@ -320,7 +273,7 @@ export function HistoryPanel({
                 : "text-purple-400 border-purple-500/20"
             )}
           >
-            {isSocketIO ? "IO" : "WS"}
+            {isSocketIO ? "SIO" : "WSS"}
           </Badge>
           <div ref={urlContainerRef} className="flex-1 min-w-0">
             <div className="text-xs font-medium text-slate-400 tracking-tighter truncate">
@@ -365,7 +318,7 @@ export function HistoryPanel({
         <div
           key={item.id}
           className="group flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
-          onClick={() => handleHistoryItemClick(item)} // Uses full URL from item
+          onClick={() => handleHistoryItemClick(item)}
         >
           <Badge
             variant="outline"
@@ -430,6 +383,56 @@ export function HistoryPanel({
     }
   };
 
+  const handleClearHistory = () => {
+    if (deleteConfirm) {
+      try {
+        // Clear history from storage
+        localStorage.removeItem('request_history');
+        
+        // Clear any related data
+        localStorage.removeItem('history_metadata');
+        localStorage.removeItem('history_timestamps');
+        
+        // Call onDelete to update parent state
+        onClearHistory();
+        
+        // Reset UI state
+        setDeleteConfirm(false);
+        setSearch('');
+        
+        toast.success("History cleared successfully");
+      } catch (error) {
+        console.error('Error clearing history:', error);
+        toast.error("Failed to clear history");
+      }
+    } else {
+      setDeleteConfirm(true);
+    }
+  };
+
+  // Add useEffect to auto-hide delete confirmation after timeout
+  useEffect(() => {
+    if (deleteConfirm) {
+      const timer = setTimeout(() => {
+        setDeleteConfirm(false);
+      }, 3000); // Hide after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [deleteConfirm]);
+
+  useEffect(() => {
+    if (!urlContainerRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+
+    resizeObserver.observe(urlContainerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   return (
     <div className="h-full flex flex-col bg-slate-800">
       {/* Search input */}
@@ -439,7 +442,7 @@ export function HistoryPanel({
         onChange={(e) => setSearch(e.target.value)}
         className="h-8 rounded-none border-x-0 text-xs bg-slate-900 border-slate-700"
       />
-      <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
+      <div className="sticky top-0 z-10 bg-slate-900/50 border-b border-slate-700">
         <div className="flex items-center p-2 gap-2">
           {/* All controls in a single flex container */}
           <div className="flex items-center gap-1 w-full">
@@ -452,7 +455,7 @@ export function HistoryPanel({
                   g === "none" ? "domain" : g === "domain" ? "date" : "none"
                 )
               }
-              className="w-full h-8 px-2 sm:px-3 text-xs bg-slate-800 border border-slate-700"
+              className="w-full h-8 px-2 sm:px-3 text-xs border border-slate-700"
             >
               <Clock className="h-4 w-4 text-blue-400" />
               <span className="ml-2 hidden lg:inline">
@@ -466,7 +469,7 @@ export function HistoryPanel({
               size="sm"
               onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
               className={cn(
-                "w-full h-8 px-2 sm:px-3 text-xs bg-slate-800 border border-slate-700",
+                "w-full h-8 px-2 sm:px-3 text-xs border border-slate-700",
                 isHistorySavingEnabled ? "text-emerald-400" : "text-slate-400"
               )}
             >
@@ -480,7 +483,7 @@ export function HistoryPanel({
               variant="ghost"
               size="sm"
               onClick={onExportHistory}
-              className="w-full h-8 px-2 sm:px-3 text-xs bg-slate-800 border border-slate-700"
+              className="w-full h-8 px-2 sm:px-3 text-xs border border-slate-700"
             >
               <DownloadIcon className="h-4 w-4 text-emerald-400" />
               <span className="ml-2 hidden lg:inline">Export</span>
@@ -490,17 +493,45 @@ export function HistoryPanel({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onClearHistory}
-              className="w-full h-8 px-2 sm:px-3 text-xs bg-slate-800 border border-slate-700"
+              onClick={() => setDeleteConfirm(true)}
+              className="w-full h-8 px-2 sm:px-3 text-xs border border-slate-700"
             >
               <Trash2 className="h-4 w-4 text-red-400" />
               <span className="ml-2 hidden lg:inline">Clear</span>
             </Button>
           </div>
         </div>
+        
+        {/* Add confirmation UI below the buttons */}
+        {deleteConfirm && (
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
+            <span className="text-xs text-slate-400">Clear all history?</span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeleteConfirm(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4 text-slate-400" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearHistory}
+                className="h-6 w-6 p-0"
+              >
+                <Check className="h-4 w-4 text-emerald-400" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea 
+        direction="vertical"
+        className="h-full"
+      >
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <div className="p-4 rounded-lg bg-slate-900 border border-slate-700 mb-4">

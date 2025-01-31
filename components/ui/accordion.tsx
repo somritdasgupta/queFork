@@ -21,8 +21,8 @@ const AccordionItem = React.forwardRef<
 AccordionItem.displayName = "AccordionItem"
 
 const AccordionTrigger = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
+  HTMLButtonElement,
+  React.HTMLAttributes<HTMLButtonElement>
 >(({ className, children, ...props }, ref) => (
   <AccordionPrimitive.Header className="flex">
     <AccordionPrimitive.Trigger
@@ -33,8 +33,14 @@ const AccordionTrigger = React.forwardRef<
       )}
       {...props}
     >
-      {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+      <div className="flex items-center justify-between w-full">
+        {children}
+        <div className="flex items-center">
+          <div className="h-8 w-8 hover:text-slate-400 rounded-md p-0 inline-flex items-center justify-center">
+            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+          </div>
+        </div>
+      </div>
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))

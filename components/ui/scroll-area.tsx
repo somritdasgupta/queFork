@@ -4,36 +4,35 @@ import * as React from "react"
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 import { cn } from "@/lib/utils"
 
+interface ScrollAreaProps extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> {
+  direction?: 'vertical' | 'horizontal' | 'both';
+}
+
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+  ScrollAreaProps
+>(({ className, children, direction = 'vertical', ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
-    className={cn(
-      "relative overflow-hidden",
-      className
-    )}
+    className={cn("relative overflow-hidden", className)}
     {...props}
   >
     <ScrollAreaPrimitive.Viewport 
       className="h-full w-full rounded-[inherit]"
       style={{ 
-        WebkitOverflowScrolling: 'touch' as 'touch',
-        touchAction: 'pan-y',
+        WebkitOverflowScrolling: 'touch',
+        touchAction: direction === 'horizontal' ? 'pan-x' : direction === 'vertical' ? 'pan-y' : 'pan-x pan-y',
         overscrollBehavior: 'contain',
-        overflowY: 'auto',
-        overflowX: 'hidden',
+        overflowY: direction === 'horizontal' ? 'hidden' : 'auto',
+        overflowX: direction === 'vertical' ? 'hidden' : 'auto',
         userSelect: 'text',
         scrollBehavior: 'smooth',
-        // Add mask for sticky header
-        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, black var(--header-height, 0px))',
-        maskImage: 'linear-gradient(to bottom, transparent 0, black var(--header-height, 0px))',
       } as React.CSSProperties}
     >
       {children}
     </ScrollAreaPrimitive.Viewport>
-    <ScrollBar />
+    <ScrollBar orientation="vertical" />
+    <ScrollBar orientation="horizontal" />
     <ScrollAreaPrimitive.Corner />
   </ScrollAreaPrimitive.Root>
 ))

@@ -53,7 +53,7 @@ interface SuggestionType {
 }
 
 type UrlType = "http" | "websocket";
-type UrlProtocol = "ws" | "io";
+type UrlProtocol = "wss" | "sio";
 
 const detectUrlType = (url: string): UrlType => {
   if (!url) return "http";
@@ -64,8 +64,8 @@ const detectWebSocketProtocol = (url: string): UrlProtocol => {
   return /socket\.io|engine\.io|\?EIO=[3-4]|transport=websocket|\/socket\.io\/?/.test(
     url
   )
-    ? "io"
-    : "ws";
+    ? "sio"
+    : "wss";
 };
 
 const placeholderTexts = [
@@ -169,18 +169,49 @@ export function UrlBar({
   onSendRequest,
   onWebSocketToggle,
 }: UrlBarProps) {
+  // 1. Group all hooks at the top
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-
   const [showEnvSuggestions, setShowEnvSuggestions] = useState(false);
   const [searchPrefix, setSearchPrefix] = useState("");
-
   const [isIdle, setIsIdle] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
-
   const [[page, direction], setPage] = useState([0, 0]);
+
+  const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeout = useRef<NodeJS.Timeout>();
+
+  const {
+    connect: wsConnect,
+    disconnect: wsDisconnect,
+    isConnected,
+    connectionStatus,
+    onUrlChange: wsUrlChange,
+    url: wsUrl,
+  } = useWebSocket();
+
+  // 2. Move all useMemo hooks together
+  const urlType = useMemo(() => detectUrlType(url), [url]);
+  const wsProtocol = useMemo(() => detectWebSocketProtocol(url), [url]);
+  const filteredVariables = useMemo(() => {
+    const validVariables = Array.isArray(variables) ? variables : [];
+    return validVariables
+      .filter((v) => {
+        const searchTerm = searchPrefix.toLowerCase().trim();
+        return v.key.toLowerCase().includes(searchTerm);
+      })
+      .sort((a, b) => {
+        const aStartsWith = a.key
+          .toLowerCase()
+          .startsWith(searchPrefix.toLowerCase());
+        const bStartsWith = b.key
+          .toLowerCase()
+          .startsWith(searchPrefix.toLowerCase());
+        if (aStartsWith && !bStartsWith) return -1;
+        if (!aStartsWith && bStartsWith) return 1;
+        return a.key.localeCompare(b.key);
+      });
+  }, [variables, searchPrefix]);
 
   const debouncedHandleInput = useMemo(
     () =>
@@ -197,18 +228,136 @@ export function UrlBar({
     [propsOnUrlChange]
   );
 
+  // 3. Group useCallback hooks
+  const handleUrlChange = (newUrl: string) => {
+    const urlProtocol = detectUrlType(newUrl);
+    propsOnUrlChange(newUrl);
+
+    if ((!newUrl || urlProtocol === "http") && isWebSocketMode) {
+      if (wsConnected) {
+        wsDisconnect();
+      }
+      onWebSocketToggle();
+    } else if (newUrl && urlProtocol === "websocket" && !isWebSocketMode) {
+      onWebSocketToggle();
+    }
+
+    if (isWebSocketMode) {
+      wsUrlChange(newUrl);
+    }
+  };
+
+  const handleHistoryItemLoad = useCallback(
+    (historyItem: HistoryItem) => {
+      if (!historyItem) return;
+      if (historyItem.type === "websocket") {
+        handleUrlChange(historyItem.url);
+        if (isConnected) {
+          wsDisconnect();
+        }
+        onWebSocketToggle();
+        toast.info(
+          `Last session: ${historyItem.wsStats?.messagesSent || 0} sent, ${
+            historyItem.wsStats?.messagesReceived || 0
+          } received`
+        );
+      }
+    },
+    [isConnected, wsDisconnect, onWebSocketToggle]
+  );
+
   useEffect(() => {
     if (!url && isIdle) {
       const interval = setInterval(() => {
-        setPage(([prevPage, prevDirection]) => {
-          const nextPage = (prevPage + 1) % placeholderTexts.length;
-          return [nextPage, 1];
-        });
+        setPage(([prevPage]) => [(prevPage + 1) % placeholderTexts.length, 1]);
       }, 4000);
-
       return () => clearInterval(interval);
     }
   }, [url, isIdle]);
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        !["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName || "")
+      ) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, []);
+
+  useEffect(() => {
+    const handleHistorySelect = (event: CustomEvent) => {
+      const { item, url: historyUrl } = event.detail;
+      if (isConnected) {
+        toast.error(
+          "Please disconnect current WebSocket before loading a new URL"
+        );
+        return;
+      }
+      if (historyUrl) {
+        handleUrlChange(historyUrl);
+        if (item?.type === "websocket" && !isWebSocketMode) {
+          onWebSocketToggle();
+        }
+      }
+    };
+
+    window.addEventListener(
+      "loadHistoryItem",
+      handleHistorySelect as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "loadHistoryItem",
+        handleHistorySelect as EventListener
+      );
+    };
+  }, [handleUrlChange, onWebSocketToggle, isConnected, isWebSocketMode]);
+
+  useEffect(() => {
+    const handleScriptUpdate = (e: CustomEvent) => {
+      const { type, data } = e.detail;
+      if ((window as any).__ACTIVE_REQUEST__) {
+        if (type === "preRequestScript" || type === "testScript") {
+          (window as any).__ACTIVE_REQUEST__[type] = data.script;
+          (window as any).__ACTIVE_REQUEST__.scriptLogs = [
+            ...((window as any).__ACTIVE_REQUEST__.scriptLogs || []),
+            ...data.logs,
+          ];
+          if (type === "testScript") {
+            (window as any).__ACTIVE_REQUEST__.testResults = data.results;
+          }
+        }
+      }
+    };
+
+    const handleResponse = (e: CustomEvent) => {
+      if ((window as any).__ACTIVE_REQUEST__) {
+        (window as any).__ACTIVE_REQUEST__.response = e.detail;
+      }
+    };
+
+    window.addEventListener(
+      "scriptUpdate",
+      handleScriptUpdate as EventListener
+    );
+    window.addEventListener("apiResponse", handleResponse as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        "scriptUpdate",
+        handleScriptUpdate as EventListener
+      );
+      window.removeEventListener(
+        "apiResponse",
+        handleResponse as EventListener
+      );
+    };
+  }, []);
 
   const resolveVariables = (urlString: string): string => {
     return urlString.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
@@ -216,9 +365,6 @@ export function UrlBar({
       return variable ? variable.value : "{{" + key + "}}";
     });
   };
-
-  const urlType = useMemo(() => detectUrlType(url), [url]);
-  const wsProtocol = useMemo(() => detectWebSocketProtocol(url), [url]);
 
   const isValidUrl = (urlString: string): boolean => {
     if (!urlString) return false;
@@ -310,33 +456,6 @@ export function UrlBar({
     }, 0);
   };
 
-  const {
-    connect: wsConnect,
-    disconnect: wsDisconnect,
-    isConnected,
-    connectionStatus,
-    onUrlChange: wsUrlChange,
-    url: wsUrl,
-  } = useWebSocket();
-
-  const handleUrlChange = (newUrl: string) => {
-    const urlProtocol = detectUrlType(newUrl);
-    propsOnUrlChange(newUrl);
-
-    if ((!newUrl || urlProtocol === "http") && isWebSocketMode) {
-      if (wsConnected) {
-        wsDisconnect();
-      }
-      onWebSocketToggle();
-    } else if (newUrl && urlProtocol === "websocket" && !isWebSocketMode) {
-      onWebSocketToggle();
-    }
-
-    if (isWebSocketMode) {
-      wsUrlChange(newUrl);
-    }
-  };
-
   const handleWebSocketAction = () => {
     if (!url) return;
 
@@ -370,7 +489,9 @@ export function UrlBar({
           <TooltipTrigger asChild>
             <Button
               onClick={
-                urlType === "websocket" ? handleWebSocketAction : handleSendRequest
+                urlType === "websocket"
+                  ? handleWebSocketAction
+                  : handleSendRequest
               }
               disabled={
                 !isValidUrl(url) ||
@@ -582,58 +703,6 @@ export function UrlBar({
     </div>
   );
 
-  const handleHistoryItemLoad = useCallback(
-    (historyItem: HistoryItem) => {
-      if (historyItem.type === "websocket") {
-        handleUrlChange(historyItem.url);
-
-        if (isConnected) {
-          wsDisconnect();
-        }
-
-        onWebSocketToggle();
-
-        toast.info(
-          `Last session: ${historyItem.wsStats?.messagesSent || 0} sent, ${
-            historyItem.wsStats?.messagesReceived || 0
-          } received`
-        );
-      }
-    },
-    [isConnected, wsDisconnect, handleUrlChange, onWebSocketToggle]
-  );
-
-  useEffect(() => {
-    const handleHistorySelect = (event: CustomEvent) => {
-      const { item, url: historyUrl } = event.detail;
-
-      if (isConnected) {
-        toast.error(
-          "Please disconnect current WebSocket before loading a new URL"
-        );
-        return;
-      }
-
-      if (historyUrl) {
-        handleUrlChange(historyUrl);
-        if (item?.type === "websocket" && !isWebSocketMode) {
-          onWebSocketToggle();
-        }
-      }
-    };
-
-    window.addEventListener(
-      "loadHistoryItem",
-      handleHistorySelect as EventListener
-    );
-    return () => {
-      window.removeEventListener(
-        "loadHistoryItem",
-        handleHistorySelect as EventListener
-      );
-    };
-  }, [handleUrlChange, onWebSocketToggle, isConnected, isWebSocketMode]);
-
   const renderProtocolBadge = (protocol: string) => (
     <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 h-10">
       <Badge
@@ -649,29 +718,6 @@ export function UrlBar({
       </Badge>
     </div>
   );
-
-  const filteredVariables = useMemo(() => {
-    if (!showEnvSuggestions) return [];
-
-    const validVariables = Array.isArray(variables) ? variables : [];
-
-    return validVariables
-      .filter((v) => {
-        const searchTerm = searchPrefix.toLowerCase().trim();
-        return v.key.toLowerCase().includes(searchTerm);
-      })
-      .sort((a, b) => {
-        const aStartsWith = a.key
-          .toLowerCase()
-          .startsWith(searchPrefix.toLowerCase());
-        const bStartsWith = b.key
-          .toLowerCase()
-          .startsWith(searchPrefix.toLowerCase());
-        if (aStartsWith && !bStartsWith) return -1;
-        if (!aStartsWith && bStartsWith) return 1;
-        return a.key.localeCompare(b.key);
-      });
-  }, [variables, searchPrefix, showEnvSuggestions]);
 
   const handleVariableSelect = (varKey: string) => {
     if (!inputRef.current) return;
@@ -718,22 +764,6 @@ export function UrlBar({
     );
   };
 
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (
-        e.key === "/" &&
-        document.activeElement?.tagName !== "INPUT" &&
-        document.activeElement?.tagName !== "TEXTAREA"
-      ) {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, []);
-
   const handleSendRequest = () => {
     // Store the active request data with scripts on the window object
     (window as any).__ACTIVE_REQUEST__ = {
@@ -747,9 +777,9 @@ export function UrlBar({
       testScript: "", // Will be populated when script runs
       testResults: [], // Will be populated after tests run
       scriptLogs: [], // Will be populated during script execution
-      response: null // This will be updated after the response
+      response: null, // This will be updated after the response
     };
-    
+
     onSendRequest();
   };
 
@@ -758,23 +788,35 @@ export function UrlBar({
     const handleScriptUpdate = (e: CustomEvent) => {
       const { type, data } = e.detail;
       if ((window as any).__ACTIVE_REQUEST__) {
-        switch(type) {
-          case 'preRequestScript':
+        switch (type) {
+          case "preRequestScript":
             (window as any).__ACTIVE_REQUEST__.preRequestScript = data.script;
-            (window as any).__ACTIVE_REQUEST__.scriptLogs = [...((window as any).__ACTIVE_REQUEST__.scriptLogs || []), ...data.logs];
+            (window as any).__ACTIVE_REQUEST__.scriptLogs = [
+              ...((window as any).__ACTIVE_REQUEST__.scriptLogs || []),
+              ...data.logs,
+            ];
             break;
-          case 'testScript':
+          case "testScript":
             (window as any).__ACTIVE_REQUEST__.testScript = data.script;
             (window as any).__ACTIVE_REQUEST__.testResults = data.results;
-            (window as any).__ACTIVE_REQUEST__.scriptLogs = [...((window as any).__ACTIVE_REQUEST__.scriptLogs || []), ...data.logs];
+            (window as any).__ACTIVE_REQUEST__.scriptLogs = [
+              ...((window as any).__ACTIVE_REQUEST__.scriptLogs || []),
+              ...data.logs,
+            ];
             break;
         }
       }
     };
 
-    window.addEventListener('scriptUpdate', handleScriptUpdate as EventListener);
+    window.addEventListener(
+      "scriptUpdate",
+      handleScriptUpdate as EventListener
+    );
     return () => {
-      window.removeEventListener('scriptUpdate', handleScriptUpdate as EventListener);
+      window.removeEventListener(
+        "scriptUpdate",
+        handleScriptUpdate as EventListener
+      );
     };
   }, []);
 
@@ -789,7 +831,10 @@ export function UrlBar({
 
     window.addEventListener("apiResponse", handleResponse as EventListener);
     return () => {
-      window.removeEventListener("apiResponse", handleResponse as EventListener);
+      window.removeEventListener(
+        "apiResponse",
+        handleResponse as EventListener
+      );
     };
   }, []);
 
@@ -807,7 +852,7 @@ export function UrlBar({
           <Select value={method} onValueChange={onMethodChange}>
             <SelectTrigger
               className={cn(
-                "w-auto min-w-[70px] max-w-[100px] font-bold bg-transparent border-0 text-slate-400 hover:text-slate-300 gap-2",
+                "w-auto min-w-[70px] max-w-[100px] font-black bg-transparent border-0 text-slate-400 hover:text-slate-300 gap-2",
                 `text-xs text-${getMethodColor(method)}-500 py-1`
               )}
             >
@@ -824,7 +869,7 @@ export function UrlBar({
                 <SelectItem
                   key={value}
                   value={value}
-                  className={cn("text-xs font-medium", `text-${color}-500`)}
+                  className={cn("text-xs font-black", `text-${color}-500`)}
                 >
                   {value}
                 </SelectItem>

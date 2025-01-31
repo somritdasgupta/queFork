@@ -35,6 +35,47 @@ import { EnvironmentSelector } from "@/components/environment-selector";
 import { importFromUrl, parseImportData } from "@/lib/import-utils";
 import { ScriptRunner } from "@/lib/script-runner";
 
+
+const MAX_HISTORY_ITEMS = 500;
+
+// Add these utility functions
+const cleanupStorage = () => {
+  try {
+    // Remove oldest history items until we're under the limit
+    const history = JSON.parse(localStorage.getItem("apiHistory") || "[]");
+    const newHistory = history.slice(0, MAX_HISTORY_ITEMS);
+    localStorage.setItem("apiHistory", JSON.stringify(newHistory));
+    
+    // If still exceeding quota, clear less important data
+    const keys = Object.keys(localStorage);
+    for (let key of keys) {
+      if (key !== "apiHistory") {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch (error) {
+    console.error("Storage cleanup failed:", error);
+  }
+};
+
+const safeSetItem = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    if (error instanceof Error && error.name === "QuotaExceededError") {
+      cleanupStorage();
+      try {
+        localStorage.setItem(key, value);
+      } catch (retryError) {
+        toast.error("Storage limit reached. Unable to save history.");
+        console.error("Storage retry failed:", retryError);
+      }
+    } else {
+      console.error("Storage error:", error);
+    }
+  }
+};
+
 export default function Page() {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("");
@@ -225,40 +266,6 @@ export default function Page() {
       setRecentUrls(JSON.parse(saved));
     }
   }, []);
-
-  useEffect(() => {
-    const handleResetActiveRequest = () => {
-      setMethod('GET');
-      setUrl('');
-      setHeaders([{ key: '', value: '', enabled: true, showSecrets: false, type: '' }]);
-      setParams([{ key: '', value: '', enabled: true, showSecrets: false, type: '' }]);
-      setBody({ type: 'none', content: '' });
-      setAuth({ type: 'none' });
-      setResponse(null);
-      setPreRequestScript(null);
-      setTestScript(null);
-      setScriptLogs([]);
-      setTestResults([]);
-    };
-
-    const handleSetRequestMode = (e: CustomEvent) => {
-      const { mode } = e.detail;
-      setIsWebSocketMode(mode === 'websocket');
-      
-      // Disconnect WebSocket if switching to HTTP mode
-      if (mode === 'http' && wsConnected) {
-        disconnect();
-      }
-    };
-
-    window.addEventListener('resetActiveRequest', handleResetActiveRequest);
-    window.addEventListener('setRequestMode', handleSetRequestMode as EventListener);
-
-    return () => {
-      window.removeEventListener('resetActiveRequest', handleResetActiveRequest);
-      window.removeEventListener('setRequestMode', handleSetRequestMode as EventListener);
-    };
-  }, [wsConnected, disconnect]);
 
   const executeRequest = async () => {
     if (!url) {
@@ -489,9 +496,8 @@ export default function Page() {
         };
 
         setHistory((prev) => {
-          const newHistory = [historyItem, ...prev];
-          // Save to localStorage with scripts included
-          localStorage.setItem("apiHistory", JSON.stringify(newHistory));
+          const newHistory = [historyItem, ...prev].slice(0, MAX_HISTORY_ITEMS);
+          safeSetItem("apiHistory", JSON.stringify(newHistory));
           return newHistory;
         });
       }

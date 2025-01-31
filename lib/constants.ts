@@ -1,6 +1,6 @@
 export const PANEL_SIZING = {
   // Panel default sizes
-  DEFAULT: 20,
+  DEFAULT: 100,
   EXPANDED: 100, // When expanded
   COLLAPSED: 0, // When collapsed
 

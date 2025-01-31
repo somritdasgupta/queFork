@@ -1,3 +1,5 @@
+"use client";
+
 import React, {
   useState,
   forwardRef,
@@ -18,6 +20,7 @@ import {
   Copy,
   X,
   BoxIcon,
+  Check,
 } from "lucide-react";
 import { KeyValueEditor } from "./key-value-editor";
 import { Environment, EnvironmentVariable, KeyValuePair } from "@/types";
@@ -25,12 +28,19 @@ import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { saveAs } from "file-saver";
 import {
-  Accordion,
-  AccordionContent,
   AccordionItem,
   AccordionTrigger,
+  AccordionContent,
 } from "@/components/ui/accordion";
 import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
+import dynamic from "next/dynamic";
+
+const DynamicAccordion = dynamic(
+  () => import("@/components/ui/accordion").then((mod) => mod.Accordion),
+  {
+    ssr: false,
+  }
+);
 
 interface EnvironmentPanelProps {
   environments: Environment[];
@@ -62,6 +72,10 @@ export const EnvironmentPanel = forwardRef<
     value: string;
     type: "text" | "secret";
   } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: string;
+    type: "environment";
+  } | null>(null);
 
   useEffect(() => {
     const handleShowSaveForm = (e: CustomEvent) => {
@@ -82,22 +96,125 @@ export const EnvironmentPanel = forwardRef<
     };
   }, []); // Remove expandedEnvironments dependency
 
+  useEffect(() => {
+    const handleEnvironmentSaveAction = (e: CustomEvent) => {
+      const { key, value, type, useFirstEmptyRow } = e.detail;
+      
+      // Find the target environment
+      const targetEnvironment = currentEnvironment || environments[0];
+      if (!targetEnvironment) {
+        toast.error("No environment selected");
+        return;
+      }
+
+      // Function to add variable to environment
+      const addVariableToEnvironment = (env: Environment) => {
+        const updatedEnvironments = environments.map((e) => {
+          if (e.id === env.id) {
+            let updatedVariables = [...e.variables];
+            
+            if (useFirstEmptyRow) {
+              // Find first empty row
+              const emptyIndex = updatedVariables.findIndex(v => !v.key && !v.value);
+              
+              if (emptyIndex !== -1) {
+                // Update existing empty row
+                updatedVariables[emptyIndex] = {
+                  key,
+                  value,
+                  type: type || "text",
+                  enabled: true,
+                };
+              } else {
+                // No empty row found, add new one
+                updatedVariables.push({
+                  key,
+                  value,
+                  type: type || "text",
+                  enabled: true,
+                });
+              }
+            } else {
+              // Legacy behavior - always add new row
+              updatedVariables.push({
+                key,
+                value,
+                type: type || "text",
+                enabled: true,
+              });
+            }
+
+            return {
+              ...e,
+              variables: updatedVariables,
+              lastModified: new Date().toISOString(),
+            };
+          }
+          return e;
+        });
+
+        onEnvironmentsUpdate(updatedEnvironments);
+        setPendingVariable(null);
+        setShowSaveForm(false);
+        toast.success("Variable added to environment");
+      };
+
+      // If we're showing the form, save the pending variable
+      if (e.detail.showForm) {
+        setPendingVariable({ key, value, type: type || "text" });
+        setShowSaveForm(true);
+      } else {
+        // Direct save to current/default environment
+        addVariableToEnvironment(targetEnvironment);
+      }
+    };
+
+    window.addEventListener(
+      "environmentSaveAction",
+      handleEnvironmentSaveAction as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        "environmentSaveAction",
+        handleEnvironmentSaveAction as EventListener
+      );
+    };
+  }, [environments, currentEnvironment, onEnvironmentsUpdate]);
+
   const handleSaveToEnvironment = (environmentId: string) => {
     if (!pendingVariable) return;
 
+    const targetEnv = environments.find(env => env.id === environmentId);
+    if (!targetEnv) return;
+
     const updatedEnvironments = environments.map((env) => {
       if (env.id === environmentId) {
+        let updatedVariables = [...env.variables];
+        
+        // Find first empty row
+        const emptyIndex = updatedVariables.findIndex(v => !v.key && !v.value);
+        
+        if (emptyIndex !== -1) {
+          // Update existing empty row
+          updatedVariables[emptyIndex] = {
+            key: pendingVariable.key,
+            value: pendingVariable.value,
+            type: pendingVariable.type,
+            enabled: true,
+          };
+        } else {
+          // No empty row found, add new one
+          updatedVariables.push({
+            key: pendingVariable.key,
+            value: pendingVariable.value,
+            type: pendingVariable.type,
+            enabled: true,
+          });
+        }
+
         return {
           ...env,
-          variables: [
-            ...env.variables,
-            {
-              key: pendingVariable.key,
-              value: pendingVariable.value,
-              type: pendingVariable.type,
-              enabled: true,
-            },
-          ],
+          variables: updatedVariables,
           lastModified: new Date().toISOString(),
         };
       }
@@ -113,19 +230,22 @@ export const EnvironmentPanel = forwardRef<
   const handleDeleteEnvironment = (id: string) => {
     const env = environments.find((e) => e.id === id);
     if (env && !env.global) {
-      if (confirm("Are you sure you want to delete this environment?")) {
+      if (deleteConfirm?.id === id && deleteConfirm.type === "environment") {
         // Clean up navigable elements
         navigableElements.current = navigableElements.current.filter(
           (el) => el.id !== id
         );
         onEnvironmentsUpdate(environments.filter((e) => e.id !== id));
         toast.success("Environment deleted");
+        setDeleteConfirm(null);
 
         // Focus next available environment
         const nextElement = navigableElements.current[0];
         if (nextElement) {
           setFocus(nextElement.id);
         }
+      } else {
+        setDeleteConfirm({ id, type: "environment" });
       }
     }
   };
@@ -367,14 +487,44 @@ export const EnvironmentPanel = forwardRef<
     env.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (editingEnvironment) {
-    // Add check to close editing mode if save form needs to be shown
-    useEffect(() => {
-      if (showSaveForm && pendingVariable) {
-        setEditingEnvironment(null);
-      }
-    }, [showSaveForm, pendingVariable]);
+  // Add check to close editing mode if save form needs to be shown
+  useEffect(() => {
+    if (showSaveForm && pendingVariable) {
+      setEditingEnvironment(null);
+    }
+  }, [showSaveForm, pendingVariable]);
 
+  const renderDeleteConfirmation = (id: string) => (
+    <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
+      <span className="text-xs text-slate-400">Delete environment?</span>
+      <div className="flex items-center gap-1 ml-auto">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDeleteConfirm(null);
+          }}
+          className="h-6 w-6 p-0"
+        >
+          <X className="h-4 w-4 text-slate-400" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDeleteEnvironment(id);
+          }}
+          className="h-6 w-6 p-0"
+        >
+          <Check className="h-4 w-4 text-emerald-400" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (editingEnvironment) {
     return (
       <div className="h-full flex flex-col bg-slate-800">
         <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
@@ -398,7 +548,7 @@ export const EnvironmentPanel = forwardRef<
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea direction="vertical" className="flex-1">
           <div className="p-0">
             <KeyValueEditor
               pairs={editingEnvironment.variables.map((v) => ({
@@ -438,7 +588,10 @@ export const EnvironmentPanel = forwardRef<
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-800/95">
+    <div
+      className="h-full flex flex-col bg-slate-800/95"
+      suppressHydrationWarning
+    >
       {showSaveForm && pendingVariable && (
         <div className="bg-slate-900/50">
           <div className="p-4 space-y-4">
@@ -498,7 +651,7 @@ export const EnvironmentPanel = forwardRef<
             placeholder="Add new environment"
             value={newEnvironmentName}
             onChange={(e) => setNewEnvironmentName(e.target.value)}
-            className="h-12 w-full rounded-none bg-slate-900 border-2 border-slate-700 focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
+            className="h-12 w-full rounded-none bg-slate-800 border-2 border-slate-700 focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
           />
           <div className="flex">
             <Button
@@ -506,7 +659,7 @@ export const EnvironmentPanel = forwardRef<
               size="sm"
               onClick={handleCreateEnvironment}
               disabled={!newEnvironmentName.trim()}
-              className="h-12 w-12 rounded-none border-2 border-l-0 border-slate-700/50 bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 disabled:border-slate-700 disabled:text-slate-500"
+              className="h-12 w-12 rounded-none border-2 border-slate-700/50 bg-slate-800 hover:bg-slate-900/50 text-blue-400 hover:text-blue-300 disabled:border-slate-700 disabled:text-slate-500"
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -514,15 +667,15 @@ export const EnvironmentPanel = forwardRef<
               variant="ghost"
               size="sm"
               onClick={handleImportEnvironment}
-              className="h-12 w-12 rounded-none border-2 border-l-0 border-slate-700 bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300"
+              className="h-12 w-12 rounded-none border-2 border-slate-700 bg-slate-800 hover:bg-slate-900/50 text-emerald-400 hover:text-emerald-300"
             >
               <Upload className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
-      <ScrollArea className="flex-1 overflow-hidden">
-        <Accordion
+      <ScrollArea direction="vertical" className="flex-1 overflow-hidden">
+        <DynamicAccordion
           type="multiple"
           value={Array.from(expandedEnvironments)}
           onValueChange={(value) => {
@@ -545,8 +698,8 @@ export const EnvironmentPanel = forwardRef<
               }}
               className="border-b border-slate-700"
             >
-              <AccordionTrigger className="px-4 text-slate-500 hover:bg-slate-700/50 transition-colors">
-                <div className="flex items-center justify-between w-full">
+              <div className="flex items-center justify-between">
+                <AccordionTrigger className="flex-1 px-4 text-slate-500 transition-colors">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-slate-300">
                       {env.name}
@@ -563,45 +716,46 @@ export const EnvironmentPanel = forwardRef<
                       ({countValidVariables(env.variables)})
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
+                </AccordionTrigger>
+                <div className="flex items-center gap-1 px-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDuplicateEnvironment(env);
+                    }}
+                    className="h-8 w-8 hover:bg-slate-800 text-blue-400 hover:text-blue-300"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExportEnvironment(env);
+                    }}
+                    className="h-8 w-8 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  {!env.global && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDuplicateEnvironment(env);
+                        handleDeleteEnvironment(env.id);
                       }}
-                      className="h-8 w-8 hover:bg-slate-800 text-blue-400 hover:text-blue-300"
+                      className="h-8 w-8 hover:bg-slate-800 text-red-400 hover:text-red-300"
                     >
-                      <Copy className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleExportEnvironment(env);
-                      }}
-                      className="h-8 w-8 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    {!env.global && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteEnvironment(env.id);
-                        }}
-                        className="h-8 w-8 hover:bg-slate-800 text-red-400 hover:text-red-300"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </div>
-              </AccordionTrigger>
+              </div>
+              {deleteConfirm?.id === env.id && renderDeleteConfirmation(env.id)}
               <AccordionContent className="border-t border-slate-700 bg-slate-900/50 p-0">
                 <KeyValueEditor
                   pairs={env.variables.map((v) => ({
@@ -622,8 +776,8 @@ export const EnvironmentPanel = forwardRef<
               </AccordionContent>
             </AccordionItem>
           ))}
-        </Accordion>
-      </ScrollArea>
+        </DynamicAccordion>
+      </ScrollArea>{" "}
     </div>
   );
 });

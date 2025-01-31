@@ -693,6 +693,7 @@ export function RequestPanel({
                   initial="initial"
                   animate="animate"
                   exit="exit"
+                  className="h-full overflow-auto" // Add overflow handling
                 >
                   <ConnectionTab />
                 </motion.div>

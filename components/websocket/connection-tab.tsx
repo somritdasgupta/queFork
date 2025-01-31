@@ -189,14 +189,14 @@ export function ConnectionTab() {
 
   return (
     <motion.div
-      className="h-full pt-2"
+      className="h-full overflow-y-auto" // Add overflow handling
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
     >
       <div
         className={cn(
-          "grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4",
+          "grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4 p-2",
           !isConnected && "opacity-80"
         )}
       >

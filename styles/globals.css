@@ -414,3 +414,83 @@ body {
     text-size-adjust: none;
   }
 }
+
+/* Connection Lost Backdrop */
+.connection-lost-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+.connection-lost .connection-lost-backdrop {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.connection-lost main {
+  pointer-events: none;
+  filter: blur(4px);
+  transition: filter 0.3s ease;
+}
+
+/* Adjust blur intensity for mobile */
+@media (max-width: 768px) {
+  .connection-lost main {
+    filter: blur(2px);
+  }
+}
+
+/* Exempt the offline page from blur */
+.offline-page {
+  pointer-events: all !important;
+  filter: none !important;
+}
+
+/* Improve mobile scrolling */
+.scroll-container {
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+  position: relative;
+  height: 100%;
+}
+
+[data-radix-scroll-area-viewport] {
+  touch-action: pan-x pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* Fix for iOS momentum scrolling */
+.momentum-scroll {
+  -webkit-overflow-scrolling: touch !important;
+  overflow-y: scroll !important;
+  overscroll-behavior-y: contain !important;
+}
+
+/* Prevent parent scroll while scrolling child */
+.scroll-lock {
+  overflow: hidden !important;
+  position: fixed !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* Enable smooth scrolling for scroll areas */
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}

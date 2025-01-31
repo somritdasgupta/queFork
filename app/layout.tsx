@@ -4,6 +4,7 @@ import { WebSocketWrapper } from "@/components/websocket/websocket-wrapper";
 import { Preloader } from "@/components/preloader";
 import { ServiceWorkerRegistration } from "./components/ServiceWorkerRegistration";
 import type { Metadata, Viewport } from "next";
+import { ConnectionLostBackdrop } from "./components/ConnectionLostBackdrop";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -106,7 +107,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" dir="ltr">
+    <html lang="en" dir="ltr" suppressHydrationWarning>
       <head>
         <link rel="canonical" href="https://quefork.somrit.in" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -140,11 +141,14 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.className} antialiased`}>
-        <ServiceWorkerRegistration />
-        <Preloader />
-        <div className="contents animate-unblur">
-          <WebSocketWrapper>{children}</WebSocketWrapper>
+      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
+        <div id="root" suppressHydrationWarning>
+          <ServiceWorkerRegistration />
+          <Preloader />
+          <div className="contents animate-unblur">
+            <WebSocketWrapper>{children}</WebSocketWrapper>
+          </div>
+          <ConnectionLostBackdrop />
         </div>
       </body>
     </html>

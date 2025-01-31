@@ -27,7 +27,7 @@ export function EnvironmentSelector({
       <SelectTrigger className={className}>
         <SelectValue>
           {currentEnvironment ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 font-black">
               <span className={currentEnvironment.global ? "text-blue-400" : "text-yellow-400"}>
                 {currentEnvironment.name}
               </span>

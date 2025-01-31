@@ -13,7 +13,7 @@ const Footer = () => {
               showSubtitle={true} 
               size="sm" 
               subtitlePosition="right"
-              primaryColor="text-slate-400"
+              primaryColor="text-slate-100"
               secondaryColor="text-blue-500"
               subtitleColor="text-slate-500"
             />

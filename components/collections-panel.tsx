@@ -1,13 +1,10 @@
+"use client";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { AccordionContent, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -38,6 +35,22 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { cn } from "@/lib/utils";
 import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
+import dynamic from "next/dynamic";
+
+// Dynamic import for components that need to be client-side only
+const DynamicAccordion = dynamic(
+  () => import("@/components/ui/accordion").then((mod) => mod.Accordion),
+  {
+    ssr: false,
+  }
+);
+
+const DynamicAccordionItem = dynamic(
+  () => import("@/components/ui/accordion").then((mod) => mod.AccordionItem),
+  {
+    ssr: false,
+  }
+);
 
 interface CollectionsPanelProps {
   collections: Collection[];
@@ -52,6 +65,36 @@ interface CollectionsPanelProps {
   onSwitchToCollections?: () => void;
   onImportCollections: (source: ImportSource, data: string) => Promise<void>;
 }
+
+// Change the CollectionHeader to use div elements
+const CollectionHeader = ({
+  collection,
+  onAction,
+}: {
+  collection: Collection;
+  onAction: (action: string) => void;
+}) => (
+  <div className="flex items-center justify-between w-full">
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-slate-400 truncate">
+          {collection.name}
+        </span>
+        {collection.apiVersion && (
+          <Badge className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/20">
+            v{collection.apiVersion}
+          </Badge>
+        )}
+        <Badge
+          variant="outline"
+          className="text-[10px] px-1 bg-transparent border-slate-700 text-slate-400"
+        >
+          {collection.requests?.length || 0}
+        </Badge>
+      </div>
+    </div>
+  </div>
+);
 
 export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   const [search, setSearch] = useState("");
@@ -419,7 +462,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
       }, [isEditing]);
 
       return (
-        <div className="flex flex-col">
+        <div key={`request-${request.id}`} className="flex flex-col">
           <div
             key={request.id}
             ref={(el) => {
@@ -435,55 +478,57 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             tabIndex={0}
             className="group border-t border-slate-700/50 outline-none focus:bg-slate-800"
           >
-            <div className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors">
-              <Badge
-                variant="outline"
-                className={cn(
-                  "shrink-0 text-xs font-mono border",
-                  request.method === "GET" &&
-                    "text-emerald-400 border-emerald-500/20",
-                  request.method === "POST" &&
-                    "text-blue-400 border-blue-500/20",
-                  request.method === "PUT" &&
-                    "text-yellow-400 border-yellow-500/20",
-                  request.method === "DELETE" &&
-                    "text-red-400 border-red-500/20",
-                  request.method === "PATCH" &&
-                    "text-purple-400 border-purple-500/20"
-                )}
-              >
-                {request.method}
-              </Badge>
+            <div className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors justify-between">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "shrink-0 text-xs font-mono border",
+                    request.method === "GET" &&
+                      "text-emerald-400 border-emerald-500/20",
+                    request.method === "POST" &&
+                      "text-blue-400 border-blue-500/20",
+                    request.method === "PUT" &&
+                      "text-yellow-400 border-yellow-500/20",
+                    request.method === "DELETE" &&
+                      "text-red-400 border-red-500/20",
+                    request.method === "PATCH" &&
+                      "text-purple-400 border-purple-500/20"
+                  )}
+                >
+                  {request.method}
+                </Badge>
 
-              <div
-                className="flex-1 min-w-0"
-                onClick={() => !isEditing && props.onSelectRequest(request)}
-              >
-                {isEditing ? (
-                  <Input
-                    ref={inputRef}
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="h-6 text-xs bg-slate-900"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleRename(editName);
-                      } else if (e.key === "Escape") {
-                        setIsEditing(false);
-                        setEditName(request.name || request.url);
-                      }
-                    }}
-                    onBlur={() => handleRename(editName)}
-                    maxLength={50}
-                  />
-                ) : (
-                  <div className="text-xs font-medium text-slate-300 truncate cursor-pointer">
-                    {request.name || request.url}
-                  </div>
-                )}
+                <div
+                  className="flex-1 min-w-0"
+                  onClick={() => !isEditing && props.onSelectRequest(request)}
+                >
+                  {isEditing ? (
+                    <Input
+                      ref={inputRef}
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="h-6 text-xs bg-slate-900"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleRename(editName);
+                        } else if (e.key === "Escape") {
+                          setIsEditing(false);
+                          setEditName(request.name || request.url);
+                        }
+                      }}
+                      onBlur={() => handleRename(editName)}
+                      maxLength={50}
+                    />
+                  ) : (
+                    <div className="text-xs font-medium text-slate-300 truncate cursor-pointer">
+                      {request.name || request.url}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -581,141 +626,59 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   const renderCollectionActions = useCallback(
     (collection: Collection) => {
       return (
-        <div className="flex items-center">
-          <div className="hidden sm:flex items-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleQuickSave(collection.id)}
-              disabled={!canQuickSave}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleQuickSave(collection.id)}
+            disabled={!canQuickSave}
+            className={cn(
+              "h-8 w-8 hover:text-slate-300",
+              !canQuickSave && "opacity-50 cursor-not-allowed"
+            )}
+            title={
+              canQuickSave
+                ? "Save current request"
+                : "No active request to save"
+            }
+          >
+            <Save
               className={cn(
-                "h-8 w-8 hover:text-slate-300",
-                !canQuickSave && "opacity-50 cursor-not-allowed"
+                "h-4 w-4",
+                canQuickSave ? "text-blue-400" : "text-slate-500"
               )}
-              title={
-                canQuickSave
-                  ? "Save current request"
-                  : "No active request to save"
-              }
-            >
-              <Save
-                className={cn(
-                  "h-4 w-4",
-                  canQuickSave ? "text-blue-400" : "text-slate-500"
-                )}
-              />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDuplicateCollection(collection)}
-              className="h-8 w-8 hover:text-slate-300"
-              title="Duplicate collection"
-            >
-              <Copy className="h-4 w-4 text-emerald-400" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => props.onExportCollection(collection.id)}
-              className="h-8 w-8 hover:text-slate-300"
-              title="Export collection"
-            >
-              <Download className="h-4 w-4 text-purple-400" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDeleteConfirm({ id: collection.id, type: "collection" });
-              }}
-              className="h-8 w-8 hover:text-slate-300"
-              title="Delete collection"
-            >
-              <Trash2 className="h-4 w-4 text-red-400" />
-            </Button>
-          </div>
-
-          <div className="sm:hidden flex items-center relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsExpanded(!isExpanded);
-              }}
-              className="h-8 w-8 hover:text-slate-300"
-            >
-              <EllipsisIcon
-                className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  isExpanded && "rotate-90"
-                )}
-              />
-            </Button>
-
-            <div
-              className={cn(
-                "flex absolute right-full top-0 overflow-hidden transition-all duration-200",
-                isExpanded ? "w-auto opacity-100" : "w-0 opacity-70"
-              )}
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "h-8 w-8 hover:text-slate-300",
-                  !canQuickSave && "opacity-50 cursor-not-allowed"
-                )}
-                disabled={!canQuickSave}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleQuickSave(collection.id);
-                }}
-              >
-                <Save
-                  className={cn(
-                    "h-4 w-4",
-                    canQuickSave ? "text-blue-400" : "text-slate-500"
-                  )}
-                />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 hover:text-slate-300"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDuplicateCollection(collection);
-                }}
-              >
-                <Copy className="h-4 w-4 text-emerald-400" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 hover:text-slate-300"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  props.onExportCollection(collection.id);
-                }}
-              >
-                <Download className="h-4 w-4 text-purple-400" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 hover:text-slate-300"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteConfirm({ id: collection.id, type: "collection" });
-                }}
-              >
-                <Trash2 className="h-4 w-4 text-red-400" />
-              </Button>
-            </div>
-          </div>
+            />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDuplicateCollection(collection)}
+            className="h-8 w-8 hover:text-slate-300"
+            title="Duplicate collection"
+          >
+            <Copy className="h-4 w-4 text-emerald-400" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => props.onExportCollection(collection.id)}
+            className="h-8 w-8 hover:text-slate-300"
+            title="Export collection"
+          >
+            <Download className="h-4 w-4 text-purple-400" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteConfirm({ id: collection.id, type: "collection" });
+            }}
+            className="h-8 w-8 hover:text-slate-300"
+            title="Delete collection"
+          >
+            <Trash2 className="h-4 w-4 text-red-400" />
+          </Button>
         </div>
       );
     },
@@ -726,26 +689,21 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     props.onExportCollection(collection.id);
   };
 
-  const renderCollectionContent = (collection: Collection) => (
-    <div className="flex flex-col w-full">
-      <div className="flex items-center justify-between w-full group px-4 py-2">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="text-sm font-medium text-slate-400 truncate">
-            {collection.name}
-          </span>
-          {collection.apiVersion && (
-            <Badge className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/20">
-              v{collection.apiVersion}
-            </Badge>
-          )}
-          <Badge
-            variant="outline"
-            className="mr-2 text-[10px] px-1 bg-transparent border-slate-700 text-slate-400"
-          >
-            {collection.requests?.length || 0}
-          </Badge>
+  // Modify the renderCollectionItem to use div for the accordion trigger wrapper
+  const renderCollectionItem = (collection: Collection) => (
+    <DynamicAccordionItem
+      key={`collection-${collection.id}`}
+      value={collection.id}
+      className="px-0 border-b border-slate-700"
+      suppressHydrationWarning
+    >
+      <div className="flex items-center w-full">
+        <div className="flex-1">
+          <AccordionTrigger className="w-full p-4 text-slate-500 hover:no-underline hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors [&>svg]:hidden">
+            <CollectionHeader collection={collection} onAction={() => {}} />
+          </AccordionTrigger>
         </div>
-        {renderCollectionActions(collection)}
+        <div className="pr-4">{renderCollectionActions(collection)}</div>
       </div>
       {deleteConfirm?.id === collection.id &&
         deleteConfirm.type === "collection" && (
@@ -753,24 +711,17 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             {renderDeleteConfirmation("collection", collection.id)}
           </div>
         )}
-    </div>
-  );
-
-  const renderCollectionItem = (collection: Collection) => (
-    <AccordionItem
-      key={collection.id}
-      value={collection.id}
-      className="px-0 border-b border-slate-700"
-    >
-      <AccordionTrigger className="w-full p-0 text-slate-500 hover:no-underline hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors [&>svg]:hidden">
-        {renderCollectionContent(collection)}
-      </AccordionTrigger>
       <AccordionContent className="pt-0 pb-0">
-        <div className="bg-slate-900/50">
+        <div
+          key={`collection-content-${collection.id}`}
+          className="bg-slate-900/50"
+        >
           {collection.requests?.length > 0 ? (
-            collection.requests.map((request) =>
-              renderRequestItem(request, collection)
-            )
+            collection.requests.map((request) => (
+              <div key={`request-wrapper-${request.id}`}>
+                {renderRequestItem(request, collection)}
+              </div>
+            ))
           ) : (
             <div className="py-3 text-sm text-slate-500 text-center border-t border-slate-700/50">
               No requests in this collection
@@ -778,7 +729,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
           )}
         </div>
       </AccordionContent>
-    </AccordionItem>
+    </DynamicAccordionItem>
   );
 
   const handleSaveToCollection = (
@@ -883,14 +834,14 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
 
       await props.onImportCollections("clipboard", text);
       toast.success("Collection imported successfully");
-      setIsImporting(false); // Close import dialog after success
+      setIsImporting(false);
     } catch (error: any) {
       toast.error(error.message || "Failed to import from clipboard");
     }
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-800">
+    <div className="h-full flex flex-col bg-slate-800" suppressHydrationWarning>
       <div className="h-full flex flex-col bg-slate-800">
         <Input
           placeholder="Search collections"
@@ -898,7 +849,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 rounded-none border-x-0 text-xs bg-slate-900 border-slate-700"
         />
-        <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-700">
+        <div className="sticky top-0 z-10 bg-slate-800 border-b border-slate-700">
           <div className="flex items-center p-2 gap-2">
             {/* All controls in a single flex container */}
             <div className="flex items-center gap-1 w-full">
@@ -939,7 +890,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
-                  className="w-32 bg-slate-800 border-slate-700"
+                  className="w-32 bg-slate-800 border-slate-700 text-slate-400"
                 >
                   <DropdownMenuItem onClick={() => setFilterBy("")}>
                     All Methods
@@ -999,9 +950,9 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             <div className="p-4 bg-slate-900/50 border-b border-slate-700">
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-slate-300">
+                  <h2 className="text-sm font-medium text-slate-300">
                     Import Collection
-                  </h3>
+                  </h2>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1076,9 +1027,9 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             <div className="p-4 bg-slate-900/50 border-b border-slate-700">
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-slate-300">
+                  <h2 className="text-sm font-medium text-slate-300">
                     Create Collection
-                  </h3>
+                  </h2>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1185,9 +1136,9 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             <div className="border-b border-slate-700 bg-slate-900/50">
               <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-slate-300">
+                  <h2 className="text-sm font-medium text-slate-300">
                     Save Request
-                  </h3>
+                  </h2>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1280,13 +1231,17 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
               </Button>
             </div>
           ) : (
-            <div>
-              {" "}
-              <Accordion type="multiple">
-                {filteredCollections.map((collection: Collection) =>
-                  renderCollectionItem(collection)
-                )}
-              </Accordion>
+            <div suppressHydrationWarning>
+              <DynamicAccordion type="multiple">
+                {filteredCollections.map((collection) => (
+                  <div
+                    key={`collection-wrapper-${collection.id}`}
+                    suppressHydrationWarning
+                  >
+                    {renderCollectionItem(collection)}
+                  </div>
+                ))}
+              </DynamicAccordion>
             </div>
           )}
         </ScrollArea>
