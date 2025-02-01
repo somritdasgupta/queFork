@@ -51,42 +51,66 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // indicates async response
   }
 
-  // Only intercept if enabled
+  // Simplified request handling
   if (request.action === "executeRequest" && interceptorEnabled) {
     console.debug("Background received request:", request);
-
-    const targetUrl = getTargetForUrl(request.url);
-    if (!targetUrl) {
-      sendResponse({
-        success: false,
-        error: "No target URL configured"
-      });
-      return true;
-    }
+    const startTime = performance.now();
 
     // Update stats before making the request
-    updateStats(request.url, targetUrl);
+    updateStats(request.url, "interceptor");
 
-    fetch(`${targetUrl}/api/proxy`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request)
+    // Direct fetch to the requested URL (can be localhost)
+    fetch(request.url, {
+      method: request.method || 'GET',
+      headers: request.headers,
+      body: request.method !== 'GET' ? JSON.stringify(request.body) : undefined
     })
     .then(async (response) => {
-      const responseData = await response.json();
-      sendResponse({ success: true, response: responseData });
+      const contentType = response.headers.get('content-type');
+      let responseData;
+      
+      if (contentType?.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        responseData = await response.text();
+      }
+
+      // Calculate response size
+      const blob = new Blob([JSON.stringify(responseData)]);
+      const size = blob.size;
+      
+      // Calculate time taken
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
+      // Immediately notify popup of stats update
+      chrome.runtime.sendMessage({ 
+        action: "statsUpdated", 
+        stats: requestStats 
+      });
+
+      sendResponse({ 
+        success: true, 
+        response: {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: responseData,
+          contentType,
+          time: `${Math.round(duration)}ms`,
+          size: formatBytes(size)
+        }
+      });
     })
     .catch((error) => {
-      console.error("Background fetch error:", error);
+      console.error("Fetch error:", error);
       sendResponse({
         success: false,
         error: error.message || "Failed to fetch"
       });
     });
 
-    return true; // Keep message channel open for async response
+    return true; // Keep channel open for async response
   }
 
   if (request.action === "getStats") {
@@ -96,6 +120,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   return true; // Required for async response
 });
+
+// Add this helper function
+function formatBytes(bytes) {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+}
 
 // Load saved endpoints on startup
 chrome.storage.local.get(["enabledEndpoints"], (result) => {
@@ -132,7 +165,9 @@ function getTargetForUrl(requestUrl) {
   }
 }
 
+// Add real-time stats update
 function updateStats(url, targetUrl) {
+  // Initialize stats object if not exists
   if (!requestStats[url]) {
     requestStats[url] = {
       count: 0,
@@ -141,13 +176,25 @@ function updateStats(url, targetUrl) {
     };
   }
   
-  requestStats[url].count++;
+  // Update counts
+  requestStats[url].count = (requestStats[url].count || 0) + 1;
   requestStats[url].lastAccessed = new Date().toISOString();
   
+  // Update target specific counts
+  if (!requestStats[url].targets) {
+    requestStats[url].targets = {};
+  }
   if (!requestStats[url].targets[targetUrl]) {
     requestStats[url].targets[targetUrl] = 0;
   }
   requestStats[url].targets[targetUrl]++;
-  
-  chrome.storage.local.set({ requestStats });
+
+  // Save to storage and broadcast update
+  chrome.storage.local.set({ requestStats }, () => {
+    // Broadcast to all extension pages
+    chrome.runtime.sendMessage({ 
+      action: "statsUpdated", 
+      stats: requestStats 
+    });
+  });
 }

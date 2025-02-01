@@ -11,55 +11,49 @@ export async function POST(req: Request) {
   try {
     const { method, url, headers, body } = await req.json();
 
-    // Validate URL early to fail fast
+    // Validate URL
     try {
       new URL(url);
     } catch {
       return createErrorResponse("Invalid URL format", 400, startTime);
     }
 
-    const response = await fetch(url, {
+    const fetchResponse = await fetch(url, {
       method,
-      headers: headers,
+      headers: {
+        ...headers,
+        'X-Forwarded-For': req.headers.get('x-forwarded-for') || 'unknown',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
       body: ["GET", "HEAD"].includes(method) ? undefined : JSON.stringify(body),
-      next: { revalidate: 0 } // Disable caching
     });
 
-    const contentType = response.headers.get("content-type");
-    let responseData;
+    const contentType = fetchResponse.headers.get("content-type");
+    const responseData = contentType?.includes("application/json") 
+      ? await fetchResponse.json()
+      : await fetchResponse.text();
 
-    try {
-      if (contentType?.includes("application/json")) {
-        responseData = await response.json();
-      } else {
-        responseData = await response.text();
-      }
+    // Calculate response size
+    const blob = new Blob([typeof responseData === 'string' ? responseData : JSON.stringify(responseData)]);
+    const size = blob.size;
 
-      return NextResponse.json({
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        body: responseData,
-        contentType: contentType || 'text/plain',
-        time: `${(performance.now() - startTime).toFixed(2)}ms`,
-        size: formatBytes(new Blob([responseData.toString()]).size)
-      });
+    // Calculate time
+    const endTime = performance.now();
+    const duration = endTime - startTime;
 
-    } catch (parseError) {
-      return NextResponse.json({
-        error: `Failed to parse response: ${(parseError as Error).message}`,
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        body: await response.text(),
-        contentType: contentType || 'text/plain',
-        time: `${(performance.now() - startTime).toFixed(2)}ms`
-      });
-    }
+    return NextResponse.json({
+      status: fetchResponse.status,
+      statusText: fetchResponse.statusText,
+      headers: Object.fromEntries(fetchResponse.headers.entries()),
+      body: responseData,
+      contentType,
+      time: `${Math.round(duration)}ms`,
+      size: formatBytes(size)
+    });
 
   } catch (error) {
     return createErrorResponse(
-      error instanceof Error ? error.message : "Internal server error",
+      error instanceof Error ? error.message : "Proxy error",
       500,
       startTime
     );

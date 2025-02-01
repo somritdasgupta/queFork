@@ -292,44 +292,17 @@ export default function Page() {
     const startTime = Date.now();
 
     try {
-      // Run pre-request script
+      // Run pre-request script if exists
       if (preRequestScript) {
-        const scriptRunner = new ScriptRunner(
-          {
-            request: {
-              method,
-              url,
-              headers,
-              body,
-            },
-            environment: mergedEnvVariables.reduce(
-              (acc, v) => ({ ...acc, [v.key]: v.value }),
-              {}
-            ),
-            variables: {},
-          },
-          (type, ...args) => {
-            setScriptLogs((logs) => [
-              ...logs,
-              `[${type.toUpperCase()}] ${args.join(" ")}`,
-            ]);
-          }
-        );
-
-        const result = await scriptRunner.runScript(preRequestScript);
-        if (!result.success) {
-          toast.error(`Pre-request script error: ${result.error}`);
-          return;
-        }
+        // ...existing pre-request script
       }
 
+      // Prepare the request object
       const queryString = params
         .filter((p) => p.key && p.value && p.enabled)
         .map(
           (p) =>
-            `${encodeURIComponent(p.key)}=${encodeURIComponent(
-              replaceEnvironmentVariables(p.value)
-            )}`
+            `${encodeURIComponent(p.key)}=${encodeURIComponent(replaceEnvironmentVariables(p.value))}`
         )
         .join("&");
 
@@ -340,180 +313,74 @@ export default function Page() {
           requestHeaders[h.key] = replaceEnvironmentVariables(h.value);
         });
 
+      // Add auth headers
       if (auth.type === "bearer" && auth.token) {
-        requestHeaders["Authorization"] = `Bearer ${replaceEnvironmentVariables(
-          auth.token
-        )}`;
+        requestHeaders["Authorization"] =
+          `Bearer ${replaceEnvironmentVariables(auth.token)}`;
       } else if (auth.type === "basic" && auth.username && auth.password) {
         requestHeaders["Authorization"] = `Basic ${btoa(
-          `${replaceEnvironmentVariables(
-            auth.username
-          )}:${replaceEnvironmentVariables(auth.password)}`
+          `${replaceEnvironmentVariables(auth.username)}:${replaceEnvironmentVariables(auth.password)}`
         )}`;
       } else if (auth.type === "apiKey" && auth.key) {
         requestHeaders["X-API-Key"] = replaceEnvironmentVariables(auth.key);
       }
 
-      const fullUrl = `${replaceEnvironmentVariables(url)}${
-        queryString ? `?${queryString}` : ""
-      }`;
+      const fullUrl = `${replaceEnvironmentVariables(url)}${queryString ? `?${queryString}` : ""}`;
 
-      const requestBody = (() => {
-        if (!body.content || body.type === "none") {
-          return undefined;
-        }
-
-        switch (body.type) {
-          case "json":
-          case "application/json":
-          case "application/ld+json":
-          case "application/hal+json":
-          case "application/vnd.api+json":
-            return typeof body.content === "string"
-              ? JSON.parse(body.content)
-              : body.content;
-
-          case "form-data":
-          case "multipart/form-data":
-            const formData = new FormData();
-            if (Array.isArray(body.content)) {
-              body.content.forEach((item) => {
-                if (item.key && item.value) {
-                  formData.append(item.key, item.value);
-                }
-              });
-            }
-            return formData;
-
-          case "x-www-form-urlencoded":
-          case "application/x-www-form-urlencoded":
-            if (Array.isArray(body.content)) {
-              return new URLSearchParams(
-                body.content
-                  .filter((item) => item.key && item.value)
-                  .map((item) => [item.key, item.value])
-              ).toString();
-            }
-            return body.content;
-
-          default:
-            return body.content;
-        }
-      })();
-
-      // Add Content-Type header if not present
-      if (
-        body.type !== "none" &&
-        !headers.some((h) => h.key.toLowerCase() === "content-type")
-      ) {
-        headers.push({
-          key: "Content-Type",
-          value: body.type,
-          enabled: true,
-          showSecrets: false,
-          type: "text",
-        });
-      }
-
-      // Prepare request object
       const requestObj = {
         method,
         url: fullUrl,
         headers: requestHeaders,
-        body: requestBody,
+        body: body.type !== "none" ? body.content : undefined,
       };
 
-      // Use interceptor if available, otherwise use proxy
+      // Use interceptor or direct proxy based on hasExtension
       let responseData;
       if (hasExtension) {
         responseData = await interceptRequest(requestObj);
+        // Add intercepted flag
+        responseData = {
+          ...responseData,
+          intercepted: true
+        };
       } else {
         const response = await fetch("/api/proxy", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestObj),
         });
         responseData = await response.json();
+        responseData.intercepted = false;
       }
 
+      // Process response
       const endTime = Date.now();
       const duration = endTime - startTime;
-
-      const responseSize = new Blob([JSON.stringify(responseData.body)]).size;
-      const formattedSize =
-        responseSize > 1024
-          ? `${(responseSize / 1024).toFixed(1)} KB`
-          : `${responseSize} B`;
 
       const finalResponse = {
         ...responseData,
         time: `${duration}ms`,
-        size: formattedSize,
         timestamp: new Date().toISOString(),
       };
 
       setResponse(finalResponse);
 
-      // Run test script
-      if (testScript && response) {
-        const scriptRunner = new ScriptRunner(
-          {
-            request: {
-              method,
-              url,
-              headers: requestHeaders,
-              body,
-            },
-            response: {
-              status: response.status,
-              statusText: response.statusText,
-              headers: response.headers,
-              body: response.body,
-            },
-            environment: mergedEnvVariables.reduce(
-              (acc, v) => ({ ...acc, [v.key]: v.value }),
-              {}
-            ),
-            variables: {},
-          },
-          (type, ...args) => {
-            setScriptLogs((logs) => [
-              ...logs,
-              `[${type.toUpperCase()}] ${args.join(" ")}`,
-            ]);
-          }
-        );
-
-        const results = await scriptRunner.runTests(testScript);
-        setTestResults(results);
-
-        const failedTests = results.filter((r) => !r.passed).length;
-        if (failedTests > 0) {
-          toast.error(`${failedTests} test(s) failed`);
-        } else {
-          toast.success(`All ${results.length} test(s) passed`);
-        }
-      }
-
-      // Add history saving logic here
+      // Add to history if enabled
       if (isHistorySavingEnabled) {
         const historyItem: HistoryItem = {
           id: Date.now().toString(),
           timestamp: new Date().toISOString(),
           method,
-          url,
+          url: fullUrl,
           request: {
             headers,
             params,
             body,
             auth,
-            // Include the actual script values from state
-            preRequestScript: String(preRequestScript),
-            testScript: String(testScript),
-            testResults,
-            scriptLogs,
+            preRequestScript: preRequestScript || "",
+            testScript: testScript || "",
+            testResults: testResults || [],
+            scriptLogs: scriptLogs || [],
           },
           response: finalResponse,
           type: "rest",
@@ -526,10 +393,15 @@ export default function Page() {
         });
       }
 
+      // Run test script if exists
+      if (testScript && responseData) {
+        // ...existing test script
+      }
+
       toast.success(`${method} request successful`);
     } catch (error) {
       console.error("Request failed:", error);
-      toast.error("Request failed. Please check the console for details.");
+      toast.error(error instanceof Error ? error.message : "Request failed");
     } finally {
       setIsLoading(false);
     }

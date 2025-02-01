@@ -70,8 +70,9 @@ interface RequestResponse {
   statusText: string;
   headers: Record<string, string>;
   body: any;
-  time: string;
-  size: string;
+  time?: string;
+  size?: string;
+  intercepted?: boolean; // Add this prop
   error?: string;
 }
 
@@ -354,12 +355,19 @@ export function ResponsePanel({
 
         <div className="flex items-center gap-4">
           {response?.time && (
+          <div className="flex items-center gap-2">
             <div className="flex items-center px-3 py-1 rounded-lg border border-slate-700/50 bg-slate-800/50">
               <Clock className="h-3.5 w-3.5 mr-1.5 text-blue-400" />
               <span className="text-xs font-medium text-slate-300">
-                {response.time}
+              {response.time}
               </span>
+              {response.intercepted && (
+              <div className="ml-1.5 w-1.5 h-1.5 rounded-full bg-green-500" 
+                 title="local" 
+              />
+              )}
             </div>
+          </div>
           )}
           {response?.size && (
             <div className="flex items-center px-3 py-1 rounded-lg border border-slate-700/50 bg-slate-800/50">

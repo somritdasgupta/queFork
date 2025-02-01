@@ -126,48 +126,64 @@ export const useAPIInterceptor = ({ onRequestIntercept }: APIInterceptorProps): 
   }, []);
 
   const interceptRequest = async (request: any) => {
-    if (hasExtension) {
-      return new Promise((resolve, reject) => {
-        const requestId = `request_${Date.now()}`
+    if (!hasExtension) {
+      return await fallbackToProxy(request);
+    }
+  
+    return new Promise((resolve, reject) => {
+      const requestId = `request_${Date.now()}`;
+      let timeout: NodeJS.Timeout;
+  
+      const handleResponse = (event: MessageEvent) => {
+        if (event.source !== window) return;
         
-        const handleResponse = (event: MessageEvent) => {
-          if (event.source !== window) return
+        if (event.data.type === "FROM_EXTENSION" && 
+            event.data.action === "executeResponse" && 
+            event.data.id === requestId) {
+          clearTimeout(timeout);
+          window.removeEventListener("message", handleResponse);
           
-          if (event.data.type === "FROM_EXTENSION" && 
-              event.data.action === "executeResponse" && 
-              event.data.id === requestId) {
-            window.removeEventListener("message", handleResponse)
-            if (event.data.error) {
-              reject(new Error(event.data.error))
-            } else {
-              resolve(event.data.response)
-            }
+          if (event.data.error) {
+            console.warn("Extension failed, falling back to proxy:", event.data.error);
+            fallbackToProxy(request).then(resolve).catch(reject);
+          } else {
+            resolve(event.data.response);
           }
         }
-
-        window.addEventListener("message", handleResponse)
-        window.postMessage({ 
-          type: "FROM_QUEFORK", 
-          action: "executeRequest", 
-          id: requestId, 
-          ...request 
-        }, "*")
-
-        setTimeout(() => {
-          window.removeEventListener("message", handleResponse)
-          reject(new Error("Request timed out"))
-        }, 30000)
-      })
-    } else {
-      // Fall back to direct proxy call if extension is not available
-      const response = await fetch("/api/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request)
-      });
-      return response.json();
+      };
+  
+      window.addEventListener("message", handleResponse);
+  
+      // Send request directly to extension
+      window.postMessage({ 
+        type: "FROM_QUEFORK", 
+        action: "executeRequest", 
+        id: requestId, 
+        ...request 
+      }, "*");
+  
+      // Set timeout and fallback to proxy
+      timeout = setTimeout(() => {
+        window.removeEventListener("message", handleResponse);
+        console.warn("Extension timeout, falling back to proxy");
+        fallbackToProxy(request).then(resolve).catch(reject);
+      }, 5000); // 5 second timeout
+    });
+  };
+  
+  const fallbackToProxy = async (request: any) => {
+    const response = await fetch("/api/proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Proxy error: ${response.status} ${response.statusText}`);
     }
-  }
+    
+    return response.json();
+  };
 
   return { 
     hasExtension, 
