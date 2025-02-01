@@ -55,12 +55,12 @@ export function NetworkStatusIndicator({ className }: { className?: string }) {
         title={isOnline ? "Connected" : "Connection Lost"}
       >
         {isOnline ? (
-          <WifiIcon className="h-4 w-3 text-green-500 animate-pulse" />
+          <WifiIcon className="h-5 w-3 text-green-500 animate-pulse" />
         ) : (
           <>
-            <WifiOff className="h-4 w-3 text-red-500 animate-pulse" />
+            <WifiOff className="h-5 w-3 text-red-500 animate-pulse" />
             <span className="text-red-500 text-sm font-medium animate-pulse">
-              queFork offline
+              Offline
             </span>
           </>
         )}

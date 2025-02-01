@@ -18,72 +18,45 @@ export async function POST(req: Request) {
       return createErrorResponse("Invalid URL format", 400, startTime);
     }
 
-    const cacheKey = method === 'GET' ? `${method}-${url}-${JSON.stringify(headers)}` : null;
+    const response = await fetch(url, {
+      method,
+      headers: headers,
+      body: ["GET", "HEAD"].includes(method) ? undefined : JSON.stringify(body),
+      next: { revalidate: 0 } // Disable caching
+    });
 
-    // Check cache for GET requests
-    if (cacheKey && cache.has(cacheKey)) {
-      const { data, timestamp } = cache.get(cacheKey);
-      if (Date.now() - timestamp < CACHE_DURATION) {
-        return createSuccessResponse(data, startTime);
-      }
-      cache.delete(cacheKey); 
-    }
-
-    // Optimize headers
-    const optimizedHeaders = new Headers();
-    for (const [key, value] of Object.entries(headers)) {
-      if (value) optimizedHeaders.set(key, value as string);
-    }
-
-    // Add performance headers
-    optimizedHeaders.set('Accept-Encoding', 'gzip, deflate, br');
-    
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); 
+    const contentType = response.headers.get("content-type");
+    let responseData;
 
     try {
-      const response = await fetch(url, {
-        method,
-        headers: optimizedHeaders,
-        body: ["GET", "HEAD"].includes(method) ? undefined : JSON.stringify(body),
-        signal: controller.signal,
-        cache: method === 'GET' ? 'force-cache' : 'no-store',
-      });
+      if (contentType?.includes("application/json")) {
+        responseData = await response.json();
+      } else {
+        responseData = await response.text();
+      }
 
-      clearTimeout(timeout);
-
-      const responseData = await response.text();
-      const contentSize = new Blob([responseData]).size;
-
-      // Parse and prepare response
-      const result = {
+      return NextResponse.json({
         status: response.status,
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries()),
-        body: parseResponseBody(responseData),
+        body: responseData,
+        contentType: contentType || 'text/plain',
         time: `${(performance.now() - startTime).toFixed(2)}ms`,
-        size: formatBytes(contentSize),
-      };
+        size: formatBytes(new Blob([responseData.toString()]).size)
+      });
 
-      // Caching successful GET responses
-      if (cacheKey && response.ok) {
-        maintainCacheSize();
-        cache.set(cacheKey, {
-          data: result,
-          timestamp: Date.now(),
-        });
-      }
-
-      return NextResponse.json(result);
-
-    } catch (fetchError) {
-      clearTimeout(timeout);
-      return createErrorResponse(
-        fetchError instanceof Error ? fetchError.message : "Network request failed",
-        0,
-        startTime
-      );
+    } catch (parseError) {
+      return NextResponse.json({
+        error: `Failed to parse response: ${(parseError as Error).message}`,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: await response.text(),
+        contentType: contentType || 'text/plain',
+        time: `${(performance.now() - startTime).toFixed(2)}ms`
+      });
     }
+
   } catch (error) {
     return createErrorResponse(
       error instanceof Error ? error.message : "Internal server error",

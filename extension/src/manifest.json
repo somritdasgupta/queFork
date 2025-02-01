@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "queFork Interceptor",
+  "version": "1.0",
+  "description": "Local interceptor for queFork",
+  "permissions": [
+    "storage",
+    "declarativeNetRequest",
+    "scripting",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://unpkg.com;",
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval'; child-src 'self'"
+  },
+  "web_accessible_resources": [{
+    "resources": [
+      "inject.js",
+      "icons/lucide-icons.js"
+    ],
+    "matches": ["<all_urls>"]
+  }]
+}
+

@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+  <head>
+    <title>queFork Interceptor</title>
+    <link rel="stylesheet" href="popup.css" />
+    <link rel="stylesheet" href="lucide.min.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <img src="icons/icon48.png" alt="queFork Logo" class="logo" />
+        <h1>queFork Interceptor</h1>
+      </div>
+
+      <div class="status-card">
+        <div class="status-indicator"></div>
+        <span>Active</span>
+      </div>
+
+      <div class="section">
+        <h2>Target URLs (Proxy Servers)</h2>
+        <div class="input-group">
+          <input
+            type="text"
+            id="targetUrl"
+            placeholder="Enter proxy URL (e.g., http://localhost:4000)"
+          />
+          <input
+            type="text"
+            id="targetPattern"
+            placeholder="URL pattern to match (optional)"
+          />
+          <div class="select-wrapper">
+            <select id="targetMode" class="mode-select">
+              <option value="active">Active Target</option>
+              <option value="roundrobin">Round Robin</option>
+              <option value="pattern">Pattern Match</option>
+            </select>
+            <div class="select-arrow">&#x25BC;</div>
+          </div>
+          <button id="saveTarget" class="btn-primary">Add</button>
+        </div>
+        <ul id="targetList" class="endpoint-list"></ul>
+      </div>
+
+      <div class="section">
+        <h2>URLs to Intercept</h2>
+        <div class="input-group">
+          <input
+            type="text"
+            id="endpoint"
+            placeholder="Enter URL pattern (e.g., api.example.com/*)"
+          />
+          <button id="add" class="btn-primary">Add</button>
+        </div>
+        <ul id="endpointList" class="endpoint-list"></ul>
+      </div>
+
+      <div class="info-section">
+        <div id="currentTarget" class="info-item">
+          <span class="info-label">Current Target:</span>
+          <span class="info-value">Not set</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Status:</span>
+          <span class="info-value success">Connected</span>
+        </div>
+      </div>
+
+      <div class="info">
+        <p><strong>How it works:</strong></p>
+        <ul>
+          <li>
+            Target URL: Where intercepted requests will be redirected to (your
+            proxy server)
+          </li>
+          <li>
+            URLs to Intercept: Which URLs should be intercepted and redirected
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="popup-footer">
+      <div class="footer-links">
+        <a href="https://github.com/somritdasgupta" target="_blank" class="footer-link">
+          <span data-lucide="github"></span>
+          GitHub
+        </a>
+        <a href="https://linkedin.com/in/somritdasgupta" target="_blank" class="footer-link">
+          <span data-lucide="linkedin"></span>
+          LinkedIn
+        </a>
+        <a href="http://quefork.somrit.in" target="_blank" class="footer-link">
+          <span data-lucide="globe"></span>
+          queFork
+        </a>
+      </div>
+      <div class="footer-text">
+        Made with <span data-lucide="heart" class="text-red-500"></span> by Somrit Dasgupta
+      </div>
+    </footer>
+
+    <script src="popup.js"></script>
+    <script src="icons/lucide-icons.js"></script>
+  </body>
+</html>

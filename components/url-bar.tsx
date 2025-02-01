@@ -43,6 +43,7 @@ interface UrlBarProps {
   onConnect?: () => void;
   onDisconnect?: () => void;
   className?: string;
+  hasExtension?: boolean;
 }
 
 interface SuggestionType {
@@ -168,6 +169,7 @@ export function UrlBar({
   onUrlChange: propsOnUrlChange,
   onSendRequest,
   onWebSocketToggle,
+  hasExtension = false,
 }: UrlBarProps) {
   // 1. Group all hooks at the top
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -395,10 +397,10 @@ export function UrlBar({
     }
 
     const resolvedUrl = resolveVariables(urlString);
-    const httpPattern =
-      /^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
-    const wsPattern =
-      /^wss?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+    
+    // Updated patterns to allow localhost and IP addresses
+    const httpPattern = /^https?:\/\/(?:localhost(?::[0-9]+)?|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::[0-9]+)?|[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6})\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+    const wsPattern = /^wss?:\/\/(?:localhost(?::[0-9]+)?|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::[0-9]+)?|[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6})\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
 
     return httpPattern.test(resolvedUrl) || wsPattern.test(resolvedUrl);
   };
@@ -852,13 +854,13 @@ export function UrlBar({
           <Select value={method} onValueChange={onMethodChange}>
             <SelectTrigger
               className={cn(
-                "w-auto min-w-[70px] max-w-[100px] font-black bg-transparent border-0 text-slate-400 hover:text-slate-300 gap-2",
+                "w-auto min-w-[70px] max-w-[100px] font-mono font-black bg-transparent border-0 text-slate-400 hover:text-slate-300 gap-2",
                 `text-xs text-${getMethodColor(method)}-500 py-1`
               )}
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="border border-slate-700 bg-slate-800">
+            <SelectContent className="border border-slate-700 bg-slate-800 font-mono font-black">
               {[
                 { value: "GET", color: "emerald" },
                 { value: "POST", color: "blue" },
@@ -869,7 +871,7 @@ export function UrlBar({
                 <SelectItem
                   key={value}
                   value={value}
-                  className={cn("text-xs font-black", `text-${color}-500`)}
+                  className={cn("text-xs font-mono font-black", `text-${color}-500`)}
                 >
                   {value}
                 </SelectItem>

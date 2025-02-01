@@ -1,0 +1,15 @@
+{
+  "name": "quefork-extension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-dev.js",
+    "build:prod": "node scripts/build-prod.js",
+    "watch": "node scripts/watch.js"
+  },
+  "devDependencies": {
+    "archiver": "^5.3.1",
+    "chokidar": "^3.5.3",
+    "terser": "^5.19.2"
+  }
+}

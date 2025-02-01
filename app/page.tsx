@@ -34,18 +34,17 @@ import SidePanel from "@/components/side-panel";
 import { EnvironmentSelector } from "@/components/environment-selector";
 import { importFromUrl, parseImportData } from "@/lib/import-utils";
 import { ScriptRunner } from "@/lib/script-runner";
-
+import { useAPIInterceptor } from "@/components/APIInterceptor";
+import { InterceptorControl } from "@/components/InterceptorControl";
 
 const MAX_HISTORY_ITEMS = 500;
-
-// Add these utility functions
 const cleanupStorage = () => {
   try {
-    // Remove oldest history items until we're under the limit
+    // Remove oldest history items
     const history = JSON.parse(localStorage.getItem("apiHistory") || "[]");
     const newHistory = history.slice(0, MAX_HISTORY_ITEMS);
     localStorage.setItem("apiHistory", JSON.stringify(newHistory));
-    
+
     // If still exceeding quota, clear less important data
     const keys = Object.keys(localStorage);
     for (let key of keys) {
@@ -139,6 +138,22 @@ export default function Page() {
   const [testScript, setTestScript] = useState<string | null>(null);
   const [scriptLogs, setScriptLogs] = useState<string[]>([]);
   const [testResults, setTestResults] = useState<any[]>([]);
+
+  const { hasExtension, interceptRequest } = useAPIInterceptor({
+    onRequestIntercept: async (request) => {
+      try {
+        const response = await fetch("/api/proxy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(request),
+        });
+        return response.json();
+      } catch (error) {
+        console.error("Proxy request failed:", error);
+        throw error;
+      }
+    },
+  });
 
   useEffect(() => {
     const loadSavedEnvironments = () => {
@@ -400,20 +415,29 @@ export default function Page() {
         });
       }
 
-      const response = await fetch("/api/proxy", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          method,
-          url: fullUrl,
-          headers: requestHeaders,
-          body: requestBody,
-        }),
-      });
+      // Prepare request object
+      const requestObj = {
+        method,
+        url: fullUrl,
+        headers: requestHeaders,
+        body: requestBody,
+      };
 
-      const responseData = await response.json();
+      // Use interceptor if available, otherwise use proxy
+      let responseData;
+      if (hasExtension) {
+        responseData = await interceptRequest(requestObj);
+      } else {
+        const response = await fetch("/api/proxy", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestObj),
+        });
+        responseData = await response.json();
+      }
+
       const endTime = Date.now();
       const duration = endTime - startTime;
 
@@ -1042,6 +1066,7 @@ export default function Page() {
                 environments={environments}
                 currentEnvironment={currentEnvironment}
                 onEnvironmentChange={handleEnvironmentChange}
+                hasExtension={hasExtension}
                 className="h-10 w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 
                   text-slate-300 rounded-lg transition-colors"
               />
@@ -1065,6 +1090,7 @@ export default function Page() {
               recentUrls={recentUrls}
               isMobile={false}
               className="flex-1"
+              hasExtension={hasExtension} // Add this line
             />
           </div>
         </div>
