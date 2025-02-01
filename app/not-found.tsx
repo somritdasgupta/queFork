@@ -52,7 +52,7 @@ export default function NotFound() {
             </Button>
           </Link>
           <Link 
-            href="https://github.com/somritdasgupta/quefork" 
+            href="https://github.com/somritdasgupta/queFork" 
             target="_blank"
           >
             <Button 

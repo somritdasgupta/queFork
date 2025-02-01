@@ -1,13 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import hljs from "highlight.js";
-import "highlight.js/styles/github-dark.css"; // Change to a more stable theme
+import "highlight.js/styles/github-dark.css";
 import { languageConfigs, type CodeGenLanguage } from "@/utils/code-generators";
-import { CodeGenerationTab } from "./code-generation-tab";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
-  Loader2,
   CheckCircle,
   XCircle,
   Clock,
@@ -18,31 +15,16 @@ import {
   AlertCircle,
   FileJson,
   List,
-  FileCode,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Collection, SavedRequest } from "@/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MessagesTab } from "./websocket/messages-tab";
-import { Checkbox } from "@/components/ui/checkbox"; // Add this import
+import { Checkbox } from "@/components/ui/checkbox";
 import { Editor } from "@monaco-editor/react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { CodeLanguageSelector } from "./code-language-selector";
+import { useTheme } from "next-themes";
 
 const getLanguage = (contentType: string): string => {
   switch (contentType) {
@@ -130,6 +112,7 @@ export function ResponsePanel({
   const [preRequestScript, setPreRequestScript] = useState<string>("");
   const [testScript, setTestScript] = useState<string>("");
   const [isOnline, setIsOnline] = useState(true);
+  const { theme } = useTheme();
 
   // 2. All useRef hooks
   const editorRef = useRef<any>(null);
@@ -332,8 +315,15 @@ export function ResponsePanel({
       <div className="sticky top-0 w-full px-4 py-3 border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Badge className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-blue-400 border-blue-500/30 px-3 py-1 rounded-lg">
+            {response?.intercepted && (
+              <div
+                className="mr-1.5 w-2 h-2 rounded-full bg-green-400"
+                title="local"
+              />
+            )}
             {method}
           </Badge>
+
           <div
             className={cn(
               "flex items-center gap-2 px-3 py-1 rounded-lg border",
@@ -355,19 +345,14 @@ export function ResponsePanel({
 
         <div className="flex items-center gap-4">
           {response?.time && (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center px-3 py-1 rounded-lg border border-slate-700/50 bg-slate-800/50">
-              <Clock className="h-3.5 w-3.5 mr-1.5 text-blue-400" />
-              <span className="text-xs font-medium text-slate-300">
-              {response.time}
-              </span>
-              {response.intercepted && (
-              <div className="ml-1.5 w-1.5 h-1.5 rounded-full bg-green-500" 
-                 title="local" 
-              />
-              )}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center px-3 py-1 rounded-lg border border-slate-700/50 bg-slate-800/50">
+                <Clock className="h-3.5 w-3.5 mr-1.5 text-blue-400" />
+                <span className="text-xs font-medium text-slate-300">
+                  {response.time}
+                </span>
+              </div>
             </div>
-          </div>
           )}
           {response?.size && (
             <div className="flex items-center px-3 py-1 rounded-lg border border-slate-700/50 bg-slate-800/50">
@@ -416,39 +401,52 @@ export function ResponsePanel({
 
   const renderResponseContent = () => (
     <div className="h-full flex flex-col">
-      <div className="flex-1">
-        <Editor
-          height="100%"
-          defaultLanguage={contentType === "json" ? "json" : "text"}
-          value={getFormattedContent(response?.body, contentType)}
-          theme="vs-dark"
-          options={{
-            readOnly: true,
-            minimap: { enabled: true },
-            fontSize: 14,
-            lineNumbers: "on",
-            folding: isPrettyPrint,
-            foldingStrategy: "indentation",
-            formatOnPaste: false, // Disable automatic formatting
-            formatOnType: false, // Disable automatic formatting
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 2,
-            wordWrap: "on",
-            autoIndent: "advanced",
-            wrappingIndent: isPrettyPrint ? "deepIndent" : "none",
-            renderWhitespace: isPrettyPrint ? "all" : "none",
-            guides: {
-              indentation: true,
-              bracketPairs: true,
-              highlightActiveIndentation: true,
-              bracketPairsHorizontal: true,
-            },
-          }}
-          onMount={(editor) => {
-            editorRef.current = editor;
-          }}
-        />
+      <div className="flex-1 bg-slate-900">
+        <div className="h-full [&_.monaco-editor]:!bg-slate-900 [&_.monaco-editor_.monaco-scrollable-element_.monaco-editor-background]:!bg-slate-900">
+          <Editor
+            height="100%"
+            defaultLanguage={contentType === "json" ? "json" : "text"}
+            value={getFormattedContent(response?.body, contentType)}
+            theme="vs-dark"
+            options={{
+              readOnly: true,
+              minimap: { enabled: false },
+              fontSize: 12,
+              lineNumbers: "on",
+              folding: isPrettyPrint,
+              foldingStrategy: "indentation",
+              formatOnPaste: false, // Disable automatic formatting
+              formatOnType: false, // Disable automatic formatting
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+              wordWrap: "on",
+              autoIndent: "advanced",
+              wrappingIndent: isPrettyPrint ? "deepIndent" : "none",
+              renderWhitespace: isPrettyPrint ? "all" : "none",
+              guides: {
+                indentation: true,
+                bracketPairs: true,
+                highlightActiveIndentation: true,
+                bracketPairsHorizontal: true,
+              },
+            }}
+            beforeMount={(monaco) => {
+              monaco.editor.defineTheme("customTheme", {
+                base: "vs-dark",
+                inherit: true,
+                rules: [],
+                colors: {
+                  "editor.background": "#0f172a",
+                },
+              });
+              monaco.editor.setTheme("customTheme");
+            }}
+            onMount={(editor) => {
+              editorRef.current = editor;
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -470,7 +468,6 @@ export function ResponsePanel({
                       className="h-10 rounded-none border-b-4 border-transparent font-medium text-xs text-slate-400 transition-colors px-3 sm:px-4 py-2 data-[state=active]:bg-transparent data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 hover:text-slate-300"
                     >
                       <div className="flex items-center gap-2">
-                        {tab.icon}
                         <span className="truncate max-w-[80px] sm:max-w-none">
                           {tab.label}
                         </span>
@@ -537,7 +534,7 @@ export function ResponsePanel({
               </div>
             </div>
 
-            <div className="flex-1 relative bg-slate-800/90">
+            <div className="flex-1 relative bg-slate-900/50">
               <TabsContent value="response" className="absolute inset-0 m-0">
                 {renderResponseContent()}
               </TabsContent>
@@ -576,42 +573,48 @@ export function ResponsePanel({
               </TabsContent>
               <TabsContent value="code" className="absolute inset-0 m-0">
                 <div className="h-full">
-                  <Editor
-                    height="100%"
-                    language={languageConfigs[selectedLanguage].highlight}
-                    value={getGeneratedCode()}
-                    theme="vs-dark"
-                    options={{
-                      readOnly: true,
-                      minimap: { enabled: true },
-                      fontSize: 14,
-                      lineNumbers: "on",
-                      folding: true,
-                      wordWrap: "on",
-                      automaticLayout: true,
-                      scrollBeyondLastLine: false,
-                      tabSize: 4,
-                      formatOnPaste: true,
-                      formatOnType: true,
-                      autoIndent: "advanced",
-                      renderWhitespace: "all",
-                      detectIndentation: true,
-                      wrappingIndent: "indent",
-                      guides: {
-                        indentation: true,
-                        bracketPairs: true,
-                        highlightActiveIndentation: true,
-                        bracketPairsHorizontal: true,
-                      },
-                    }}
-                    onMount={(editor, monaco) => {
-                      // Format code on mount and language change
-                      setTimeout(() => {
-                        editor.getAction("editor.action.formatDocument")?.run();
-                        editor.pushUndoStop(); // Prevent undo of initial formatting
-                      }, 100);
-                    }}
-                  />
+                  <div className="h-full [&_.monaco-editor]:!bg-slate-900 [&_.monaco-editor_.monaco-scrollable-element_.monaco-editor-background]:!bg-slate-900">
+                    <Editor
+                      height="100%"
+                      language={languageConfigs[selectedLanguage].highlight}
+                      value={getGeneratedCode()}
+                      theme="vs-dark"
+                      options={{
+                        readOnly: true,
+                        minimap: { enabled: true },
+                        fontSize: 12,
+                        lineNumbers: "on",
+                        folding: true,
+                        wordWrap: "on",
+                        automaticLayout: true,
+                        scrollBeyondLastLine: false,
+                        tabSize: 4,
+                        formatOnPaste: true,
+                        formatOnType: true,
+                        autoIndent: "advanced",
+                        renderWhitespace: "all",
+                        detectIndentation: true,
+                        wrappingIndent: "indent",
+                        guides: {
+                          indentation: true,
+                          bracketPairs: true,
+                          highlightActiveIndentation: true,
+                          bracketPairsHorizontal: true,
+                        },
+                      }}
+                      beforeMount={(monaco) => {
+                        monaco.editor.defineTheme("customTheme", {
+                          base: "vs-dark",
+                          inherit: true,
+                          rules: [],
+                          colors: {
+                            "editor.background": "#0f172a",
+                          },
+                        });
+                        monaco.editor.setTheme("customTheme");
+                      }}
+                    />
+                  </div>
                 </div>
               </TabsContent>
               <TabsContent value="messages" className="absolute inset-0 m-0">

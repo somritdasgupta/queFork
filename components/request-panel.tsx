@@ -31,26 +31,22 @@ import {
   SquareChartGanttIcon,
   SquarePlay,
   SquareActivityIcon,
+  ChevronDown,
 } from "lucide-react";
-import { Textarea } from "./ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { ConnectionTab } from "./websocket/connection-tab";
 import { useWebSocket } from "./websocket/websocket-context";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
 import { Editor } from "@monaco-editor/react";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -563,12 +559,27 @@ export function RequestPanel({
                           onChange={handlePreRequestScriptChange}
                           theme="vs-dark"
                           options={{
+                            readOnly: false,
                             minimap: { enabled: false },
                             fontSize: 12,
                             lineNumbers: "on",
                             folding: true,
-                            tabSize: 2,
+                            wordWrap: "on",
+                            automaticLayout: true,
                             scrollBeyondLastLine: false,
+                            tabSize: 4,
+                            formatOnPaste: true,
+                            formatOnType: true,
+                            autoIndent: "advanced",
+                            renderWhitespace: "all",
+                            detectIndentation: true,
+                            wrappingIndent: "indent",
+                            guides: {
+                              indentation: true,
+                              bracketPairs: true,
+                              highlightActiveIndentation: true,
+                              bracketPairsHorizontal: true,
+                            },
                           }}
                         />
                       </div>
@@ -617,12 +628,27 @@ export function RequestPanel({
                           onChange={handleTestScriptChange}
                           theme="vs-dark"
                           options={{
+                            readOnly: false,
                             minimap: { enabled: false },
                             fontSize: 12,
                             lineNumbers: "on",
                             folding: true,
-                            tabSize: 2,
+                            wordWrap: "on",
+                            automaticLayout: true,
                             scrollBeyondLastLine: false,
+                            tabSize: 4,
+                            formatOnPaste: true,
+                            formatOnType: true,
+                            autoIndent: "advanced",
+                            renderWhitespace: "all",
+                            detectIndentation: true,
+                            wrappingIndent: "indent",
+                            guides: {
+                              indentation: true,
+                              bracketPairs: true,
+                              highlightActiveIndentation: true,
+                              bracketPairsHorizontal: true,
+                            },
                           }}
                         />
                       </div>
@@ -855,60 +881,77 @@ function RequestBodyContent({
   return (
     <div className="h-full flex flex-col bg-slate-900">
       {/* Responsive Content Type Header */}
-      <div className="sticky top-0 border-b border-slate-700 bg-slate-900/95 backdrop-blur-sm z-10">
+      <div className="sticky top-0 bg-slate-800 backdrop-blur-sm z-10">
         <div className="p-2 sm:p-3">
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <Select
-                value={selectedContentType}
-                onValueChange={(value) => {
-                  handleContentTypeChange(value as ContentType);
-                }}
-              >
-                <SelectTrigger className="w-full h-8 bg-slate-800 border-slate-700 text-xs sm:text-sm text-slate-200">
-                  <div className="flex items-center gap-2 truncate">
-                    {getIconForContentType(selectedContentType)}
-                    <span className="truncate">
-                      {contentTypeOption?.label || "Select type"}
-                    </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="flex p-2 items-center gap-2 cursor-pointer hover:text-white transition-colors duration-200">
+                    <div className="flex items-center gap-2">
+                      {getIconForContentType(selectedContentType)}
+                      <span className="font-medium sm:text-sm text-xs">
+                        {contentTypeOption?.label || "Select type"}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-3 w-3 text-slate-400 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                   </div>
-                </SelectTrigger>
-                <SelectContent
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
                   align="start"
-                  className="w-[200px] sm:w-[260px] bg-slate-800 border-slate-700"
+                  className="w-screen sm:w-[75vw] bg-slate-800/60 backdrop-blur-xl shadow-lg rounded-none border-2 border-slate-700 overflow-hidden"
                 >
-                  {Object.entries(contentTypeOptions).map(
-                    ([category, options]) => (
-                      <SelectGroup key={category}>
-                        <SelectLabel className="px-2 py-1.5 text-[10px] font-semibold text-slate-400 bg-slate-800/50">
-                          {category}
-                        </SelectLabel>
-                        <div className="p-1 space-y-0.5">
-                          {options.map((option) => (
-                            <SelectItem
+                  <ScrollArea
+                    direction="horizontal"
+                    className="w-full [&::-webkit-scrollbar]:hidden [&_[data-radix-scroll-area-scrollbar]]:hidden no-scrollbar"
+                    style={{ scrollbarWidth: "none" }}
+                  >
+                    <div className="flex items-center gap-4 p-2">
+                      <div className="inline-flex items-center gap-2 w-max">
+                        {Object.values(contentTypeOptions)
+                          .flat()
+                          .map((option) => (
+                            <DropdownMenuItem
                               key={option.value}
-                              value={option.value}
-                              className="text-xs rounded-sm text-slate-200 data-[highlighted]:bg-slate-700"
+                              onClick={() =>
+                                handleContentTypeChange(option.value)
+                              }
+                              className={cn(
+                                "flex-none shrink-0 transition-all duration-200",
+                                "hover:bg-slate-800/50 focus:bg-slate-800/50",
+                                "data-[highlighted]:bg-slate-800/50",
+                                selectedContentType === option.value
+                                  ? "bg-slate-800/50 rounded-full"
+                                  : "transparent"
+                              )}
                             >
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 py-1 px-2 bg-slate-800 rounded-full">
                                 {getIconForContentType(option.value)}
-                                <span className="truncate">{option.label}</span>
+                                <span
+                                  className={cn(
+                                    "transition-colors duration-200 whitespace-nowrap sm:text-sm text-xs",
+                                    selectedContentType === option.value
+                                      ? "text-blue-400 font-medium"
+                                      : "text-slate-300"
+                                  )}
+                                >
+                                  {option.label}
+                                </span>
                               </div>
-                            </SelectItem>
+                            </DropdownMenuItem>
                           ))}
-                        </div>
-                      </SelectGroup>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <Button
               variant="ghost"
               size="sm"
               onClick={handleOverrideContentType}
-              className="h-8 sm:h-9 px-3 bg-slate-800 border-slate-700 text-xs"
+              className="h-8 sm:h-9 px-3 bg-slate-800/50 border border-slate-700 text-xs"
             >
               <SquareCodeIcon className="h-3.5 w-3.5 text-blue-400" />
               <span className="ml-2 hidden lg:inline">Set Header</span>
@@ -919,7 +962,7 @@ function RequestBodyContent({
                 variant="ghost"
                 size="sm"
                 onClick={handleFormatJson}
-                className="h-8 sm:h-9 px-3 bg-slate-800 border-slate-700 text-xs"
+                className="h-8 sm:h-9 px-3 bg-slate-800/50 border border-slate-700 text-xs"
               >
                 <FileJson className="h-3.5 w-3.5 text-emerald-400" />
                 <span className="ml-2 hidden lg:inline">Format</span>
@@ -932,7 +975,7 @@ function RequestBodyContent({
               onClick={() =>
                 onChange({ type: selectedContentType, content: "" })
               }
-              className="h-8 sm:h-9 px-3 bg-slate-800 border-slate-700 text-xs"
+              className="h-8 sm:h-9 px-3 bg-slate-800/50 border border-slate-700 text-xs"
             >
               <Eraser className="h-3.5 w-3.5 text-red-400" />
               <span className="ml-2 hidden lg:inline">Clear</span>
@@ -1103,17 +1146,27 @@ function RequestBodyContent({
                 onMount={handleEditorDidMount}
                 theme="vs-dark"
                 options={{
-                  fontSize: 12,
+                  readOnly: false,
                   minimap: { enabled: false },
+                  fontSize: 12,
                   lineNumbers: "on",
-                  renderWhitespace: "selection",
                   folding: true,
-                  tabSize: 2,
                   wordWrap: "on",
-                  wrappingIndent: "indent",
                   automaticLayout: true,
-                  padding: { top: 8, bottom: 8 },
                   scrollBeyondLastLine: false,
+                  tabSize: 4,
+                  formatOnPaste: true,
+                  formatOnType: true,
+                  autoIndent: "advanced",
+                  renderWhitespace: "all",
+                  detectIndentation: true,
+                  wrappingIndent: "indent",
+                  guides: {
+                    indentation: true,
+                    bracketPairs: true,
+                    highlightActiveIndentation: true,
+                    bracketPairsHorizontal: true,
+                  },
                 }}
               />
             </motion.div>

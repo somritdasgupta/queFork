@@ -193,4 +193,3 @@ export const useAPIInterceptor = ({ onRequestIntercept }: APIInterceptorProps): 
     testInterceptor
   }
 }
-

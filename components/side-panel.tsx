@@ -10,7 +10,6 @@ import { EnvironmentPanel } from "@/components/environment-panel";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { EnvironmentSelector } from "@/components/environment-selector";
 
 const SidePanel = (props: SidePanelProps): JSX.Element => {
   const [isOpen, setIsOpen] = useState(false);

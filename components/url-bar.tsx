@@ -136,16 +136,16 @@ const AnimatedPlaceholder = ({ text, direction }: PlaceholderTextProps) => {
             key={index}
             variants={typewriterVariants}
             custom={{
-              delay: index * 0.05,
-              duration: 0.1,
+              delay: index * 0.03, // typing speed
+              duration: 0.1, // duration
             }}
             className={cn(
-              "font-mono tracking-tight text-slate-400/80",
+              "font-mono tracking-tighter text-blue-400/90",
               "font-medium antialiased"
             )}
             style={{
               fontFamily: "JetBrains Mono, Menlo, Monaco, Consolas, monospace",
-              textShadow: "0 0 10px rgba(56, 189, 248, 0.1)",
+              textShadow: "0 0 10px rgba(16, 185, 129, 0.2)", // Green glow effect
             }}
           >
             {char === " " ? "\u00A0" : char}
@@ -397,10 +397,12 @@ export function UrlBar({
     }
 
     const resolvedUrl = resolveVariables(urlString);
-    
+
     // Updated patterns to allow localhost and IP addresses
-    const httpPattern = /^https?:\/\/(?:localhost(?::[0-9]+)?|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::[0-9]+)?|[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6})\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
-    const wsPattern = /^wss?:\/\/(?:localhost(?::[0-9]+)?|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::[0-9]+)?|[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6})\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+    const httpPattern =
+      /^https?:\/\/(?:localhost(?::[0-9]+)?|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::[0-9]+)?|[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6})\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+    const wsPattern =
+      /^wss?:\/\/(?:localhost(?::[0-9]+)?|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::[0-9]+)?|[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6})\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
 
     return httpPattern.test(resolvedUrl) || wsPattern.test(resolvedUrl);
   };
@@ -676,26 +678,56 @@ export function UrlBar({
                   onClick={() => handleVariableSelect(variable.key)}
                   className="w-full flex items-start justify-between px-3 py-2 hover:bg-slate-800 rounded-md group"
                 >
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-slate-300">
-                        {highlightMatch(variable.key, searchPrefix)}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="h-4 px-1 text-[10px] bg-slate-800 text-slate-400 border-slate-600"
-                      >
-                        {variable.type || "text"}
-                      </Badge>
+                  <div className="flex items-center justify-between w-full group">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <motion.div
+                          whileHover={{ scale: 1.05 }}
+                          className="w-1.5 h-1.5 rounded-full bg-blue-500/50"
+                        />
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "h-5 px-2 text-[10px] font-medium transition-colors",
+                            "bg-slate-800/50 border-slate-600/50",
+                            "group-hover:bg-slate-700/50 group-hover:border-slate-500/50",
+                            variable.type === "secret"
+                              ? "text-purple-300/90"
+                              : "text-emerald-300/90"
+                          )}
+                        >
+                          {variable.type || "text"}
+                        </Badge>
+                        <span
+                          className={cn(
+                            "font-mono text-xs tracking-tight transition-colors",
+                            "text-slate-400 group-hover:text-slate-200"
+                          )}
+                        >
+                          {highlightMatch(variable.key, searchPrefix)}
+                        </span>
+                        <span className="text-xs text-slate-500">=</span>
+                        <span
+                          className={cn(
+                            "text-xs font-mono truncate max-w-[250px] transition-colors",
+                            "text-slate-500 group-hover:text-slate-400",
+                            variable.type === "secret" &&
+                              "font-serif tracking-widest"
+                          )}
+                        >
+                          {variable.type === "secret"
+                            ? "•••••••"
+                            : variable.value}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-xs text-slate-500 text-left truncate max-w-[300px]">
-                      ={" "}
-                      {variable.type === "secret" ? "••••••••" : variable.value}
-                    </span>
+
+                    <div className="flex items-center gap-2 opacity-0 translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0">
+                      <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border border-slate-700/50 bg-slate-800/50 px-2 font-mono text-[10px] font-medium text-slate-400">
+                        enter
+                      </kbd>
+                    </div>
                   </div>
-                  <kbd className="hidden group-hover:inline-flex h-5 select-none items-center gap-1 rounded border border-slate-700 bg-slate-800 px-1.5 font-mono text-[10px] font-medium text-slate-400">
-                    enter
-                  </kbd>
                 </button>
               ))
             )}
@@ -855,7 +887,7 @@ export function UrlBar({
             <SelectTrigger
               className={cn(
                 "w-auto min-w-[70px] max-w-[100px] font-mono font-black bg-transparent border-0 text-slate-400 hover:text-slate-300 gap-2",
-                `text-xs text-${getMethodColor(method)}-500 py-1`
+                `text-xs text-${getMethodColor(method)}-400 py-1`
               )}
             >
               <SelectValue />
@@ -871,7 +903,10 @@ export function UrlBar({
                 <SelectItem
                   key={value}
                   value={value}
-                  className={cn("text-xs font-mono font-black", `text-${color}-500`)}
+                  className={cn(
+                    "text-xs font-mono font-black",
+                    `text-${color}-500`
+                  )}
                 >
                   {value}
                 </SelectItem>

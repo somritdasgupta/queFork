@@ -1,9 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge"; // Add this import
+import { Badge } from "@/components/ui/badge";
 import {
   Plus,
   Trash2,
@@ -26,7 +25,6 @@ import {
 import { KeyValuePair, Environment } from "@/types";
 import { toast } from "sonner";
 import {
-  DndContext,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
@@ -35,29 +33,23 @@ import {
 } from "@dnd-kit/core";
 import {
   arrayMove,
-  SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS, Transform } from "@dnd-kit/utilities";
+import { Transform } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
 import { useId } from "react";
 import dynamic from "next/dynamic";
 
-// Move generateStableId to be more predictable
+// generateStableId is now predictable
 const generateStableId = (index: number, existingId?: string) => {
   if (existingId) return existingId;
   return `pair-${index}-${Date.now()}`;
 };
 
-// Create client-only DnD components
+// These are client-only DnD components...
 const DndContextClient = dynamic(
   () => import("@dnd-kit/core").then((mod) => mod.DndContext),
   { ssr: false }
@@ -96,8 +88,9 @@ interface KeyValueInputProps {
   icon: React.ElementType;
   onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
   className?: string;
-  pairId: string; // Add pairId to props interface
-  isValue?: boolean; // Add isValue to props interface
+  pairId: string;
+  isValue?: boolean;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }
 
 const KeyValueInput = React.memo(
@@ -169,31 +162,22 @@ const KeyValueInput = React.memo(
           onPaste={props.onPaste}
           placeholder={props.placeholder}
           className={cn(
-            "h-8 bg-slate-900 border-slate-700 text-slate-300 placeholder:text-slate-500",
+            "h-8 bg-slate-900 border-slate-700 text-slate-300 select-none",
             "focus:border-slate-600 focus:ring-slate-700",
-            "rounded-none text-xs font-medium transition-colors",
-            "no-zoom-input touch-input text-xs",
+            "rounded-none text-[12px] leading-4 py-1",
             typeof window !== "undefined" && window.innerWidth < 640
               ? "pl-3"
               : "pl-9",
+            "select-none touch-none",
             props.className
           )}
-          style={{
-            fontSize: "16px",
-            touchAction: "manipulation",
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Tab" && !e.shiftKey) {
-              e.preventDefault();
-              // Find next input in sequence
-              const nextElement = props.navigableElements.current?.find(
-                (el) => el.groupId === props.pairId && el.id > inputId
-              );
-              if (nextElement) {
-                props.setFocus(nextElement.id);
-              }
-            }
-          }}
+          inputMode="text"
+          data-lpignore="true"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          onKeyDown={props.onKeyDown}
         />
       </div>
     );
@@ -251,7 +235,7 @@ const SortableItem = React.memo(
         <div className="group flex items-start min-w-0 relative">
           <button
             {...listeners}
-            className="flex items-center justify-center w-8 h-8 absolute -ml-10 sm:-ml-8 left-0 text-slate-200 opacity-30 group-hover:opacity-100 transition-opacity"
+            className="flex items-center justify-center w-8 h-8 absolute -ml-8 left-0 text-slate-200 opacity-30 group-hover:opacity-100 transition-opacity"
             title="Drag to reorder"
           >
             <GripVertical className="h-4 w-4" />
@@ -470,13 +454,13 @@ export function KeyValueEditor({
           if (autoSave) toast.success("Cleared pair");
           return;
         }
-        
+
         // Allow deletion of any pair in environment editor
         onChange(pairs.filter((_, i) => i !== index));
         if (autoSave) toast.success("Item removed");
         return;
       }
-  
+
       // Normal key-value editor behavior
       if (pairs.length <= 1) {
         const clearedPair = {
@@ -490,17 +474,16 @@ export function KeyValueEditor({
         toast.success("Cleared pair");
         return;
       }
-  
+
       if (preventFirstItemDeletion && index === 0) {
         toast.error("Cannot delete the first item");
         return;
       }
-  
+
       onChange(pairs.filter((_, i) => i !== index));
     },
     [pairs, onChange, preventFirstItemDeletion, isEnvironmentEditor, autoSave]
   );
-  
 
   const updatePair = useCallback(
     (index: number, field: keyof KeyValuePair, value: string | boolean) => {
@@ -698,7 +681,7 @@ export function KeyValueEditor({
     const isSinglePair = pairs.length === 1;
     const hasContent = pair.key.trim() || pair.value.trim();
     const isComplete = pair.key.trim() && pair.value.trim();
-    
+
     // Common buttons configuration
     const actionButtons = [
       {
@@ -706,7 +689,11 @@ export function KeyValueEditor({
         onClick: () => updatePair(index, "enabled", !pair.enabled),
         className: cn(
           "h-7 w-7 p-0",
-          isComplete ? (pair.enabled ? "text-emerald-400" : "text-slate-500") : "text-slate-500/50 cursor-not-allowed"
+          isComplete
+            ? pair.enabled
+              ? "text-emerald-400"
+              : "text-slate-500"
+            : "text-slate-500/50 cursor-not-allowed"
         ),
         title: pair.enabled ? "Disable" : "Enable",
         disabled: !isComplete,
@@ -718,22 +705,28 @@ export function KeyValueEditor({
         title: "Copy pair",
         disabled: !hasContent,
       },
-      ...(onAddToEnvironment ? [{
-        icon: PackagePlusIcon,
-        onClick: () => handleAddToEnvironment(index),
-        className: cn(
-          "h-7 w-7 p-0",
-          isComplete ? "text-purple-400" : "text-purple-400/50 cursor-not-allowed"
-        ),
-        title: "Save to environment",
-        disabled: !isComplete,
-      }] : []),
+      ...(onAddToEnvironment
+        ? [
+            {
+              icon: PackagePlusIcon,
+              onClick: () => handleAddToEnvironment(index),
+              className: cn(
+                "h-7 w-7 p-0",
+                isComplete
+                  ? "text-purple-400"
+                  : "text-purple-400/50 cursor-not-allowed"
+              ),
+              title: "Save to environment",
+              disabled: !isComplete,
+            },
+          ]
+        : []),
       {
         icon: isSinglePair ? Eraser : Trash2,
         onClick: () => removePair(index),
         className: cn(
           "h-7 w-7 p-0 text-red-400",
-          (!hasContent && isSinglePair) && "text-red-400/50"
+          !hasContent && isSinglePair && "text-red-400/50"
         ),
         title: isSinglePair ? "Clear" : "Remove",
         // Simplified disabled logic
@@ -786,9 +779,11 @@ export function KeyValueEditor({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setExpandedRowId(isExpanded ? null : pair.id || null)}
+            onClick={() =>
+              setExpandedRowId(isExpanded ? null : pair.id || null)
+            }
             className={cn(
-              "h-7 w-7 p-0 transition-transform duration-200",
+              "h-8 w-8 p-0 transition-transform duration-900",
               isExpanded && "rotate-90"
             )}
           >
@@ -920,75 +915,49 @@ export function KeyValueEditor({
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Fixed Header */}
-      <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700/50">
-        <div className="flex items-center justify-between px-2 h-10">
-          <span className="text-xs font-medium text-slate-400">
-            {isBulkMode ? "Bulk Edit Mode" : "Key-Value Pairs"}
-          </span>
-          <Badge
-            variant="secondary"
-            className="text-xs bg-slate-800 text-slate-400"
-          >
-            {getActivePairsCount()} Active Pair
-          </Badge>
-        </div>
-      </div>
-
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-hidden touch-pan-y overscroll-y-contain">
-        <ScrollArea
-          direction="vertical"
-          className={cn(
-            "w-full transition-all duration-200 bg-slate-900/50 backdrop-blur-sm",
-            "momentum-scroll scroll-smooth",
-            "touch-pan-y overscroll-y-contain",
-            pairs.length > 6 ? "h-[192px]" : "h-auto"
-          )}
-          style={{
-            WebkitOverflowScrolling: "touch",
-            touchAction: "pan-y",
-            position: "relative",
-          }}
-        >
-          <div
-            className="divide-y divide-slate-700/50 scroll-container"
-            style={{
-              minHeight: pairs.length > 6 ? "192px" : "auto",
-            }}
-          >
-            {isBulkMode ? (
-              <Textarea
-                value={bulkContent}
-                onChange={(e) => setBulkContent(e.target.value)}
-                placeholder={`• Format: key: value\n• Examples:\n  • api_key: your-key-here\n  • base_url: https://api.example.com\n  • disabled_key: #key: value`}
-                className="w-full min-h-[300px] border border-slate-700 text-xs 
-                  rounded-none bg-slate-950 
-                  text-slate-300 placeholder:text-slate-500
-                  focus:outline-none focus:ring-1 focus:ring-slate-700
-                  font-mono"
-              />
-            ) : (
-              <div className="relative min-h-[32px] touch-pan-y">
-                {renderDndContent()}
-              </div>
-            )}
+    <div className="flex flex-col max-h-[36vh] relative select-none">
+      <div
+        className="flex-1 overflow-auto touch-pan-y overscroll-y-contain select-none"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          height: "calc(36vh - 58px)",
+        }}
+      >
+        {isBulkMode ? (
+          <Textarea
+            value={bulkContent}
+            onChange={(e) => setBulkContent(e.target.value)}
+            placeholder={`• Format: key: value\n• Examples:\n  • api_key: your-key-here\n  • base_url: https://api.example.com\n  • disabled_key: #key: value`}
+            className="w-full min-h-[300px] border border-slate-700 text-xs 
+              rounded-none bg-slate-950 touch-pan-y select-none
+              text-slate-300 placeholder:text-slate-500
+              focus:outline-none focus:ring-1 focus:ring-slate-700
+              font-mono"
+          />
+        ) : (
+          <div className="min-h-full w-full touch-pan-y select-none">
+            {renderDndContent()}
           </div>
-        </ScrollArea>
+        )}
       </div>
 
-      <div className="flex border-t border-slate-700 bg-slate-900/50 backdrop-blur-sm">
+      {/* Footer */}
+      <div className="flex-none flex border-t border-slate-700 bg-slate-900/50 backdrop-blur-sm h-8">
         <Button
           variant="ghost"
           onClick={handleAddPair}
-          className="flex-1 h-8 rounded-none text-slate-400 hover:bg-slate-800 hover:text-slate-300 
+          className="flex-1 h-8 rounded-none text-slate-400 hover:bg-slate-900/50 hover:text-slate-300 
             border-r border-slate-700 transition-colors"
         >
-          <Plus className="h-4 w-4 mr-2 text-emerald-500" />
           <span className="text-xs">
             {pairs.length === 0 ? "Add First Item" : addButtonText}
           </span>
+          <Badge
+            variant="secondary"
+            className="text-[10px] py-0 h-4 bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 transition-colors border border-slate-700/50"
+          >
+            {getActivePairsCount()}
+          </Badge>
         </Button>
         <Button
           variant="ghost"

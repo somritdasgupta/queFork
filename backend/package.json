@@ -1,8 +1,12 @@
 {
-  "name": "backend",
+  "name": "quefork_backend",
   "version": "1.0.0",
   "description": "Simple test API",
   "main": "server.js",
+  "author": {
+    "name": "Somrit Dasgupta",
+    "email": "thesomritdasgupta@gmail.com"
+  },
   "scripts": {
     "start": "node server.js"
   },

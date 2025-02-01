@@ -22,7 +22,6 @@ import {
   ImportSource,
 } from "@/types";
 import {
-  EnvironmentPanel,
   EnvironmentPanelRef,
 } from "@/components/environment-panel";
 import { v4 as uuidv4 } from "uuid";
@@ -33,9 +32,7 @@ import { UrlBar } from "@/components/url-bar";
 import SidePanel from "@/components/side-panel";
 import { EnvironmentSelector } from "@/components/environment-selector";
 import { importFromUrl, parseImportData } from "@/lib/import-utils";
-import { ScriptRunner } from "@/lib/script-runner";
 import { useAPIInterceptor } from "@/components/APIInterceptor";
-import { InterceptorControl } from "@/components/InterceptorControl";
 
 const MAX_HISTORY_ITEMS = 500;
 const cleanupStorage = () => {
@@ -395,7 +392,7 @@ export default function Page() {
 
       // Run test script if exists
       if (testScript && responseData) {
-        // ...existing test script
+        // ...existing test script will add later :)
       }
 
       toast.success(`${method} request successful`);
@@ -409,7 +406,7 @@ export default function Page() {
 
   const handleSendRequest = async () => {
     // Remove URL validation from here since it's handled in UrlBar
-    // Just check for existence and unresolved variables
+    // Just checking for existence and unresolved variables
     if (!url) {
       toast.error("Please enter a URL");
       return;

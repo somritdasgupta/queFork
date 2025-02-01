@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/select";
 import { PackagePlus } from "lucide-react";
 import { NetworkStatusIndicator } from "@/app/components/NetworkStatusIndicator";
-import { cn } from "@/lib/utils";
 
 interface EnvironmentSelectorProps {
   environments: Environment[];
@@ -23,26 +22,34 @@ export function EnvironmentSelector({
   currentEnvironment,
   onEnvironmentChange,
   className,
-  hasExtension = false
+  hasExtension = false,
 }: EnvironmentSelectorProps) {
   return (
-    <Select value={currentEnvironment?.id || "none"} onValueChange={onEnvironmentChange}>
+    <Select
+      value={currentEnvironment?.id || "none"}
+      onValueChange={onEnvironmentChange}
+    >
       <SelectTrigger className={className}>
         <SelectValue>
           {currentEnvironment ? (
             <div className="flex items-center justify-between w-full gap-2">
-              <div className="flex items-center gap-2 font-medium">
-                <span className={currentEnvironment.global ? "text-blue-400" : "text-yellow-400"}>
+              <div className="flex items-center gap-2 text-sm font-mono font-black tracking-tighter">
+                <span
+                  className={
+                    currentEnvironment.global
+                      ? "text-blue-400"
+                      : "text-yellow-400"
+                  }
+                >
                   {currentEnvironment.name}
                 </span>
-                <NetworkStatusIndicator />
               </div>
               {hasExtension && (
-                <div className="flex items-center gap-1 px-2 py-0.5 text-xs text-green-400 bg-green-900/20 rounded-full">
-                  <div className="w-2 h-1 bg-green-400 rounded-full" />
-                  local
+                <div className="flex items-center gap-1 px-2 text-xs text-green-400 bg-green-900/20 rounded-full">
+                  <div className="w-2 h-2 bg-green-400 rounded-full" />interceptor
                 </div>
               )}
+              <NetworkStatusIndicator />
             </div>
           ) : (
             <div className="flex items-center gap-2 text-slate-400">

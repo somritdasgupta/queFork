@@ -99,7 +99,7 @@ export const EnvironmentPanel = forwardRef<
   useEffect(() => {
     const handleEnvironmentSaveAction = (e: CustomEvent) => {
       const { key, value, type, useFirstEmptyRow } = e.detail;
-      
+
       // Find the target environment
       const targetEnvironment = currentEnvironment || environments[0];
       if (!targetEnvironment) {
@@ -112,11 +112,13 @@ export const EnvironmentPanel = forwardRef<
         const updatedEnvironments = environments.map((e) => {
           if (e.id === env.id) {
             let updatedVariables = [...e.variables];
-            
+
             if (useFirstEmptyRow) {
               // Find first empty row
-              const emptyIndex = updatedVariables.findIndex(v => !v.key && !v.value);
-              
+              const emptyIndex = updatedVariables.findIndex(
+                (v) => !v.key && !v.value
+              );
+
               if (emptyIndex !== -1) {
                 // Update existing empty row
                 updatedVariables[emptyIndex] = {
@@ -184,16 +186,18 @@ export const EnvironmentPanel = forwardRef<
   const handleSaveToEnvironment = (environmentId: string) => {
     if (!pendingVariable) return;
 
-    const targetEnv = environments.find(env => env.id === environmentId);
+    const targetEnv = environments.find((env) => env.id === environmentId);
     if (!targetEnv) return;
 
     const updatedEnvironments = environments.map((env) => {
       if (env.id === environmentId) {
         let updatedVariables = [...env.variables];
-        
+
         // Find first empty row
-        const emptyIndex = updatedVariables.findIndex(v => !v.key && !v.value);
-        
+        const emptyIndex = updatedVariables.findIndex(
+          (v) => !v.key && !v.value
+        );
+
         if (emptyIndex !== -1) {
           // Update existing empty row
           updatedVariables[emptyIndex] = {
@@ -589,7 +593,7 @@ export const EnvironmentPanel = forwardRef<
 
   return (
     <div
-      className="h-full flex flex-col bg-slate-800/95"
+      className="h-full flex flex-col bg-slate-900/50"
       suppressHydrationWarning
     >
       {showSaveForm && pendingVariable && (
@@ -639,7 +643,7 @@ export const EnvironmentPanel = forwardRef<
           </div>
         </div>
       )}
-      <div className="sticky top-0 z-10 bg-slate-900">
+      <div className="sticky top-0 z-10 bg-slate-800">
         <Input
           placeholder="Search environments"
           value={search}
@@ -651,7 +655,7 @@ export const EnvironmentPanel = forwardRef<
             placeholder="Add new environment"
             value={newEnvironmentName}
             onChange={(e) => setNewEnvironmentName(e.target.value)}
-            className="h-12 w-full rounded-none bg-slate-800 border-2 border-slate-700 focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
+            className="h-12 w-full rounded-none bg-slate-900/50 border-2 border-slate-700 focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
           />
           <div className="flex">
             <Button
@@ -659,7 +663,7 @@ export const EnvironmentPanel = forwardRef<
               size="sm"
               onClick={handleCreateEnvironment}
               disabled={!newEnvironmentName.trim()}
-              className="h-12 w-12 rounded-none border-2 border-slate-700/50 bg-slate-800 hover:bg-slate-900/50 text-blue-400 hover:text-blue-300 disabled:border-slate-700 disabled:text-slate-500"
+              className="h-12 w-12 rounded-none border-2 border-slate-700/50 bg-slate-900 hover:bg-slate-900/50 text-blue-400 hover:text-blue-300 disabled:border-slate-600 disabled:text-slate-500"
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -667,7 +671,7 @@ export const EnvironmentPanel = forwardRef<
               variant="ghost"
               size="sm"
               onClick={handleImportEnvironment}
-              className="h-12 w-12 rounded-none border-2 border-slate-700 bg-slate-800 hover:bg-slate-900/50 text-emerald-400 hover:text-emerald-300"
+              className="h-12 w-12 rounded-none border-2 border-slate-700 bg-slate-900/50 hover:bg-slate-900/50 text-emerald-400 hover:text-emerald-300"
             >
               <Upload className="h-4 w-4" />
             </Button>
@@ -701,7 +705,7 @@ export const EnvironmentPanel = forwardRef<
               <div className="flex items-center justify-between">
                 <AccordionTrigger className="flex-1 px-4 text-slate-500 transition-colors">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-300">
+                    <span className="text-sm font-medium text-slate-400">
                       {env.name}
                     </span>
                     {env.global && (

@@ -24,7 +24,6 @@ import {
   Copy,
   Download,
   Pencil,
-  EllipsisIcon,
   DownloadIcon,
   Upload,
   Check,
@@ -476,9 +475,9 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
               }
             }}
             tabIndex={0}
-            className="group border-t border-slate-700/50 outline-none focus:bg-slate-800"
+            className="group border-t border-slate-700/50 outline-none focus:bg-slate-900/25"
           >
-            <div className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors justify-between">
+            <div className="flex items-center gap-2 px-4 py-2 hover:bg-slate-900/25 transition-colors justify-between">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Badge
                   variant="outline"
@@ -689,17 +688,16 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     props.onExportCollection(collection.id);
   };
 
-  // Modify the renderCollectionItem to use div for the accordion trigger wrapper
   const renderCollectionItem = (collection: Collection) => (
     <DynamicAccordionItem
       key={`collection-${collection.id}`}
       value={collection.id}
-      className="px-0 border-b border-slate-700"
+      className="px-0 border-y-2 border-slate-700/50"
       suppressHydrationWarning
     >
       <div className="flex items-center w-full">
         <div className="flex-1">
-          <AccordionTrigger className="w-full p-4 text-slate-500 hover:no-underline hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors [&>svg]:hidden">
+          <AccordionTrigger className="w-full p-4 text-slate-500 [&[data-state=open]]:bg-slate-900/25 transition-colors [&>svg]:hidden">
             <CollectionHeader collection={collection} onAction={() => {}} />
           </AccordionTrigger>
         </div>
@@ -714,7 +712,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
       <AccordionContent className="pt-0 pb-0">
         <div
           key={`collection-content-${collection.id}`}
-          className="bg-slate-900/50"
+          className="bg-slate-900/75"
         >
           {collection.requests?.length > 0 ? (
             collection.requests.map((request) => (
@@ -841,15 +839,15 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-800" suppressHydrationWarning>
-      <div className="h-full flex flex-col bg-slate-800">
+    <div className="h-full flex flex-col bg-slate-900/25" suppressHydrationWarning>
+      <div className="h-full flex flex-col bg-slate-900/25">
         <Input
           placeholder="Search collections"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 rounded-none border-x-0 text-xs bg-slate-900 border-slate-700"
         />
-        <div className="sticky top-0 z-10 bg-slate-800 border-b border-slate-700">
+        <div className="sticky top-0 z-10 bg-slate-900/25 border-b border-slate-700">
           <div className="flex items-center p-2 gap-2">
             {/* All controls in a single flex container */}
             <div className="flex items-center gap-1 w-full">
@@ -866,7 +864,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                         : "name"
                   )
                 }
-                className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
+                className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
               >
                 <SortAsc className="h-4 w-4 text-blue-400" />
                 <span className="ml-2 hidden lg:inline capitalize">
@@ -880,7 +878,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
+                    className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
                   >
                     <Filter className="h-4 w-4 text-purple-400" />
                     <span className="ml-2 hidden lg:inline">
@@ -890,7 +888,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
-                  className="w-32 bg-slate-800 border-slate-700 text-slate-400"
+                  className="w-32 bg-slate-800/90 border-slate-700 text-slate-400"
                 >
                   <DropdownMenuItem onClick={() => setFilterBy("")}>
                     All Methods
@@ -918,7 +916,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsCreating(true)}
-                className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
+                className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
               >
                 <Plus className="h-4 w-4 text-emerald-400" />
               </Button>
@@ -926,7 +924,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsImporting(true)}
-                className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
+                className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
               >
                 <Upload className="h-4 w-4 text-yellow-400" />
                 <span className="ml-2 hidden lg:inline">Import</span>
@@ -936,7 +934,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 variant="ghost"
                 size="sm"
                 onClick={props.onExportCollections}
-                className="w-full h-8 px-2 bg-slate-800 border border-slate-700 text-xs"
+                className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
               >
                 <DownloadIcon className="h-4 w-4 text-emerald-400" />
                 <span className="ml-2 hidden lg:inline">Export</span>
@@ -957,7 +955,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsImporting(false)}
-                    className="h-7 w-7 p-0 hover:bg-slate-800"
+                    className="h-7 w-7 p-0 hover:bg-slate-900/25"
                   >
                     <X className="h-4 w-4 text-slate-400" />
                   </Button>
@@ -973,7 +971,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                         placeholder="Enter URL (Postman, OpenAPI, etc.)"
                         value={importUrl}
                         onChange={(e) => setImportUrl(e.target.value)}
-                        className="h-8 bg-slate-800 border-slate-700 text-sm"
+                        className="h-8 bg-slate-900/25 border-slate-700 text-sm"
                       />
                       <Button
                         variant="ghost"
@@ -981,7 +979,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                         onClick={handleImportUrl}
                         disabled={!importUrl.trim()}
                         className={cn(
-                          "h-8 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700",
+                          "h-8 px-3 bg-slate-900/25 hover:bg-slate-700 border border-slate-700",
                           "text-slate-300 hover:text-slate-200 transition-colors",
                           !importUrl.trim() && "opacity-50"
                         )}
@@ -999,7 +997,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                       variant="ghost"
                       size="sm"
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700"
+                      className="w-full h-8 bg-slate-900/25 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700"
                     >
                       Choose File
                     </Button>
@@ -1013,7 +1011,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                       variant="ghost"
                       size="sm"
                       onClick={handlePaste}
-                      className="w-full h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700"
+                      className="w-full h-8 bg-slate-900/25 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700"
                     >
                       Paste from Clipboard
                     </Button>
@@ -1041,7 +1039,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                         apiVersion: "",
                       });
                     }}
-                    className="h-7 w-7 p-0 hover:bg-slate-800"
+                    className="h-7 w-7 p-0 hover:bg-slate-900/25"
                   >
                     <X className="h-4 w-4 text-slate-400" />
                   </Button>
@@ -1062,7 +1060,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                           name: e.target.value.slice(0, 15),
                         }))
                       }
-                      className="h-8 bg-slate-800 border-slate-700 text-sm"
+                      className="h-8 bg-slate-900/25 border-slate-700 text-sm"
                     />
                   </div>
 
@@ -1093,7 +1091,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                           }
                         }
                       }}
-                      className="h-8 bg-slate-800 border-slate-700 text-sm"
+                      className="h-8 bg-slate-900/25 border-slate-700 text-sm"
                     />
                   </div>
 
@@ -1110,7 +1108,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                           description: e.target.value,
                         }))
                       }
-                      className="bg-slate-800 border-slate-700 min-h-[80px] text-sm"
+                      className="bg-slate-900/25 border-slate-700 min-h-[80px] text-sm"
                     />
                   </div>
 
@@ -1121,7 +1119,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                       !newCollection.apiVersion.trim()
                     }
                     className={cn(
-                      "w-full h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700",
+                      "w-full h-8 bg-slate-900/25 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700",
                       "disabled:opacity-50"
                     )}
                   >
@@ -1182,7 +1180,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                             name: requestName,
                           });
                         }}
-                        className="w-full justify-start text-left h-8 px-3 text-slate-300 hover:text-slate-200 hover:bg-slate-800"
+                        className="w-full justify-start text-left h-8 px-3 text-slate-300 hover:text-slate-200 hover:bg-slate-900/25"
                       >
                         <FolderOpen className="h-4 w-4 mr-2 text-slate-400" />
                         {collection.name}
@@ -1200,7 +1198,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsCreating(true)}
-                    className="w-full justify-start text-left h-8 px-3 text-emerald-400 hover:text-emerald-300 hover:bg-slate-800"
+                    className="w-full justify-start text-left h-8 px-3 text-emerald-400 hover:text-emerald-300 hover:bg-slate-900/25"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Create New Collection
@@ -1224,7 +1222,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
               <Button
                 variant="outline"
                 onClick={() => setIsCreating(true)}
-                className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
+                className="bg-slate-900/25 border-slate-700 text-slate-300 hover:bg-slate-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Collection

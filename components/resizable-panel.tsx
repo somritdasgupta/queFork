@@ -54,7 +54,7 @@ const ResizablePanel = React.forwardRef<
       ref={panelRef}
       className={cn(
         "relative flex flex-col overflow-hidden select-none",
-        "bg-slate-800",
+        "bg-slate-950",
         "transition-all duration-300 ease-out",
         !response && "opacity-75",
         className
@@ -152,7 +152,7 @@ const ResizablePanelGroup = ({
       "resizable-panel-group",
       "flex h-full w-full",
       "data-[panel-group-direction=vertical]:flex-col",
-      "bg-slate-800",
+      "bg-slate-950",
       className
     )}
     autoSaveId="panel-group-layout"

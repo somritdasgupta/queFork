@@ -27,7 +27,7 @@ export function ConnectionLostBackdrop() {
             </span>
           </div>
           <p className="text-slate-300 animate-pulse text-xs md:text-sm">
-            Attempting to restore connection...
+            queFork will reconnect automatically...
           </p>
         </div>
       </div>
