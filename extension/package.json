@@ -1,11 +1,15 @@
 {
-  "name": "quefork-extension",
+  "name": "quefork-interceptor",
   "version": "1.0.0",
   "private": true,
+  "author": {
+    "name": "Somrit Dasgupta"
+  },
   "scripts": {
-    "build": "node scripts/build-dev.js",
+    "build:dev": "node scripts/build-dev.js",
     "build:prod": "node scripts/build-prod.js",
-    "watch": "node scripts/watch.js"
+    "watch": "node scripts/watch.js",
+    "build": "node scripts/build-prod.js"
   },
   "devDependencies": {
     "archiver": "^5.3.1",

@@ -8,6 +8,8 @@ A lightweight, and powerful local web REST API testing platform. Built with Next
 
 [![OpenAPI Generator](https://github.com/somritdasgupta/queFork/actions/workflows/openapi.yml/badge.svg?branch=main)](https://github.com/somritdasgupta/queFork/actions/workflows/openapi.yml)
 
+![queFork Interface](public/quefork_demo.png)
+
 ## ✨ Features
 
 - 🔥 **Modern Interface**: Clean and intuitive UI built with Tailwind CSS

@@ -387,22 +387,22 @@ export function HistoryPanel({
     if (deleteConfirm) {
       try {
         // Clear history from storage
-        localStorage.removeItem('request_history');
-        
+        localStorage.removeItem("request_history");
+
         // Clear any related data
-        localStorage.removeItem('history_metadata');
-        localStorage.removeItem('history_timestamps');
-        
+        localStorage.removeItem("history_metadata");
+        localStorage.removeItem("history_timestamps");
+
         // Call onDelete to update parent state
         onClearHistory();
-        
+
         // Reset UI state
         setDeleteConfirm(false);
-        setSearch('');
-        
+        setSearch("");
+
         toast.success("History cleared successfully");
       } catch (error) {
-        console.error('Error clearing history:', error);
+        console.error("Error clearing history:", error);
         toast.error("Failed to clear history");
       }
     } else {
@@ -444,7 +444,6 @@ export function HistoryPanel({
       />
       <div className="sticky top-0 z-10 bg-slate-900/50 border-b border-slate-700">
         <div className="flex items-center p-2 gap-2">
-          {/* All controls in a single flex container */}
           <div className="flex items-center gap-1 w-full">
             {/* Group by button */}
             <Button
@@ -458,7 +457,7 @@ export function HistoryPanel({
               className="w-full h-8 px-2 sm:px-3 text-xs border border-slate-700"
             >
               <Clock className="h-4 w-4 text-blue-400" />
-              <span className="ml-2 hidden lg:inline">
+              <span className="hidden lg:inline">
                 {groupBy === "none" ? "None" : `${groupBy}`}
               </span>
             </Button>
@@ -474,7 +473,7 @@ export function HistoryPanel({
               )}
             >
               <History className="h-4 w-4" />
-              <span className="ml-2 hidden lg:inline">
+              <span className="hidden lg:inline">
                 {isHistorySavingEnabled ? "Saving" : "Off"}
               </span>
             </Button>
@@ -486,7 +485,6 @@ export function HistoryPanel({
               className="w-full h-8 px-2 sm:px-3 text-xs border border-slate-700"
             >
               <DownloadIcon className="h-4 w-4 text-emerald-400" />
-              <span className="ml-2 hidden lg:inline">Export</span>
             </Button>
 
             {/* Clear button */}
@@ -497,12 +495,10 @@ export function HistoryPanel({
               className="w-full h-8 px-2 sm:px-3 text-xs border border-slate-700"
             >
               <Trash2 className="h-4 w-4 text-red-400" />
-              <span className="ml-2 hidden lg:inline">Clear</span>
             </Button>
           </div>
         </div>
-        
-        {/* Add confirmation UI below the buttons */}
+
         {deleteConfirm && (
           <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
             <span className="text-xs text-slate-400">Clear all history?</span>
@@ -528,21 +524,35 @@ export function HistoryPanel({
         )}
       </div>
 
-      <ScrollArea 
-        direction="vertical"
-        className="h-full"
-      >
+      <ScrollArea direction="vertical" className="h-full bg-slate-900/50">
         {history.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center">
-            <div className="p-4 rounded-lg bg-slate-900 border border-slate-700 mb-4">
-              <Clock className="h-8 w-8 text-slate-400" />
+          <div className="flex flex-col items-center justify-center h-[calc(75vh)] space-y-4 p-4">
+            <div className="flex flex-col items-center text-center space-y-2">
+              <div className="p-3 rounded-lg bg-gradient-to-b from-slate-800 to-slate-900/50 ring-1 ring-slate-700/50">
+                <Clock className="h-6 w-6 text-slate-400" />
+              </div>
+              <h3 className="text-sm font-medium text-slate-300">No History</h3>
+              <p className="text-xs text-slate-500 max-w-[15rem] leading-relaxed">
+                Your request history and activities will appear here
+              </p>
             </div>
-            <h3 className="text-lg font-medium text-slate-300 mb-2">
-              No History Yet
-            </h3>
-            <p className="text-sm text-slate-400 max-w-sm">
-              Make your first request to see it appear in history.
-            </p>
+
+            <div className="flex flex-col gap-2 w-48">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
+                className={cn(
+                  "w-full h-8 hover:bg-slate-800 border border-slate-800 text-xs gap-2",
+                  isHistorySavingEnabled ? "text-emerald-400" : "text-slate-400"
+                )}
+              >
+                <History className="h-3.5 w-3.5" />
+                {isHistorySavingEnabled
+                  ? "History Saving On"
+                  : "History Saving Off"}
+              </Button>
+            </div>
           </div>
         ) : (
           <div>

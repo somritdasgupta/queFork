@@ -21,9 +21,7 @@ import {
   SidePanelProps,
   ImportSource,
 } from "@/types";
-import {
-  EnvironmentPanelRef,
-} from "@/components/environment-panel";
+import { EnvironmentPanelRef } from "@/components/environment-panel";
 import { v4 as uuidv4 } from "uuid";
 import Footer from "@/components/footer";
 import { useWebSocket } from "@/components/websocket/websocket-context";
@@ -136,7 +134,12 @@ export default function Page() {
   const [scriptLogs, setScriptLogs] = useState<string[]>([]);
   const [testResults, setTestResults] = useState<any[]>([]);
 
-  const { hasExtension, interceptRequest } = useAPIInterceptor({
+  const {
+    hasExtension,
+    interceptorEnabled,
+    toggleInterceptor,
+    interceptRequest,
+  } = useAPIInterceptor({
     onRequestIntercept: async (request) => {
       try {
         const response = await fetch("/api/proxy", {
@@ -333,12 +336,12 @@ export default function Page() {
 
       // Use interceptor or direct proxy based on hasExtension
       let responseData;
-      if (hasExtension) {
+      if (hasExtension && interceptorEnabled) {
         responseData = await interceptRequest(requestObj);
         // Add intercepted flag
         responseData = {
           ...responseData,
-          intercepted: true
+          intercepted: true,
         };
       } else {
         const response = await fetch("/api/proxy", {
@@ -930,16 +933,37 @@ export default function Page() {
         <div className="w-full flex flex-col md:flex-row items-stretch gap-2 p-4">
           {/* Environment and Mobile Controls - Full width on mobile, fixed width on desktop */}
           <div className="flex gap-2 md:w-[280px] shrink-0">
+            {hasExtension && (
+              <button
+              onClick={toggleInterceptor}
+              className={`hidden md:flex h-10 w-10 items-center justify-center rounded-lg transition-colors border ${
+                interceptorEnabled
+                ? "bg-slate-900 hover:bg-slate-800 border-slate-600 text-slate-300"
+                : "bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-500"
+              }`}
+              title={`Interceptor ${interceptorEnabled ? "enabled" : "disabled"}`}
+              >
+              <img
+                src="/icons/icon128.png"
+                alt="queFork"
+                className={`w-6 h-6 transition-all ${
+                interceptorEnabled ? "opacity-100" : "opacity-50 grayscale"
+                }`}
+              />
+              </button>
+            )}
             <div className="flex-1">
               <EnvironmentSelector
                 environments={environments}
                 currentEnvironment={currentEnvironment}
                 onEnvironmentChange={handleEnvironmentChange}
                 hasExtension={hasExtension}
+                interceptorEnabled={interceptorEnabled}
                 className="h-10 w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 
                   text-slate-300 rounded-lg transition-colors"
               />
             </div>
+
             <div className="md:hidden">
               <MobileNav {...mobileNavProps} />
             </div>
@@ -959,7 +983,7 @@ export default function Page() {
               recentUrls={recentUrls}
               isMobile={false}
               className="flex-1"
-              hasExtension={hasExtension} // Add this line
+              hasExtension={hasExtension}
             />
           </div>
         </div>

@@ -839,7 +839,10 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-900/25" suppressHydrationWarning>
+    <div
+      className="h-full flex flex-col bg-slate-900/25"
+      suppressHydrationWarning
+    >
       <div className="h-full flex flex-col bg-slate-900/25">
         <Input
           placeholder="Search collections"
@@ -849,7 +852,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
         />
         <div className="sticky top-0 z-10 bg-slate-900/25 border-b border-slate-700">
           <div className="flex items-center p-2 gap-2">
-            {/* All controls in a single flex container */}
             <div className="flex items-center gap-1 w-full">
               {/* Sort button */}
               <Button
@@ -867,9 +869,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
               >
                 <SortAsc className="h-4 w-4 text-blue-400" />
-                <span className="ml-2 hidden lg:inline capitalize">
-                  {sortBy}
-                </span>
+                <span className="hidden lg:inline capitalize">{sortBy}</span>
               </Button>
 
               {/* Filter dropdown */}
@@ -881,7 +881,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                     className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
                   >
                     <Filter className="h-4 w-4 text-purple-400" />
-                    <span className="ml-2 hidden lg:inline">
+                    <span className="hidden lg:inline">
                       {filterBy || "All"}
                     </span>
                   </Button>
@@ -927,7 +927,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
               >
                 <Upload className="h-4 w-4 text-yellow-400" />
-                <span className="ml-2 hidden lg:inline">Import</span>
               </Button>
 
               <Button
@@ -937,7 +936,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
                 className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
               >
                 <DownloadIcon className="h-4 w-4 text-emerald-400" />
-                <span className="ml-2 hidden lg:inline">Export</span>
               </Button>
             </div>
           </div>
@@ -1209,24 +1207,28 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
           )}
 
           {props.collections.length === 0 && !isCreating ? (
-            <div className="flex flex-col items-center justify-center p-8 text-center">
-              <div className="p-4 rounded-lg bg-slate-900 border border-slate-700 mb-4">
-                <Clock className="h-8 w-8 text-slate-400" />
+            <div className="flex flex-col items-center justify-center h-[calc(75vh)] space-y-4 p-4">
+              <div className="flex flex-col items-center text-center space-y-2">
+                <div className="p-3 rounded-lg bg-gradient-to-b from-slate-800 to-slate-900/50 ring-1 ring-slate-700/50">
+                  <FolderOpen className="h-6 w-6 text-slate-400" />
+                </div>
+                <h3 className="text-sm font-medium text-slate-300">
+                  No Collections
+                </h3>
+                <p className="text-xs text-slate-500 max-w-[15rem] leading-relaxed">
+                  Create a collection to organize and save your API requests
+                </p>
               </div>
-              <h3 className="text-lg font-medium text-slate-300 mb-2">
-                No Collections Yet
-              </h3>
-              <p className="text-sm text-slate-400 max-w-sm mb-4">
-                Create your first collection to organize your API requests.
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => setIsCreating(true)}
-                className="bg-slate-900/25 border-slate-700 text-slate-300 hover:bg-slate-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Collection
-              </Button>
+
+              <div className="flex flex-col gap-2 w-48">
+                <Button
+                  onClick={() => setIsCreating(true)}
+                  className="w-full h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs gap-2"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  New Collection
+                </Button>
+              </div>
             </div>
           ) : (
             <div suppressHydrationWarning>

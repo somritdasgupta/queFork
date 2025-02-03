@@ -71,3 +71,25 @@ const injectScript = () => {
 
 injectScript();
 
+// Listen for messages from background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "INTERCEPTOR_STATE_CHANGED") {
+    // Forward to webpage
+    window.postMessage({
+      type: "INTERCEPTOR_STATE_CHANGED",
+      enabled: message.enabled
+    }, "*");
+  }
+});
+
+// Listen for messages from webpage
+window.addEventListener("message", (event) => {
+  if (event.data.type === "INTERCEPTOR_TOGGLE") {
+    // Forward to background script
+    chrome.runtime.sendMessage({
+      action: "toggleInterceptor",
+      enabled: event.data.enabled
+    });
+  }
+});
+

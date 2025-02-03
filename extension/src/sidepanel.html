@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>queFork Interceptor</title>
+    <link rel="stylesheet" href="popup.css" />
+    <link rel="stylesheet" href="fonts/inter.css" />
+    <script defer src="libs/feather-icons.min.js"></script>
+    <script defer src="popup.js"></script>
+  </head>
+  <body class="sidepanel">
+    <div class="container">
+      <section class="section">
+        <h2>
+          Target URLs (Proxy Servers)
+          <div
+            class="status-indicator"
+            id="statusIndicator"
+            title="Interceptor Status"
+          ></div>
+        </h2>
+        <div class="input-group">
+          <input
+            type="text"
+            id="targetUrl"
+            placeholder="Enter proxy URL (e.g., http://localhost:4000)"
+          />
+          <input
+            type="text"
+            id="targetPattern"
+            placeholder="URL pattern to match (optional)"
+          />
+          <div class="select-wrapper">
+            <select id="targetMode" class="mode-select">
+              <option value="active">Active Target</option>
+              <option value="roundrobin">Round Robin</option>
+              <option value="pattern">Pattern Match</option>
+            </select>
+          </div>
+          <button id="saveTarget" class="btn btn-primary">Add Target</button>
+        </div>
+        <ul id="targetList" class="list target-list"></ul>
+      </section>
+
+      <section class="section">
+        <h2>URLs to Intercept</h2>
+        <div class="input-group">
+          <input
+            type="text"
+            id="endpoint"
+            placeholder="Enter URL pattern (e.g., api.example.com/*)"
+          />
+          <button id="add" class="btn btn-primary">Add Endpoint</button>
+        </div>
+        <ul id="endpointList" class="list endpoint-list"></ul>
+      </section>
+
+      <section class="info-section">
+        <div id="currentTarget" class="info-item">
+          <span class="info-label">Current Target:</span>
+          <span class="info-value">Not set</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Status:</span>
+          <span class="info-value success">Connected</span>
+        </div>
+      </section>
+
+      <section class="help-section">
+        <h3>How it works</h3>
+        <ul>
+          <li>
+            Target URL: Where intercepted requests will be redirected. The default proxy server is 
+            <a href="https://quefork.somrit.in" class="help-link" target="_blank"">https://queFork.somrit.in</a>. 
+            You can change this to your own proxy server URL and set it as the primary active target.
+          </li>
+          <li>
+            URLs to Intercept: Which URLs/endpoibts should be intercepted and redirected to the target URL
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <footer class="footer">
+      <div class="footer-links">
+        <a
+          href="https://github.com/somritdasgupta"
+          target="_blank"
+          class="footer-link"
+        >
+          <i data-feather="github"></i>
+          GitHub
+        </a>
+        <a
+          href="https://linkedin.com/in/somritdasgupta"
+          target="_blank"
+          class="footer-link"
+        >
+          <i data-feather="linkedin"></i>
+          LinkedIn
+        </a>
+        <a href="http://quefork.somrit.in" target="_blank" class="footer-link">
+          <i data-feather="globe"></i>
+          queFork
+        </a>
+      </div>
+      <div class="footer-text">
+        Made with <i data-feather="heart"></i> by Somrit Dasgupta
+      </div>
+    </footer>
+  </body>
+</html>

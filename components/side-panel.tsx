@@ -1,49 +1,75 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { CollectionsPanel } from "@/components/collections-panel";
 import { HistoryPanel } from "@/components/history-panel";
 import { SidePanelProps } from "@/types";
-import { FolderOpen, History, BoxIcon, Layers, X } from "lucide-react";
+import { BoxesIcon, BoxIcon, Layers, RewindIcon, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnvironmentPanel } from "@/components/environment-panel";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const SidePanel = (props: SidePanelProps): JSX.Element => {
   const [isOpen, setIsOpen] = useState(false);
+  const [shouldShowLabels, setShouldShowLabels] = useState(true);
   const [activePanel, setActivePanel] = useState<
     "collections" | "history" | "environments"
   >("collections");
 
   useEffect(() => {
+    const checkWidth = () => {
+      if (typeof window !== "undefined") {
+        setShouldShowLabels(window.innerWidth >= window.innerWidth * 0.25);
+      }
+    };
+
+    checkWidth(); // Initial check
+    window.addEventListener("resize", checkWidth);
+    return () => window.removeEventListener("resize", checkWidth);
+  }, []);
+
+  useEffect(() => {
     const handleSaveRequestAction = (e: CustomEvent) => {
       // Switch to collections panel
       setActivePanel("collections");
-      
+
       // Only open sheet if we're in mobile mode and the event indicates mobile
       if (props.isMobile && e.detail.isMobile) {
         setIsOpen(true);
       }
 
       // Forward the request data to CollectionsPanel
-      window.dispatchEvent(new CustomEvent('saveRequest', {
-        detail: e.detail.request
-      }));
+      window.dispatchEvent(
+        new CustomEvent("saveRequest", {
+          detail: e.detail.request,
+        })
+      );
     };
 
-    window.addEventListener('saveRequestAction', handleSaveRequestAction as EventListener);
+    window.addEventListener(
+      "saveRequestAction",
+      handleSaveRequestAction as EventListener
+    );
 
     return () => {
-      window.removeEventListener('saveRequestAction', handleSaveRequestAction as EventListener);
+      window.removeEventListener(
+        "saveRequestAction",
+        handleSaveRequestAction as EventListener
+      );
     };
   }, [props.isMobile]);
 
   useEffect(() => {
     const handleSaveAndShow = (e: CustomEvent) => {
       const { request, isMobile } = e.detail;
-      
+
       // Set panel and open sheet if mobile
       setActivePanel("collections");
       if (props.isMobile && isMobile) {
@@ -52,15 +78,23 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
 
       // Small delay to ensure panel switch is complete
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('showCollectionSaveForm', {
-          detail: request
-        }));
+        window.dispatchEvent(
+          new CustomEvent("showCollectionSaveForm", {
+            detail: request,
+          })
+        );
       }, 50);
     };
 
-    window.addEventListener('saveAndShowRequest', handleSaveAndShow as EventListener);
+    window.addEventListener(
+      "saveAndShowRequest",
+      handleSaveAndShow as EventListener
+    );
     return () => {
-      window.removeEventListener('saveAndShowRequest', handleSaveAndShow as EventListener);
+      window.removeEventListener(
+        "saveAndShowRequest",
+        handleSaveAndShow as EventListener
+      );
     };
   }, [props.isMobile]);
 
@@ -74,19 +108,27 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
 
       // Use a minimal timeout to ensure panel switch is complete
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('showEnvironmentSaveForm', {
-          detail: {
-            key: e.detail.key,
-            value: e.detail.value,
-            type: e.detail.type
-          }
-        })); 
+        window.dispatchEvent(
+          new CustomEvent("showEnvironmentSaveForm", {
+            detail: {
+              key: e.detail.key,
+              value: e.detail.value,
+              type: e.detail.type,
+            },
+          })
+        );
       }, 0);
     };
 
-    window.addEventListener('environmentSaveAction', handleEnvironmentAction as EventListener);
+    window.addEventListener(
+      "environmentSaveAction",
+      handleEnvironmentAction as EventListener
+    );
     return () => {
-      window.removeEventListener('environmentSaveAction', handleEnvironmentAction as EventListener);
+      window.removeEventListener(
+        "environmentSaveAction",
+        handleEnvironmentAction as EventListener
+      );
     };
   }, [props.isMobile]);
 
@@ -94,20 +136,40 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
     {
       id: "collections" as const,
       label: "Collections",
-      icon: <FolderOpen className="h-4 w-4" />,
+      icon: (
+        <BoxesIcon
+          className="h-4 w-4"
+          strokeWidth={1}
+          style={{
+            stroke: "currentColor",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       content: (
         <CollectionsPanel
           {...props}
           key="collections-panel"
           onSwitchToCollections={() => setActivePanel("collections")}
-          onUpdateCollections={props.onUpdateCollections} 
+          onUpdateCollections={props.onUpdateCollections}
         />
       ),
     },
     {
       id: "history" as const,
       label: "History",
-      icon: <History className="h-4 w-4" />,
+      icon: (
+        <RewindIcon
+          className="h-4 w-4"
+          strokeWidth={1}
+          style={{
+            stroke: "currentColor",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       content: (
         <HistoryPanel
           {...props}
@@ -127,7 +189,17 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
     {
       id: "environments" as const,
       label: "Environments",
-      icon: <BoxIcon className="h-4 w-4" />,
+      icon: (
+        <BoxIcon
+          className="h-4 w-4"
+          strokeWidth={1}
+          style={{
+            stroke: "currentColor",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       content: (
         <EnvironmentPanel
           environments={props.environments}
@@ -161,7 +233,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
               >
                 <div className="flex items-center justify-center gap-2">
                   {tab.icon}
-                  <span className="hidden lg:inline truncate">{tab.label}</span>
+                  {shouldShowLabels && <span className="truncate"></span>}
                 </div>
               </TabsTrigger>
             ))}
@@ -190,17 +262,14 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
         </SheetTrigger>
         <SheetContent
           position="bottom"
-          className="w-[100vw] p-0 h-[88vh] rounded-t-2xl
-            bg-gradient-to-b from-slate-800/95 to-slate-900/95
+          className="w-[100vw] p-0 h-[88vh] rounded-t-2xl bg-slate-950
             backdrop-blur-xl
             border-t-2 border-slate-800/60
             shadow-[0_-15px_50px_-15px_rgba(0,0,0,0.45)]
             animate-in slide-in-from-bottom duration-300
-title for my sheet can i make it optional that i dont use title at all?            overflow-hidden flex flex-col"
+            overflow-hidden flex flex-col"
         >
-          <SheetTitle className="sr-only">
-            Side Panel
-          </SheetTitle>
+          <SheetTitle className="sr-only">Side Panel</SheetTitle>
           <div className="flex flex-col h-full overflow-hidden">
             <div className="rounded-t-2xl flex-1 overflow-hidden">
               <PanelContent />
