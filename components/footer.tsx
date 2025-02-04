@@ -22,7 +22,7 @@ const Footer = () => {
           {/* Right section - Social links */}
           <div className="flex items-center gap-2">
             <a
-              href="https://github.com/somritdasgupta/queFork/releases"
+              href="https://github.com/somritdasgupta/queFork/releases/download/pilot/queFork_Interceptor.zip"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center p-2 rounded-md

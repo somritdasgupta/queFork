@@ -1,19 +1,32 @@
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import React from "react";
 import {
-  EyeIcon,
-  EyeOffIcon,
-  Key,
-  KeyRound,
-  User,
-  LockIcon,
-  BanIcon,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  KeyRound, 
+  Key, 
+  UserRound, 
+  Lock,
+  ShieldCheck,
+  Info,
+  HelpCircle
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
-interface AuthSectionProps {
+interface AuthProps {
   auth: {
     type: "none" | "bearer" | "basic" | "apiKey";
     token?: string;
@@ -24,175 +37,253 @@ interface AuthSectionProps {
   onChange: (auth: any) => void;
 }
 
-export function AuthSection({ auth, onChange }: AuthSectionProps) {
-  const [showPassword, setShowPassword] = useState(false);
-  const authTypes = ["none", "bearer", "basic", "apiKey"];
-  const handleTypeChange = (value: "none" | "bearer" | "basic" | "apiKey") => {
+export function AuthSection({ auth, onChange }: AuthProps) {
+  const handleAuthTypeChange = (value: string) => {
     onChange({ type: value });
   };
-  const getAuthIcon = (type: string) => {
-    switch (type) {
-      case "none":
-        return <BanIcon className="h-4 w-4 text-slate-500/70" />;
+
+  const renderAuthInfo = (type: string) => {
+    const infos = {
+      bearer: "Bearer tokens are typically used for OAuth 2.0 authentication",
+      basic: "Basic auth uses username and password encoded in base64",
+      apiKey: "API keys are unique identifiers used to authenticate requests",
+      none: "No authentication will be sent with requests"
+    };
+
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-2.5 px-4 py-3 mt-4 bg-slate-900/40 rounded-lg border border-slate-800/60 shadow-sm"
+      >
+        <Info className="h-4 w-4 text-blue-400/80" />
+        <span className="text-xs text-slate-400/90">{infos[type as keyof typeof infos]}</span>
+      </motion.div>
+    );
+  };
+
+  const renderAuthFields = () => {
+    switch (auth.type) {
       case "bearer":
-        return <KeyRound className="h-4 w-4 text-slate-500/70" />;
+        return (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-5"
+          >
+            <div className="relative group bg-slate-900/20 p-6 rounded-xl border border-slate-800/60 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="absolute -top-3.5 left-4 px-3 py-1 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-md border border-blue-400/20">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-blue-400" />
+                  <span className="text-xs font-medium text-blue-400">Bearer Authentication</span>
+                </div>
+              </div>
+              <div className="relative group mt-4">
+                <div className="flex justify-between items-center mb-3">
+                  <Label className="text-xs font-medium text-slate-400">Bearer Token</Label>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={300}>
+                      <TooltipTrigger className="hover:bg-slate-800/60 p-1 rounded-md transition-colors">
+                        <HelpCircle className="h-3.5 w-3.5 text-slate-500" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-slate-900 border-slate-800">
+                        <p className="text-xs">Token will be sent as: Bearer your-token-here</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="relative">
+                  <div className="absolute left-3 top-3 text-slate-400 group-hover:text-blue-400 transition-colors">
+                    <KeyRound className="h-4 w-4" />
+                  </div>
+                  <Input
+                    type="text"
+                    value={auth.token || ""}
+                    onChange={(e) => onChange({ ...auth, token: e.target.value })}
+                    placeholder="Enter bearer token"
+                    className="h-10 pl-9 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 placeholder:text-slate-600 rounded-md transition-all duration-200"
+                  />
+                </div>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <span className="inline-block px-2 py-1 bg-slate-800 rounded text-slate-400">Authorization</span>
+                    <span>header will be set automatically</span>
+                  </div>
+                  <div className="p-2 rounded bg-slate-900/50 border border-slate-800/60 font-mono group-hover:border-slate-700 transition-colors">
+                    Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6...
+                  </div>
+                </div>
+              </div>
+            </div>
+            {renderAuthInfo("bearer")}
+          </motion.div>
+        );
+
       case "basic":
-        return <User className="h-4 w-4 text-slate-500/70" />;
+        return (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-5"
+          >
+            <div className="relative group bg-slate-900/20 p-6 rounded-xl border border-slate-800/60 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="absolute -top-3.5 left-4 px-3 py-1 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-md border border-green-400/20">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-green-400" />
+                  <span className="text-xs font-medium text-green-400">Basic Authentication</span>
+                </div>
+              </div>
+              <div className="mt-4 space-y-4">
+                <div className="relative group">
+                  <Label className="text-xs font-medium text-slate-500 mb-2 block">Username</Label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-3 text-slate-400 group-hover:text-blue-400 transition-colors">
+                      <UserRound className="h-4 w-4" />
+                    </div>
+                    <Input
+                      type="text"
+                      value={auth.username || ""}
+                      onChange={(e) => onChange({ ...auth, username: e.target.value })}
+                      placeholder="Enter username"
+                      className="h-10 pl-9 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 placeholder:text-slate-600 rounded-md transition-all duration-200"
+                    />
+                  </div>
+                </div>
+                <div className="relative group">
+                  <Label className="text-xs font-medium text-slate-500 mb-2 block">Password</Label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-3 text-slate-400 group-hover:text-blue-400 transition-colors">
+                      <Lock className="h-4 w-4" />
+                    </div>
+                    <Input
+                      type="password"
+                      value={auth.password || ""}
+                      onChange={(e) => onChange({ ...auth, password: e.target.value })}
+                      placeholder="Enter password"
+                      className="h-10 pl-9 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 placeholder:text-slate-600 rounded-md transition-all duration-200"
+                    />
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-900/50 border border-slate-800/60 group-hover:border-slate-700 transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-slate-400">Base64 Encoded Credentials</span>
+                    <span className="text-xs text-slate-500">Automatically generated</span>
+                  </div>
+                  <div className="font-mono text-xs text-slate-500 break-all">
+                    {auth.username && auth.password 
+                      ? btoa(`${auth.username}:${auth.password}`)
+                      : 'dXNlcm5hbWU6cGFzc3dvcmQ='}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {renderAuthInfo("basic")}
+          </motion.div>
+        );
+
       case "apiKey":
-        return <Key className="h-4 w-4 text-slate-500/70" />;
+        return (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-5"
+          >
+            <div className="relative group bg-slate-900/20 p-6 rounded-xl border border-slate-800/60 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="absolute -top-3.5 left-4 px-3 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-md border border-purple-400/20">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-purple-400" />
+                  <span className="text-xs font-medium text-purple-400">API Key Authentication</span>
+                </div>
+              </div>
+              <div className="relative group">
+                <Label className="text-xs font-medium text-slate-500 mb-2 block">API Key</Label>
+                <div className="relative">
+                  <div className="absolute left-3 top-3 text-slate-400 group-hover:text-blue-400 transition-colors">
+                    <Key className="h-4 w-4" />
+                  </div>
+                  <Input
+                    type="text"
+                    value={auth.key || ""}
+                    onChange={(e) => onChange({ ...auth, key: e.target.value })}
+                    placeholder="Enter API key"
+                    className="h-10 pl-9 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 placeholder:text-slate-600 rounded-md transition-all duration-200"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span className="inline-block px-2 py-1 bg-slate-800 rounded text-slate-400">X-API-Key</span>
+                  <span>header will be set automatically</span>
+                </div>
+              </div>
+            </div>
+            {renderAuthInfo("apiKey")}
+          </motion.div>
+        );
+
       default:
-        return null;
+        return (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="py-16 text-center space-y-6"
+          >
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="inline-flex items-center justify-center p-8 rounded-2xl bg-gradient-to-b from-slate-800/50 to-slate-900/50 shadow-lg border border-slate-800/40"
+            >
+              <Lock className="h-10 w-10 text-slate-500" />
+            </motion.div>
+            <div className="space-y-2">
+              <p className="text-sm text-slate-400">No authentication required</p>
+              <p className="text-xs text-slate-500">Select an authentication type to configure</p>
+            </div>
+            {renderAuthInfo("none")}
+          </motion.div>
+        );
     }
   };
 
   return (
-    <div className="p-4 space-y-6">
-      <RadioGroup
-        value={auth.type}
-        onValueChange={handleTypeChange}
-        className="grid grid-cols-2 sm:grid-cols-4 gap-3"
-      >
-        {authTypes.map((type) => (
-          <div key={type} className="relative">
-            <RadioGroupItem value={type} id={type} className="peer sr-only" />
-            <Label
-              htmlFor={type}
-              className={cn(
-                "flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-xs border",
-                "cursor-pointer transition-all duration-200 capitalize shadow-sm",
-                "border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 hover:border-slate-600",
-                "peer-data-[state=checked]:border-blue-500/70 peer-data-[state=checked]:text-blue-400",
-                "peer-data-[state=checked]:bg-blue-500/10 peer-data-[state=checked]:shadow-[0_0_10px_rgba(59,130,246,0.1)]"
-              )}
+    <AnimatePresence mode="wait">
+      <div className="p-4 space-y-12 bg-slate-900">
+        <div className="space-y-3">
+          <div className="flex justify-between items-center px-1">
+            <Label className="text-xs font-medium text-slate-400">Authentication Type</Label>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-xs"
             >
-              {getAuthIcon(type)}
-              <span>{type}</span>
-            </Label>
+              <span className={cn(
+                "px-2 py-1 rounded-full font-medium inline-flex items-center gap-1.5",
+                auth.type === "none" 
+                  ? "bg-slate-800/80 text-slate-400" 
+                  : "bg-gradient-to-r from-blue-500/10 to-cyan-500/10 text-blue-400"
+              )}>
+                <ShieldCheck className="h-3.5 w-3.5" />
+                {auth.type === "none" ? "No Security" : "Security Active"}
+              </span>
+            </motion.div>
           </div>
-        ))}
-      </RadioGroup>
-
-      {auth.type === "none" && (
-        <div className="rounded-lg border border-slate-700/50 border-dashed p-6 text-center bg-slate-800/20 backdrop-blur-sm">
-          <BanIcon className="h-5 w-5 text-slate-400 mx-auto mb-2 opacity-50" />
-          <div className="text-sm text-slate-400 font-medium">
-            No authentication required for this endpoint
-          </div>
+          <Select value={auth.type} onValueChange={handleAuthTypeChange}>
+            <SelectTrigger className="w-full h-11 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 [&>span]:text-slate-400 transition-all duration-200">
+              <SelectValue placeholder="Select authentication type" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-900 border-slate-800">
+              <SelectItem value="none" className="text-slate-300 hover:text-slate-200 focus:text-slate-200">No Auth</SelectItem>
+              <SelectItem value="bearer" className="text-slate-300 hover:text-slate-200 focus:text-slate-200">Bearer Token</SelectItem>
+              <SelectItem value="basic" className="text-slate-300 hover:text-slate-200 focus:text-slate-200">Basic Auth</SelectItem>
+              <SelectItem value="apiKey" className="text-slate-300 hover:text-slate-200 focus:text-slate-200">API Key</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      )}
-
-      <div className="transition-all duration-200 space-y-4">
-        {auth.type === "bearer" && (
-          <div className="space-y-2">
-            <Label
-              htmlFor="token"
-              className="text-sm font-medium text-slate-200 flex items-center gap-2"
-            >
-              <KeyRound className="h-4 w-4 text-slate-400" />
-              Bearer Token
-            </Label>
-            <div className="relative group">
-              <Input
-                id="token"
-                value={auth.token || ""}
-                onChange={(e) => onChange({ ...auth, token: e.target.value })}
-                placeholder="Enter bearer token"
-                className="bg-slate-950/50 border border-slate-700/50 rounded-lg text-sm font-mono text-slate-300 
-                  placeholder:text-slate-500/50 transition-all duration-200
-                  focus:border-blue-500/50 focus:ring-blue-500/20 focus:bg-slate-900
-                  group-hover:border-slate-600/50 group-hover:bg-slate-900/50"
-              />
-            </div>
-          </div>
-        )}
-
-        {auth.type === "basic" && (
-          <div className="space-y-4 rounded-lg border border-slate-700/30 p-4 bg-slate-800/10">
-            <div className="space-y-2">
-              <Label
-                htmlFor="username"
-                className="text-sm font-medium text-slate-200 flex items-center gap-2"
-              >
-                <User className="h-4 w-4 text-slate-400" />
-                Username
-              </Label>
-              <div className="relative group">
-                <Input
-                  id="username"
-                  value={auth.username || ""}
-                  onChange={(e) =>
-                    onChange({ ...auth, username: e.target.value })
-                  }
-                  placeholder="Enter username"
-                  className="bg-slate-950/50 border border-slate-700/50 rounded-lg text-sm text-slate-300 
-                    placeholder:text-slate-500/50 transition-all duration-200
-                    focus:border-blue-500/50 focus:ring-blue-500/20 focus:bg-slate-900
-                    group-hover:border-slate-600/50 group-hover:bg-slate-900/50"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="password"
-                className="text-sm font-medium text-slate-200 flex items-center gap-2"
-              >
-                <LockIcon className="h-4 w-4 text-slate-400" />
-                Password
-              </Label>
-              <div className="relative group">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={auth.password || ""}
-                  onChange={(e) =>
-                    onChange({ ...auth, password: e.target.value })
-                  }
-                  placeholder="Enter password"
-                  className="pr-9 bg-slate-950/50 border border-slate-700/50 rounded-lg text-sm font-mono text-slate-300 
-                    placeholder:text-slate-500/50 transition-all duration-200
-                    focus:border-blue-500/50 focus:ring-blue-500/20 focus:bg-slate-900
-                    group-hover:border-slate-600/50 group-hover:bg-slate-900/50"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500/70 hover:text-slate-300 transition-colors flex items-center justify-center"
-                >
-                  {showPassword ? (
-                    <EyeOffIcon className="h-4 w-4" />
-                  ) : (
-                    <EyeIcon className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {auth.type === "apiKey" && (
-          <div className="space-y-2">
-            <Label
-              htmlFor="apiKey"
-              className="text-sm font-medium text-slate-200 flex items-center gap-2"
-            >
-              <Key className="h-4 w-4 text-slate-400" />
-              API Key
-            </Label>
-            <div className="relative group">
-              <Input
-                id="apiKey"
-                value={auth.key || ""}
-                onChange={(e) => onChange({ ...auth, key: e.target.value })}
-                placeholder="Enter API key"
-                className="bg-slate-950/50 border border-slate-700/50 rounded-lg text-sm font-mono text-slate-300 
-                  placeholder:text-slate-500/50 transition-all duration-200
-                  focus:border-blue-500/50 focus:ring-blue-500/20 focus:bg-slate-900
-                  group-hover:border-slate-600/50 group-hover:bg-slate-900/50"
-              />
-            </div>
-          </div>
-        )}
+        {renderAuthFields()}
       </div>
-    </div>
+    </AnimatePresence>
   );
 }

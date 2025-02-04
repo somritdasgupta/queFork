@@ -16,7 +16,10 @@ function updateTargetList() {
   chrome.runtime.sendMessage({ action: "getStats" }, ({ stats }) => {
     targets.forEach((target, index) => {
       const li = document.createElement("li");
-      li.style.animation = 'slideIn 0.3s ease-out';
+      li.classList.add('slide-in');
+      if (target.protected) {
+        li.classList.add('protected-target');
+      }
       
       const totalRequests = Object.values(stats || {}).reduce((sum, urlStats) => {
         return sum + (urlStats.targets[target.url] || 0);
@@ -199,7 +202,7 @@ function updateEndpointList() {
   list.innerHTML = "";
   endpoints.forEach((endpoint, index) => {
     const li = document.createElement("li");
-    li.style.animation = 'slideIn 0.3s ease-out';
+    li.classList.add('slide-in');
     li.innerHTML = `
       <div class="endpoint-info">
         <span class="endpoint-url">${endpoint}</span>
@@ -358,37 +361,15 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
-// Add styles for protected targets
-const style = document.createElement('style');
-style.textContent = `
-  .protected-target {
-    background-color: rgba(22, 163, 74, 0.05);
-    border-left: 2px solid #16a34a;
-  }
-  .protected-badge {
-    color: #16a34a;
-    margin-left: 4px;
-  }
-  .warning-toast {
-    background-color: #fef3c7;
-    color: #92400e;
-    padding: 8px 16px;
-    border-radius: 4px;
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 1000;
-    animation: slideIn 0.3s ease-out;
-  }
-`;
-document.head.appendChild(style);
-
-// Add toast function
+// Update toast function to use classes only
 function toast(message) {
   const toast = document.createElement('div');
   toast.className = 'warning-toast';
   toast.textContent = message;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 

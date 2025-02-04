@@ -261,7 +261,7 @@ export function HistoryPanel({
       return (
         <div
           key={item.id}
-          className="group flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
+          className="group flex flex-wrap items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
           onClick={() => !isConnected && handleHistoryClick(item)}
         >
           <Badge
@@ -275,7 +275,7 @@ export function HistoryPanel({
           >
             {isSocketIO ? "SIO" : "WSS"}
           </Badge>
-          <div ref={urlContainerRef} className="flex-1 min-w-0">
+          <div ref={urlContainerRef} className="flex-1 min-w-0 w-full sm:w-auto">
             <div className="text-xs font-medium text-slate-400 tracking-tighter truncate">
               {truncateUrl(item.url, containerWidth)}
             </div>
@@ -302,7 +302,7 @@ export function HistoryPanel({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
+            className="h-8 w-8 shrink-0 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
             onClick={(e) => {
               e.stopPropagation();
               onDeleteItem(item.id);
@@ -317,7 +317,7 @@ export function HistoryPanel({
       return (
         <div
           key={item.id}
-          className="group flex items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
+          className="group flex flex-wrap items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
           onClick={() => handleHistoryItemClick(item)}
         >
           <Badge
@@ -333,11 +333,11 @@ export function HistoryPanel({
           >
             {item.method}
           </Badge>
-          <div ref={urlContainerRef} className="flex-1 min-w-0">
+          <div ref={urlContainerRef} className="flex-1 min-w-0 w-full sm:w-auto">
             <div className="text-xs font-medium text-slate-400 tracking-tighter truncate">
               {truncateUrl(item.url, containerWidth)}
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span>
                 {formatDistanceToNow(new Date(item.timestamp), {
                   addSuffix: true,
@@ -369,7 +369,7 @@ export function HistoryPanel({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
+            className="h-8 w-8 shrink-0 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
             onClick={(e) => {
               e.stopPropagation();
               onDeleteItem(item.id);
@@ -434,7 +434,7 @@ export function HistoryPanel({
   }, []);
 
   return (
-    <div className="h-full flex flex-col bg-slate-800">
+    <div className="h-full flex flex-col bg-slate-900/25">
       {/* Search input */}
       <Input
         placeholder="Search history"
@@ -524,7 +524,7 @@ export function HistoryPanel({
         )}
       </div>
 
-      <ScrollArea direction="vertical" className="h-full bg-slate-900/50">
+      <ScrollArea direction="vertical" className="h-full bg-slate-900/25">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[calc(75vh)] space-y-4 p-4">
             <div className="flex flex-col items-center text-center space-y-2">
@@ -591,7 +591,7 @@ export function HistoryPanel({
                   </button>
                 )}
                 {(groupBy === "none" || expandedGroups.has(groupKey)) && (
-                  <div className="bg-slate-900/50 divide-y divide-slate-700/50">
+                  <div className="bg-slate-900/25 divide-y divide-slate-700/50">
                     {items.map((item) => (
                       <div key={item.id} className="group">
                         {renderHistoryItem(item)}

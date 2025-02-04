@@ -27,7 +27,7 @@ export function EnvironmentSelector({
   interceptorEnabled,
 }: EnvironmentSelectorProps) {
   return (
-    <div className={className}>
+    <div>
       <Select
         value={currentEnvironment?.id || "none"}
         onValueChange={onEnvironmentChange}
@@ -36,7 +36,7 @@ export function EnvironmentSelector({
           <SelectValue>
             {currentEnvironment ? (
               <div className="flex items-center justify-between w-full gap-2">
-                <div className="flex items-center gap-2 text-sm font-mono font-black tracking-tighter">
+                <div className="flex items-center gap-2 font-mono tracking-tighter text-xs">
                   <span
                     className={
                       currentEnvironment.global
@@ -47,12 +47,25 @@ export function EnvironmentSelector({
                     {currentEnvironment.name}
                   </span>
                 </div>
-                {hasExtension && interceptorEnabled && (
-                  <div className="flex items-center gap-1 px-2 text-xs text-green-400 bg-green-900/20 rounded-full">
-                    interceptor
-                  </div>
+                {hasExtension && (
+                  <>
+                    {interceptorEnabled ? (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="z-50 w-2 h-1 rounded-full bg-green-400"
+                          title="Interceptor enabled"
+                        />
+                        <span className="text-xs text-green-400">
+                          interceptor
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <NetworkStatusIndicator />
+                      </div>
+                    )}
+                  </>
                 )}
-                <NetworkStatusIndicator />
               </div>
             ) : (
               <div className="flex items-center gap-2 text-slate-400">
@@ -81,12 +94,6 @@ export function EnvironmentSelector({
           ))}
         </SelectContent>
       </Select>
-      {hasExtension && (
-        <div
-          className={`absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${interceptorEnabled ? "bg-green-500" : "bg-red-500"}`}
-          title={`Interceptor ${interceptorEnabled ? "enabled" : "disabled"}`}
-        />
-      )}
     </div>
   );
 }

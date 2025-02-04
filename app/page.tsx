@@ -931,25 +931,26 @@ export default function Page() {
       <header className="flex flex-col border-b border-slate-800">
         {/* Mobile/Desktop Layout Container */}
         <div className="w-full flex flex-col md:flex-row items-stretch gap-2 p-4">
-          {/* Environment and Mobile Controls - Full width on mobile, fixed width on desktop */}
           <div className="flex gap-2 md:w-[280px] shrink-0">
             {hasExtension && (
               <button
-              onClick={toggleInterceptor}
-              className={`hidden md:flex h-10 w-10 items-center justify-center rounded-lg transition-colors border ${
-                interceptorEnabled
-                ? "bg-slate-900 hover:bg-slate-800 border-slate-600 text-slate-300"
-                : "bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-500"
-              }`}
-              title={`Interceptor ${interceptorEnabled ? "enabled" : "disabled"}`}
-              >
-              <img
-                src="/icons/icon128.png"
-                alt="queFork"
-                className={`w-6 h-6 transition-all ${
-                interceptorEnabled ? "opacity-100" : "opacity-50 grayscale"
+                onClick={toggleInterceptor}
+                className={`hidden md:flex h-10 w-10 items-center justify-center rounded-lg transition-colors border ${
+                  interceptorEnabled
+                    ? "bg-slate-900 hover:border-blue-900 border-slate-800 border-2 text-slate-300"
+                    : "bg-slate-900 hover:border-blue-900 border-slate-800 border-2 text-slate-500"
                 }`}
-              />
+                title={`Interceptor ${interceptorEnabled ? "enabled" : "disabled"}`}
+              >
+                <img
+                  src="/icons/icon192.png"
+                  alt="queFork"
+                  className={`w-6 h-6 transition-all ${
+                    interceptorEnabled
+                      ? "opacity-100 animate-pulse duration-1200 easeIn"
+                      : "opacity-100 grayscale"
+                  }`}
+                />
               </button>
             )}
             <div className="flex-1">
@@ -959,7 +960,7 @@ export default function Page() {
                 onEnvironmentChange={handleEnvironmentChange}
                 hasExtension={hasExtension}
                 interceptorEnabled={interceptorEnabled}
-                className="h-10 w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 
+                className="h-10 w-full bg-slate-900 hover:bg-slate-800 border-2 border-slate-800 
                   text-slate-300 rounded-lg transition-colors"
               />
             </div>
@@ -990,7 +991,7 @@ export default function Page() {
       </header>
 
       {/* Rest of the layout */}
-      <div className="h-[calc(100vh-3rem)] overflow-hidden bg-slate-800">
+      <div className="h-[calc(100vh-3rem)] overflow-hidden bg-slate-950">
         <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* Sidebar */}
           <ResizablePanel
@@ -1004,7 +1005,7 @@ export default function Page() {
           {/* Main Content */}
           <ResizablePanel
             defaultSize={PANEL_SIZING.MAIN}
-            className="bg-gray-50"
+            className="bg-slate-950"
             response={null}
           >
             <ResizablePanelGroup direction="vertical">

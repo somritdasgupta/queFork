@@ -96,81 +96,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.runtime.sendMessage({
       action: "interceptorStateChanged",
       enabled: interceptorEnabled,
-    });
+    }).catch(console.debug); // Handle potential errors
+
     // Save state
     chrome.storage.local.set({ interceptorEnabled });
-    // Notify web page
-    chrome.tabs.query({}, function (tabs) {
-      tabs.forEach((tab) => {
-        chrome.tabs.sendMessage(tab.id, {
-          type: "INTERCEPTOR_STATE_CHANGED",
-          enabled: interceptorEnabled,
-        });
-      });
+    // Notify web pages with error handling
+    broadcastToTabs({
+      type: "INTERCEPTOR_STATE_CHANGED",
+      enabled: interceptorEnabled,
     });
+
     sendResponse({ success: true });
     return true;
   }
 
   // Simplified request handling
   if (request.action === "executeRequest" && interceptorEnabled) {
-    console.debug("Background received request:", request);
-    const startTime = performance.now();
-
-    // Update stats before making the request
-    updateStats(request.url, "interceptor");
-
-    // Direct fetch to the requested URL (can be localhost)
-    fetch(request.url, {
-      method: request.method || "GET",
-      headers: request.headers,
-      body: request.method !== "GET" ? JSON.stringify(request.body) : undefined,
-    })
-      .then(async (response) => {
-        const contentType = response.headers.get("content-type");
-        let responseData;
-
-        if (contentType?.includes("application/json")) {
-          responseData = await response.json();
-        } else {
-          responseData = await response.text();
-        }
-
-        // Calculate response size
-        const blob = new Blob([JSON.stringify(responseData)]);
-        const size = blob.size;
-
-        // Calculate time taken
-        const endTime = performance.now();
-        const duration = endTime - startTime;
-
-        // Immediately notify popup of stats update
-        chrome.runtime.sendMessage({
-          action: "statsUpdated",
-          stats: requestStats,
-        });
-
-        sendResponse({
-          success: true,
-          response: {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
-            body: responseData,
-            contentType,
-            time: `${Math.round(duration)}ms`,
-            size: formatBytes(size),
-          },
-        });
-      })
-      .catch((error) => {
-        console.error("Fetch error:", error);
-        sendResponse({
-          success: false,
-          error: error.message || "Failed to fetch",
-        });
-      });
-
+    handleRequest(request, sendResponse);
     return true; // Keep channel open for async response
   }
 
@@ -229,34 +171,170 @@ function getTargetForUrl(requestUrl) {
 
 // Add real-time stats update
 function updateStats(url, targetUrl) {
-  // Initialize stats object if not exists
-  if (!requestStats[url]) {
-    requestStats[url] = {
-      count: 0,
-      lastAccessed: null,
-      targets: {},
-    };
-  }
+  try {
+    // Initialize stats object if not exists
+    if (!requestStats[url]) {
+      requestStats[url] = {
+        count: 0,
+        lastAccessed: null,
+        targets: {},
+      };
+    }
 
-  // Update counts
-  requestStats[url].count = (requestStats[url].count || 0) + 1;
-  requestStats[url].lastAccessed = new Date().toISOString();
+    // Update counts
+    requestStats[url].count = (requestStats[url].count || 0) + 1;
+    requestStats[url].lastAccessed = new Date().toISOString();
 
-  // Update target specific counts
-  if (!requestStats[url].targets) {
-    requestStats[url].targets = {};
-  }
-  if (!requestStats[url].targets[targetUrl]) {
-    requestStats[url].targets[targetUrl] = 0;
-  }
-  requestStats[url].targets[targetUrl]++;
+    // Update target specific counts
+    if (!requestStats[url].targets) {
+      requestStats[url].targets = {};
+    }
+    if (!requestStats[url].targets[targetUrl]) {
+      requestStats[url].targets[targetUrl] = 0;
+    }
+    requestStats[url].targets[targetUrl]++;
 
-  // Save to storage and broadcast update
-  chrome.storage.local.set({ requestStats }, () => {
-    // Broadcast to all extension pages
-    chrome.runtime.sendMessage({
-      action: "statsUpdated",
-      stats: requestStats,
+    // Save to storage and broadcast update
+    chrome.storage.local.set({ requestStats }, () => {
+      // Broadcast to all extension pages
+      broadcastMessage({
+        action: "statsUpdated",
+        stats: requestStats,
+      });
     });
-  });
+  } catch (e) {
+    console.error("Failed to update stats:", e);
+  }
 }
+
+// Helper function to safely send messages to tabs
+async function sendMessageToTab(tabId, message) {
+  try {
+    const response = await chrome.tabs.sendMessage(tabId, message);
+    return response;
+  } catch (error) {
+    console.debug(`Failed to send message to tab ${tabId}:`, error);
+    return null;
+  }
+}
+
+// Helper function to broadcast message to all tabs
+async function broadcastToTabs(message) {
+  const tabs = await chrome.tabs.query({});
+  const sendPromises = tabs.map(tab => sendMessageToTab(tab.id, message));
+  await Promise.allSettled(sendPromises);
+}
+
+// Add connection handling for reliable communication
+chrome.runtime.onConnect.addListener((port) => {
+  console.debug('New connection established');
+  
+  port.onDisconnect.addListener(() => {
+    console.debug('Connection disconnected');
+  });
+  
+  port.onMessage.addListener((msg) => {
+    console.debug('Received message on port:', msg);
+  });
+});
+
+// Listen for tab updates to ensure content scripts are ready
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    console.debug('Tab ready:', tabId);
+  }
+});
+
+// Keep track of connected ports
+const connectedPorts = new Set();
+
+// Connection management
+chrome.runtime.onConnect.addListener((port) => {
+  connectedPorts.add(port);
+  
+  port.onDisconnect.addListener(() => {
+    connectedPorts.delete(port);
+  });
+});
+
+// Safe message broadcasting
+async function broadcastMessage(message) {
+  try {
+    // Send to connected ports
+    connectedPorts.forEach(port => {
+      try {
+        port.postMessage(message);
+      } catch (e) {
+        console.debug('Failed to send message to port:', e);
+      }
+    });
+
+    // Send to tabs with error handling
+    const tabs = await chrome.tabs.query({});
+    await Promise.all(tabs.map(async tab => {
+      try {
+        await chrome.tabs.sendMessage(tab.id, message);
+      } catch (e) {
+        // Ignore errors for tabs that can't receive messages
+        console.debug(`Tab ${tab.id} not ready for messages`);
+      }
+    }));
+  } catch (e) {
+    console.debug('Broadcast failed:', e);
+  }
+}
+
+// Separate request handling logic
+async function handleRequest(request, sendResponse) {
+  try {
+    console.debug("Processing request:", request);
+    const startTime = performance.now();
+    
+    // Make the fetch request
+    const response = await fetch(request.url, {
+      method: request.method || "GET",
+      headers: request.headers,
+      body: request.method !== "GET" ? JSON.stringify(request.body) : undefined,
+    });
+
+    // Process response
+    const contentType = response.headers.get("content-type");
+    const responseData = contentType?.includes("application/json") 
+      ? await response.json()
+      : await response.text();
+
+    // Calculate metrics
+    const endTime = performance.now();
+    const duration = Math.round(endTime - startTime);
+    const size = new Blob([JSON.stringify(responseData)]).size;
+
+    // Update stats safely
+    updateStats(request.url, request.targetUrl);
+    
+    // Send response
+    sendResponse({
+      success: true,
+      response: {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: responseData,
+        contentType,
+        time: `${duration}ms`,
+        size: formatBytes(size),
+      },
+    });
+  } catch (error) {
+    console.error("Request failed:", error);
+    sendResponse({
+      success: false,
+      error: error.message || "Request failed",
+    });
+  }
+}
+
+// Initialize connection tracking on startup
+chrome.runtime.onInstalled.addListener(() => {
+  console.debug('Extension installed/updated');
+  connectedPorts.clear();
+});

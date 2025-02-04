@@ -32,6 +32,8 @@ import {
   SquarePlay,
   SquareActivityIcon,
   ChevronDown,
+  WrapTextIcon,
+  Info,
 } from "lucide-react";
 import { ConnectionTab } from "./websocket/connection-tab";
 import { useWebSocket } from "./websocket/websocket-context";
@@ -47,6 +49,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectLabel, SelectItem, SelectGroup } from "@radix-ui/react-select";
+import React from "react";
+import { Label } from "recharts";
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -324,43 +329,113 @@ export function RequestPanel({
     {
       id: "messages",
       label: "Messages",
-      icon: <MessageSquare className="h-4 w-4" />,
+      icon: (
+        <MessageSquare
+          className="h-4 w-4"
+          strokeWidth={1}
+          style={{
+            stroke: "currentColor",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       hidden: !isWebSocketMode,
     },
     {
       id: "params",
       label: "Query",
-      icon: <SquareChartGanttIcon className="h-4 w-4 text-emerald-500" />,
+      icon: (
+        <SquareChartGanttIcon
+          className="h-4 w-4"
+          strokeWidth={1}
+          style={{
+            stroke: "white",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       disabled: isWebSocketMode,
     },
     {
       id: "headers",
       label: "Headers",
-      icon: <SquareCodeIcon className="h-4 w-4 text-blue-500" />,
+      icon: (
+        <SquareCodeIcon
+          className="h-4 w-4"
+          strokeWidth={1}
+          style={{
+            stroke: "white",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       disabled: isWebSocketMode,
     },
     {
       id: "auth",
       label: "Auth",
-      icon: <SquareAsteriskIcon className="h-4 w-4 text-red-500" />,
+      icon: (
+        <SquareAsteriskIcon
+          className="h-4 w-4"
+          strokeWidth={1}
+          style={{
+            stroke: "white",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       disabled: isWebSocketMode,
     },
     {
       id: "body",
       label: "Body",
-      icon: <SquareActivityIcon className="h-4 w-4 text-blue-500" />,
+      icon: (
+        <SquareActivityIcon
+          className="h-4 w-4"
+          strokeWidth={1}
+          style={{
+            stroke: "white",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       disabled: isWebSocketMode,
     },
     {
       id: "pre-request",
       label: "Pre-request",
-      icon: <SquareFunctionIcon className="h-4 w-4 text-yellow-500" />,
+      icon: (
+        <SquareFunctionIcon
+          className="h-4 w-4"
+          strokeWidth={1}
+          style={{
+            stroke: "white",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       disabled: isWebSocketMode,
     },
     {
       id: "tests",
       label: "Tests",
-      icon: <SquarePlay className="h-4 w-4 text-green-500" />,
+      icon: (
+        <SquarePlay
+          className="h-4 w-4"
+          strokeWidth={1}
+          style={{
+            stroke: "white",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       disabled: isWebSocketMode,
     },
   ];
@@ -408,7 +483,7 @@ export function RequestPanel({
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-800">
+    <div className="h-full flex flex-col bg-slate-900">
       <AnimatePresence mode="wait">
         {!isWebSocketMode ? (
           <motion.div
@@ -425,7 +500,7 @@ export function RequestPanel({
                   className="overflow-x-auto scrollbar-none"
                   style={{ WebkitOverflowScrolling: "touch" }}
                 >
-                  <TabsList className="flex w-max min-w-full justify-center rounded-none bg-slate-900 p-0">
+                  <TabsList className="flex w-max min-w-full justify-center rounded-none bg-slate-950 p-0">
                     {tabs.map(
                       (tab) =>
                         !tab.hidden && (
@@ -734,7 +809,7 @@ export function RequestPanel({
                 >
                   <div className="space-y-6">
                     <div className="mx-auto flex justify-center items-center w-16 h-16 bg-gradient-to-b from-slate-100/80 via-white/60 to-slate-50/80 rounded-2xl shadow-inner border-2 border-slate-200/30 backdrop-blur-sm">
-                      <PlugZap2 className="h-8 w-8 text-blue-400" />
+                      <PlugZap2 className="h-8 w-8 text-blue-600" />
                     </div>
                     <div className="space-y-2">
                       <h3 className="text-2xl font-bold text-slate-400">
@@ -881,7 +956,7 @@ function RequestBodyContent({
   return (
     <div className="h-full flex flex-col bg-slate-900">
       {/* Responsive Content Type Header */}
-      <div className="sticky top-0 bg-slate-800 backdrop-blur-sm z-10">
+      <div className="sticky top-0 bg-slate-900 backdrop-blur-sm z-10">
         <div className="p-2 sm:p-3">
           <div className="flex items-center gap-2">
             <div className="flex-1">
@@ -953,7 +1028,15 @@ function RequestBodyContent({
               onClick={handleOverrideContentType}
               className="h-8 sm:h-9 px-3 bg-slate-800/50 border border-slate-700 text-xs"
             >
-              <SquareCodeIcon className="h-3.5 w-3.5 text-blue-400" />
+              <SquareCodeIcon
+                className="h-4 w-4"
+                strokeWidth={1}
+                style={{
+                  stroke: "currentColor",
+                  fill: "yellow",
+                  fillOpacity: 0.2,
+                }}
+              />
               <span className="ml-2 hidden lg:inline">Set Header</span>
             </Button>
 
@@ -964,8 +1047,16 @@ function RequestBodyContent({
                 onClick={handleFormatJson}
                 className="h-8 sm:h-9 px-3 bg-slate-800/50 border border-slate-700 text-xs"
               >
-                <FileJson className="h-3.5 w-3.5 text-emerald-400" />
-                <span className="ml-2 hidden lg:inline">Format</span>
+                <WrapTextIcon
+                  className="h-4 w-4"
+                  strokeWidth={1}
+                  style={{
+                    stroke: "currentColor",
+                    fill: "yellow",
+                    fillOpacity: 0.2,
+                  }}
+                />
+                <span className="ml-2 hidden lg:inline">Wrap Lines</span>
               </Button>
             )}
 
@@ -977,30 +1068,49 @@ function RequestBodyContent({
               }
               className="h-8 sm:h-9 px-3 bg-slate-800/50 border border-slate-700 text-xs"
             >
-              <Eraser className="h-3.5 w-3.5 text-red-400" />
+              <Eraser
+                className="h-4 w-4"
+                strokeWidth={1}
+                style={{
+                  stroke: "currentColor",
+                  fill: "yellow",
+                  fillOpacity: 0.2,
+                }}
+              />
               <span className="ml-2 hidden lg:inline">Clear</span>
             </Button>
           </div>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden bg-slate-800">
+      <div className="flex-1 overflow-hidden bg-slate-900">
         <AnimatePresence mode="wait">
-          {contentTypeOption?.editor === "none" && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="flex items-center justify-center h-full text-slate-500"
-            >
-              <div className="text-center space-y-3 p-6 mt-12 bg-slate-800 rounded-lg border-dashed border-slate-900">
-                <FileText className="h-8 w-8 mx-auto text-slate-400 opacity-50" />
-                <span className="text-sm block">No body content</span>
-                <p className="text-xs text-slate-500">
-                  Select content type above
-                </p>
-              </div>
-            </motion.div>
-          )}
+            {contentTypeOption?.editor === "none" && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="py-16 text-center space-y-6"
+              >
+                <motion.div 
+                  whileHover={{ scale: 1.05 }}
+                  className="inline-flex items-center justify-center p-8 rounded-2xl bg-gradient-to-b from-slate-800/50 to-slate-900/50 shadow-lg border border-slate-800/40"
+                >
+                  <FileText className="h-10 w-10 text-slate-500" />
+                </motion.div>
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-400">No body content required</p>
+                  <p className="text-xs text-slate-500">Select a content type to configure request body</p>
+                </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2.5 px-4 py-3 mx-auto max-w-md bg-slate-900/40 rounded-lg border border-slate-800/60 shadow-sm"
+                >
+                  <Info className="h-4 w-4 text-blue-400/80" />
+                  <span className="text-xs text-slate-400/90">Configure body settings using the content type selector above</span>
+                </motion.div>
+              </motion.div>
+            )}
 
           {contentTypeOption?.editor === "form" && (
             <motion.div

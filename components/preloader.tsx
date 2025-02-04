@@ -13,7 +13,7 @@ export function Preloader() {
       return (
         pathname === "/404" ||
         pathname === "/not-found" ||
-        pathname.includes("not-found") ||
+        pathname?.includes("not-found") ||
         document.title.includes("404") ||
         document
           .querySelector('meta[name="status"]')

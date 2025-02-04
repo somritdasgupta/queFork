@@ -15,6 +15,7 @@ import {
   AlertCircle,
   FileJson,
   List,
+  WrapTextIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collection, SavedRequest } from "@/types";
@@ -42,7 +43,7 @@ const getLanguage = (contentType: string): string => {
 interface TabItem {
   id: string;
   label: string | React.ReactNode;
-  icon?: React.ReactNode; // Icon optional
+  icon?: React.ReactNode;
   disabled?: boolean;
   dropdown?: React.ReactNode; // Dropdown property
 }
@@ -54,7 +55,7 @@ interface RequestResponse {
   body: any;
   time?: string;
   size?: string;
-  intercepted?: boolean; // Add this prop
+  intercepted?: boolean;
   error?: string;
 }
 
@@ -128,12 +129,32 @@ export function ResponsePanel({
       {
         id: "response",
         label: contentType ? `${contentType.toUpperCase()}` : "Response",
-        icon: <FileJson className="h-4 w-4 text-blue-400" />,
+        icon: (
+          <FileJson
+            className="h-4 w-4"
+            strokeWidth="1"
+            style={{
+              stroke: "currentColor",
+              fill: "yellow",
+              fillOpacity: 0.2,
+            }}
+          />
+        ),
       },
       {
         id: "headers",
         label: "Headers",
-        icon: <List className="h-4 w-4 text-emerald-500" />,
+        icon: (
+          <List
+            className="h-4 w-4"
+            strokeWidth={1}
+            style={{
+              stroke: "currentColor",
+              fill: "yellow",
+              fillOpacity: 0.2,
+            }}
+          />
+        ),
       },
       {
         id: "code",
@@ -479,57 +500,72 @@ export function ResponsePanel({
                 {/* Right-side controls with better mobile layout */}
                 <div className="flex items-center gap-2 px-2 h-10">
                   {contentType === "json" && activeTab === "response" && (
-                    <div className="hidden sm:flex items-center gap-2 pr-2 border-r border-slate-700">
-                      <span className="text-xs text-slate-400">Pretty</span>
-                      <Checkbox
-                        id="pretty-print"
-                        checked={isPrettyPrint}
-                        onCheckedChange={(checked) =>
-                          setIsPrettyPrint(checked as boolean)
-                        }
-                        className="h-4 w-4 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 border-slate-200"
-                      />
+                    <div className=" sm:flex items-center gap-2 pr-2 border-r border-slate-700">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsPrettyPrint(!isPrettyPrint)}
+                        className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
+                      >
+                        <WrapTextIcon
+                          className={cn(
+                            "h-4 w-4",
+                            isPrettyPrint && "text-yellow-200"
+                          )}
+                          strokeWidth={1}
+                          style={{
+                            stroke: "currentColor",
+                            fill: "yellow",
+                            fillOpacity: 0.2,
+                          }}
+                        />
+                      </Button>
                     </div>
                   )}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveRequest}
-                      className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
-                    >
-                      <Save className="h-4 w-4 text-slate-400" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={copyToClipboard}
-                      className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
-                    >
-                      {copyStatus[activeTab] ? (
-                        <Check className="h-4 w-4 text-green-400" />
-                      ) : (
-                        <Copy className="h-4 w-4 text-slate-400" />
-                      )}
-                    </Button>
-                    {contentType === "json" && activeTab === "response" && (
-                      <div className="sm:hidden">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setIsPrettyPrint(!isPrettyPrint)}
-                          className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
-                        >
-                          <FileJson
-                            className={cn(
-                              "h-4 w-4 text-slate-400",
-                              isPrettyPrint && "text-blue-400"
-                            )}
-                          />
-                        </Button>
-                      </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSaveRequest}
+                    className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
+                  >
+                    <Save
+                      className="h-4 w-4"
+                      strokeWidth={1}
+                      style={{
+                        stroke: "currentColor",
+                        fill: "yellow",
+                        fillOpacity: 0.2,
+                      }}
+                    />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={copyToClipboard}
+                    className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
+                  >
+                    {copyStatus[activeTab] ? (
+                      <Check
+                        className="h-4 w-4"
+                        strokeWidth={1}
+                        style={{
+                          stroke: "currentColor",
+                          fill: "yellow",
+                          fillOpacity: 0.2,
+                        }}
+                      />
+                    ) : (
+                      <Copy
+                        className="h-4 w-4"
+                        strokeWidth={1}
+                        style={{
+                          stroke: "currentColor",
+                          fill: "yellow",
+                          fillOpacity: 0.2,
+                        }}
+                      />
                     )}
-                  </div>
+                  </Button>
                 </div>
               </div>
             </div>

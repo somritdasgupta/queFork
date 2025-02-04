@@ -215,7 +215,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
     <div className="flex flex-col h-full">
       <div className="bg-slate-950">
         <Tabs className="flex w-full" defaultValue={activePanel}>
-          <TabsList className="flex w-full justify-start rounded-none bg-slate-900 border-b border-slate-700 p-0">
+          <TabsList className="flex w-full justify-start rounded-none bg-slate-950 border-b border-slate-700 p-0">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
@@ -240,7 +240,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
           </TabsList>
         </Tabs>
       </div>
-      <div className="flex-1 overflow-hidden bg-slate-800">
+      <div className="flex-1 overflow-hidden bg-gradient-to-b from-slate-900 to-slate-900/90">
         {tabs.find((tab) => tab.id === activePanel)?.content}
       </div>
     </div>
@@ -262,7 +262,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
         </SheetTrigger>
         <SheetContent
           position="bottom"
-          className="w-[100vw] p-0 h-[88vh] rounded-t-2xl bg-slate-950
+          className="w-[100vw] p-0 h-[88vh] rounded-t-3xl bg-slate-950
             backdrop-blur-xl
             border-t-2 border-slate-800/60
             shadow-[0_-15px_50px_-15px_rgba(0,0,0,0.45)]

@@ -1,95 +1,139 @@
-// Listen for detection messages
-window.addEventListener("message", (event) => {
-  if (event.source !== window) return
+// Message retry configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
 
-  if (event.data.type === "DETECT_EXTENSION") {
-    // Respond to the detection message
-    window.postMessage({ type: "EXTENSION_DETECTED", id: event.data.id }, "*")
-  } else if (event.data.type === "FROM_QUEFORK") {
-    // Handle request interception
-    chrome.runtime.sendMessage(event.data, (response) => {
-      window.postMessage({ type: "FROM_EXTENSION", ...response, id: event.data.id }, "*")
-    })
-  } else if (event.data.type === "INTERCEPTOR_TOGGLE") {
-    chrome.runtime.sendMessage({ 
-      action: "toggleInterceptor", 
-      enabled: event.data.enabled 
-    })
+// Track pending requests
+const pendingRequests = new Map();
+
+// Establish connection with background script
+let port = chrome.runtime.connect({ name: 'content-script' });
+
+// Handle port disconnection and reconnection
+port.onDisconnect.addListener(() => {
+  console.debug('Port disconnected, attempting reconnect...');
+  reconnectPort();
+});
+
+function reconnectPort() {
+  try {
+    port = chrome.runtime.connect({ name: 'content-script' });
+    setupPortListeners();
+  } catch (e) {
+    console.error('Failed to reconnect port:', e);
+    setTimeout(reconnectPort, RETRY_DELAY);
   }
-})
+}
 
-// Listen for messages from the background script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === "TO_QUEFORK") {
-    window.postMessage({ 
-      type: "FROM_EXTENSION", 
-      ...request 
-    }, "*")
-    return true // Keep message channel open for async response
-  }
-})
+function setupPortListeners() {
+  port.onMessage.addListener((message) => {
+    console.debug('Port received message:', message);
+    if (message.type === "FROM_EXTENSION") {
+      window.postMessage(message, "*");
+    }
+  });
+}
 
-// Update request handling
-window.addEventListener("message", (event) => {
-  if (event.source !== window) return
+// Helper function to send message with retries
+async function sendMessageWithRetry(message, retries = MAX_RETRIES) {
+  return new Promise((resolve, reject) => {
+    const attemptSend = (attemptNumber) => {
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          console.debug(`Attempt ${attemptNumber} failed:`, chrome.runtime.lastError);
+          if (attemptNumber < retries) {
+            setTimeout(() => attemptSend(attemptNumber + 1), RETRY_DELAY);
+          } else {
+            reject(new Error('Failed to get response after retries'));
+          }
+          return;
+        }
+        resolve(response);
+      });
+    };
+    attemptSend(1);
+  });
+}
 
-  if (event.data.type === "FROM_QUEFORK" && event.data.action === "executeRequest") {
-    console.debug('Content script received request:', event.data)
-    
-    chrome.runtime.sendMessage(event.data, (response) => {
-      console.debug('Content script received response:', response)
-      
-      if (chrome.runtime.lastError) {
-        console.error('Chrome runtime error:', chrome.runtime.lastError)
+// Message handling from page to extension
+window.addEventListener("message", async (event) => {
+  if (event.source !== window) return;
+
+  try {
+    switch (event.data.type) {
+      case "DETECT_EXTENSION":
         window.postMessage({ 
-          type: "FROM_EXTENSION", 
-          action: "executeResponse",
-          id: event.data.id,
-          error: chrome.runtime.lastError.message 
-        }, "*")
-        return
-      }
+          type: "EXTENSION_DETECTED", 
+          id: event.data.id 
+        }, "*");
+        break;
 
-      window.postMessage({ 
-        type: "FROM_EXTENSION", 
-        action: "executeResponse",
-        id: event.data.id,
-        ...response 
-      }, "*")
-    })
-    return true // Keep message channel open
+      case "FROM_QUEFORK":
+        if (event.data.action === "executeRequest") {
+          try {
+            const requestId = event.data.id;
+            pendingRequests.set(requestId, event.data);
+            
+            const response = await sendMessageWithRetry(event.data);
+            
+            window.postMessage({
+              type: "FROM_EXTENSION",
+              action: "executeResponse",
+              id: requestId,
+              ...response
+            }, "*");
+            
+            pendingRequests.delete(requestId);
+          } catch (error) {
+            console.error('Request execution failed:', error);
+            window.postMessage({
+              type: "FROM_EXTENSION",
+              action: "executeResponse",
+              id: event.data.id,
+              success: false,
+              error: error.message
+            }, "*");
+          }
+        }
+        break;
+
+      case "INTERCEPTOR_TOGGLE":
+        await sendMessageWithRetry({
+          action: "toggleInterceptor",
+          enabled: event.data.enabled
+        });
+        break;
+    }
+  } catch (error) {
+    console.error('Message handling failed:', error);
   }
-})
-
-// Replace inline script injection with external script
-const injectScript = () => {
-  const script = document.createElement('script');
-  script.src = chrome.runtime.getURL('inject.js');
-  (document.head || document.documentElement).appendChild(script);
-  script.onload = () => script.remove();
-};
-
-injectScript();
+});
 
 // Listen for messages from background script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "INTERCEPTOR_STATE_CHANGED") {
-    // Forward to webpage
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === "TO_QUEFORK") {
     window.postMessage({
-      type: "INTERCEPTOR_STATE_CHANGED",
-      enabled: message.enabled
+      type: "FROM_EXTENSION",
+      ...request
     }, "*");
+    return true;
   }
 });
 
-// Listen for messages from webpage
-window.addEventListener("message", (event) => {
-  if (event.data.type === "INTERCEPTOR_TOGGLE") {
-    // Forward to background script
-    chrome.runtime.sendMessage({
-      action: "toggleInterceptor",
-      enabled: event.data.enabled
-    });
-  }
+// Inject the script and handle cleanup
+function injectScript() {
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('inject.js');
+  script.onload = () => script.remove();
+  (document.head || document.documentElement).appendChild(script);
+}
+
+// Clean up on unload
+window.addEventListener('unload', () => {
+  port.disconnect();
+  pendingRequests.clear();
 });
+
+// Initialize
+injectScript();
+setupPortListeners();
 

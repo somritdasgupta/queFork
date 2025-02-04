@@ -9,7 +9,7 @@
     "declarativeNetRequest",
     "scripting",
     "webRequest",
-    "action",
+    "activeTab",
     "sidePanel" 
   ],
   "host_permissions": [
@@ -41,8 +41,8 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://unpkg.com;",
-    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval'; child-src 'self'"
+    "extension_pages": "script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline' https://unpkg.com;",
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline'; child-src 'self'"
   },
   "web_accessible_resources": [{
     "resources": [

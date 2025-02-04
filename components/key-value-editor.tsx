@@ -758,7 +758,7 @@ export function KeyValueEditor({
           <div
             className={cn(
               "absolute bg-slate-900/80 right-full top-0 flex items-center transition-all duration-900 ease overflow-hidden",
-              isExpanded ? "w-[175px] opacity-100" : "w-0 opacity-0"
+              isExpanded ? "w-[115px] opacity-100" : "w-0 opacity-0"
             )}
           >
             {actionButtons.map((button, i) => (
@@ -915,12 +915,13 @@ export function KeyValueEditor({
   };
 
   return (
-    <div className="flex flex-col max-h-[36vh] relative select-none">
+    <div className="flex flex-col max-h-[36vh] relative">
       <div
-        className="flex-1 overflow-auto touch-pan-y overscroll-y-contain select-none"
+        className="flex-1 overflow-auto -webkit-overflow-scrolling-touch scrollbar-none"
         style={{
-          WebkitOverflowScrolling: "touch",
           height: "calc(36vh - 58px)",
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
         }}
       >
         {isBulkMode ? (
@@ -929,24 +930,23 @@ export function KeyValueEditor({
             onChange={(e) => setBulkContent(e.target.value)}
             placeholder={`• Format: key: value\n• Examples:\n  • api_key: your-key-here\n  • base_url: https://api.example.com\n  • disabled_key: #key: value`}
             className="w-full min-h-[300px] border border-slate-700 text-xs 
-              rounded-none bg-slate-950 touch-pan-y select-none
+              rounded-none bg-slate-950
               text-slate-300 placeholder:text-slate-500
               focus:outline-none focus:ring-1 focus:ring-slate-700
               font-mono"
           />
         ) : (
-          <div className="min-h-full w-full touch-pan-y select-none">
+          <div className="min-h-full w-full">
             {renderDndContent()}
           </div>
         )}
       </div>
 
-      {/* Footer */}
-      <div className="flex-none flex border-t border-slate-700 bg-slate-900/50 backdrop-blur-sm h-8">
+      <div className="flex-none rounded-none flex border-t border-slate-700 bg-slate-900/50 backdrop-blur-sm h-8">
         <Button
           variant="ghost"
           onClick={handleAddPair}
-          className="flex-1 h-8 rounded-none text-slate-400 hover:bg-slate-900/50 hover:text-slate-300 
+          className="flex-1 h-8 rounded-none bg-slate-950 text-blue-400 hover:bg-slate-950 hover:text-slate-300 
             border-r border-slate-700 transition-colors"
         >
           <span className="text-xs">
@@ -974,10 +974,10 @@ export function KeyValueEditor({
             }
           }}
           className={cn(
-            "h-8 w-full w-[32px] sm:w-[128px] transition-colors flex items-center justify-center gap-2",
+            "h-8 w-full w-[32px] sm:w-[128px] transition-colors flex items-center rounded-none justify-center gap-2 bg-slate-950",
             isBulkMode
-              ? "text-blue-400 hover:text-blue-500 hover:bg-transparent"
-              : "text-slate-400 hover:bg-transparent hover:text-slate-300"
+              ? "text-blue-400 bg-slate-950 hover:text-slate-300 hover:bg-slate-950"
+              : "text-blue-400 bg-slate-950 hover:bg-slate-950 hover:text-slate-300"
           )}
         >
           {isBulkMode ? (

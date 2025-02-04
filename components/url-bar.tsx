@@ -140,12 +140,12 @@ const AnimatedPlaceholder = ({ text, direction }: PlaceholderTextProps) => {
               duration: 0.1, // duration
             }}
             className={cn(
-              "font-mono tracking-tighter text-blue-400/90",
-              "font-medium antialiased"
+              "font-mono tracking-tighter text-slate-600/80",
+              "font-bold antialiased"
             )}
             style={{
               fontFamily: "JetBrains Mono, Menlo, Monaco, Consolas, monospace",
-              textShadow: "0 0 10px rgba(16, 185, 129, 0.2)", // Green glow effect
+              textShadow: "0 0 10px rgba(16, 61, 185, 0.2)", // Green glow effect
             }}
           >
             {char === " " ? "\u00A0" : char}
@@ -171,7 +171,7 @@ export function UrlBar({
   onWebSocketToggle,
   hasExtension = false,
 }: UrlBarProps) {
-  // 1. Group all hooks at the top
+  // 1. Grouped all hooks at the top
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [showEnvSuggestions, setShowEnvSuggestions] = useState(false);
@@ -192,7 +192,7 @@ export function UrlBar({
     url: wsUrl,
   } = useWebSocket();
 
-  // 2. Move all useMemo hooks together
+  // 2. Moved all useMemo hooks together
   const urlType = useMemo(() => detectUrlType(url), [url]);
   const wsProtocol = useMemo(() => detectWebSocketProtocol(url), [url]);
   const filteredVariables = useMemo(() => {
@@ -230,7 +230,7 @@ export function UrlBar({
     [propsOnUrlChange]
   );
 
-  // 3. Group useCallback hooks
+  // 3. Also Grouped useCallback hooks :)
   const handleUrlChange = (newUrl: string) => {
     const urlProtocol = detectUrlType(newUrl);
     propsOnUrlChange(newUrl);
@@ -504,10 +504,10 @@ export function UrlBar({
                   : isLoading)
               }
               className={cn(
-                "w-full h-10 p-4 transition-all relative border border-slate-700",
+                "w-full h-10 p-4 transition-all relative border-2 border-slate-800",
                 urlType === "websocket"
                   ? isConnected
-                    ? "bg-blue-500 hover:bg-red-600 text-white after:absolute after:inset-0 after:animate-pulse"
+                    ? "text-white after:absolute after:inset-0 after:animate-pulse"
                     : "bg-slate-900 hover:bg-slate-700 text-slate-400"
                   : isLoading
                     ? "bg-slate-900 text-slate-400 cursor-not-allowed overflow-hidden"
@@ -536,6 +536,12 @@ export function UrlBar({
                     "transition-transform duration-200",
                     "group-hover:translate-x-1"
                   )}
+                  strokeWidth={1}
+                  style={{
+                    stroke: "white",
+                    fill: "yellow",
+                    fillOpacity: 0.25,
+                  }}
                 />
               )}
             </Button>
@@ -596,18 +602,18 @@ export function UrlBar({
           }}
           className={cn(
             "pr-20 font-mono bg-slate-900",
-            "border border-slate-700 text-slate-500 rounded-lg",
+            "border border-slate-800 text-slate-500 rounded-lg",
             "transition-all duration-300 ease-out",
             "placeholder:text-slate-500 placeholder:font-mono",
-            "focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/30",
+            "focus:ring-2 focus:ring-blue-500/20 focus:border-slate-800/30",
             `focus:border-${getMethodColor(method)}-500/50`,
             !isValidUrl(url) && url && "border-red-500/50",
             "text-xs sm:text-sm",
             "tracking-tight leading-relaxed",
             isConnected && "opacity-50 cursor-not-allowed bg-slate-800",
-            isIdle && !url && "border-blue-500/20",
+            isIdle && !url && "border-blue-800/80 border-2 animate-pulse",
             isTyping &&
-              "border-blue-500/30 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]"
+              "border-slate-800/30 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]"
           )}
           style={{
             fontFamily: "JetBrains Mono, Menlo, Monaco, Consolas, monospace",
@@ -628,14 +634,14 @@ export function UrlBar({
       {isIdle && !url && (
         <motion.div
           animate={{
-            opacity: [0.1, 0.15, 0.1],
+            opacity: [1, 0.15, 0.1],
           }}
           transition={{
             duration: 3,
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="absolute inset-0 -z-10 bg-blue-500/5 rounded-lg blur-lg"
+          className="absolute inset-0 -z-10 bg-white rounded-lg blur-lg"
         />
       )}
 
@@ -653,8 +659,8 @@ export function UrlBar({
       </div>
 
       {showEnvSuggestions && (
-        <div className="absolute top-full left-0 z-50 w-full mt-1 rounded-lg border border-slate-700 bg-slate-900 shadow-md max-h-[300px] overflow-y-auto">
-          <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-2">
+        <div className="absolute top-full left-0 z-50 w-full mt-1 rounded-lg border border-slate-800 bg-slate-900 shadow-md max-h-[300px] overflow-y-auto">
+          <div className="sticky top-0 bg-slate-900 border-b border-slate-800 p-2">
             <Input
               value={searchPrefix}
               onChange={(e) => setSearchPrefix(e.target.value)}
@@ -723,7 +729,7 @@ export function UrlBar({
                     </div>
 
                     <div className="flex items-center gap-2 opacity-0 translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0">
-                      <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border border-slate-700/50 bg-slate-800/50 px-2 font-mono text-[10px] font-medium text-slate-400">
+                      <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border border-slate-800/50 bg-slate-800/50 px-2 font-mono text-[10px] font-medium text-slate-400">
                         enter
                       </kbd>
                     </div>
@@ -738,7 +744,7 @@ export function UrlBar({
   );
 
   const renderProtocolBadge = (protocol: string) => (
-    <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg px-2 h-10">
+    <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg px-2 h-10">
       <Badge
         variant="outline"
         className={cn(
@@ -879,20 +885,20 @@ export function UrlBar({
       ) : (
         <div
           className={cn(
-            "flex items-center bg-slate-900 border border-slate-700 rounded-lg px-0",
+            "flex items-center bg-slate-900 border border-slate-800 rounded-lg px-0",
             isMobile ? "max-w-[60px]" : ""
           )}
         >
           <Select value={method} onValueChange={onMethodChange}>
             <SelectTrigger
               className={cn(
-                "w-auto min-w-[70px] max-w-[100px] font-mono font-black bg-transparent border-0 text-slate-400 hover:text-slate-300 gap-2",
+                "w-auto min-w-[70px] max-w-[100px] font-mono font-black bg-transparent border border-slate-800 text-slate-400 hover:text-slate-300 gap-2",
                 `text-xs text-${getMethodColor(method)}-400 py-1`
               )}
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="border border-slate-700 bg-slate-800 font-mono font-black">
+            <SelectContent className="border border-slate-800 bg-slate-800 font-mono font-black text-xs">
               {[
                 { value: "GET", color: "emerald" },
                 { value: "POST", color: "blue" },
