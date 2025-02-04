@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { RequestResponse } from "@/types";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PANEL_SIZING, type PanelState } from "@/lib/constants";
+import { PANEL_SIZING } from "@/lib/constants";
 
 interface ResponsePanelProps {
   response: RequestResponse | null;
@@ -54,7 +54,7 @@ const ResizablePanel = React.forwardRef<
       ref={panelRef}
       className={cn(
         "relative flex flex-col overflow-hidden select-none",
-        "bg-slate-950",
+        "bg-slate-900",
         "transition-all duration-300 ease-out",
         !response && "opacity-75",
         className
@@ -113,7 +113,7 @@ const ResizableHandle = ({
       className={cn(
         "group relative flex items-center justify-center",
         "h-1 w-full cursor-pointer select-none",
-        "bg-slate-800 border-y border-slate-700",
+        "bg-slate-900 border-y border-slate-700",
         isTransitioning && "pointer-events-none",
         className
       )}

@@ -49,7 +49,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectLabel, SelectItem, SelectGroup } from "@radix-ui/react-select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectGroup,
+} from "@radix-ui/react-select";
 import React from "react";
 import { Label } from "recharts";
 
@@ -332,7 +340,7 @@ export function RequestPanel({
       icon: (
         <MessageSquare
           className="h-4 w-4"
-          strokeWidth={1}
+          strokeWidth={2}
           style={{
             stroke: "currentColor",
             fill: "yellow",
@@ -348,9 +356,9 @@ export function RequestPanel({
       icon: (
         <SquareChartGanttIcon
           className="h-4 w-4"
-          strokeWidth={1}
+          strokeWidth={2}
           style={{
-            stroke: "white",
+            stroke: "currentColor",
             fill: "yellow",
             fillOpacity: 0.2,
           }}
@@ -364,9 +372,9 @@ export function RequestPanel({
       icon: (
         <SquareCodeIcon
           className="h-4 w-4"
-          strokeWidth={1}
+          strokeWidth={2}
           style={{
-            stroke: "white",
+            stroke: "currentColor",
             fill: "yellow",
             fillOpacity: 0.2,
           }}
@@ -380,9 +388,9 @@ export function RequestPanel({
       icon: (
         <SquareAsteriskIcon
           className="h-4 w-4"
-          strokeWidth={1}
+          strokeWidth={2}
           style={{
-            stroke: "white",
+            stroke: "currentColor",
             fill: "yellow",
             fillOpacity: 0.2,
           }}
@@ -396,9 +404,9 @@ export function RequestPanel({
       icon: (
         <SquareActivityIcon
           className="h-4 w-4"
-          strokeWidth={1}
+          strokeWidth={2}
           style={{
-            stroke: "white",
+            stroke: "currentColor",
             fill: "yellow",
             fillOpacity: 0.2,
           }}
@@ -412,9 +420,9 @@ export function RequestPanel({
       icon: (
         <SquareFunctionIcon
           className="h-4 w-4"
-          strokeWidth={1}
+          strokeWidth={2}
           style={{
-            stroke: "white",
+            stroke: "currentColor",
             fill: "yellow",
             fillOpacity: 0.2,
           }}
@@ -428,9 +436,9 @@ export function RequestPanel({
       icon: (
         <SquarePlay
           className="h-4 w-4"
-          strokeWidth={1}
+          strokeWidth={2}
           style={{
-            stroke: "white",
+            stroke: "currentColor",
             fill: "yellow",
             fillOpacity: 0.2,
           }}
@@ -472,8 +480,6 @@ export function RequestPanel({
   );
 
   const handleResponse = (response: any) => {
-    // Your existing response handling code...
-
     // Dispatch response event
     window.dispatchEvent(
       new CustomEvent("apiResponse", {
@@ -483,7 +489,7 @@ export function RequestPanel({
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-900">
+    <div className="h-full flex flex-col bg-slate-900/70 overflow-hidden">
       <AnimatePresence mode="wait">
         {!isWebSocketMode ? (
           <motion.div
@@ -492,15 +498,18 @@ export function RequestPanel({
             initial="initial"
             animate="animate"
             exit="exit"
-            className="flex-1"
+            className="flex-1 overflow-hidden"
           >
-            <Tabs defaultValue="params" className="flex-1 flex flex-col">
-              <div className="bg-slate-900 border-b border-slate-700">
+            <Tabs
+              defaultValue="params"
+              className="flex-1 flex flex-col h-full overflow-hidden"
+            >
+              <div className="bg-slate-900/50 border-b border-slate-700 flex-shrink-0">
                 <div
                   className="overflow-x-auto scrollbar-none"
                   style={{ WebkitOverflowScrolling: "touch" }}
                 >
-                  <TabsList className="flex w-max min-w-full justify-center rounded-none bg-slate-950 p-0">
+                  <TabsList className="flex w-max min-w-full justify-center rounded-none bg-slate-900/50 p-0">
                     {tabs.map(
                       (tab) =>
                         !tab.hidden && (
@@ -540,8 +549,8 @@ export function RequestPanel({
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 bg-slate-800">
-                <div className="p-0">
+              <ScrollArea className="flex-1 overflow-auto">
+                <div className="h-full">
                   {/* Query Parameters Tab */}
                   <TabsContent value="params" className="m-0 min-h-0">
                     <div className="bg-slate-900 flex-1">
@@ -805,7 +814,7 @@ export function RequestPanel({
                   initial="initial"
                   animate="animate"
                   exit="exit"
-                  className="h-full flex flex-col items-center justify-center text-center border-slate-700 bg-slate-800"
+                  className="h-full flex flex-col items-center justify-center text-center border-slate-700 bg-slate-900"
                 >
                   <div className="space-y-6">
                     <div className="mx-auto flex justify-center items-center w-16 h-16 bg-gradient-to-b from-slate-100/80 via-white/60 to-slate-50/80 rounded-2xl shadow-inner border-2 border-slate-200/30 backdrop-blur-sm">
@@ -1084,40 +1093,46 @@ function RequestBodyContent({
       </div>
       <div className="flex-1 overflow-hidden bg-slate-900">
         <AnimatePresence mode="wait">
-            {contentTypeOption?.editor === "none" && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="py-16 text-center space-y-6"
+          {contentTypeOption?.editor === "none" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="py-16 text-center space-y-6"
+            >
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="inline-flex items-center justify-center p-8 rounded-2xl bg-gradient-to-b from-slate-800/50 to-slate-900/50 shadow-lg border border-slate-800/40"
               >
-                <motion.div 
-                  whileHover={{ scale: 1.05 }}
-                  className="inline-flex items-center justify-center p-8 rounded-2xl bg-gradient-to-b from-slate-800/50 to-slate-900/50 shadow-lg border border-slate-800/40"
-                >
-                  <FileText className="h-10 w-10 text-slate-500" />
-                </motion.div>
-                <div className="space-y-2">
-                  <p className="text-sm text-slate-400">No body content required</p>
-                  <p className="text-xs text-slate-500">Select a content type to configure request body</p>
-                </div>
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2.5 px-4 py-3 mx-auto max-w-md bg-slate-900/40 rounded-lg border border-slate-800/60 shadow-sm"
-                >
-                  <Info className="h-4 w-4 text-blue-400/80" />
-                  <span className="text-xs text-slate-400/90">Configure body settings using the content type selector above</span>
-                </motion.div>
+                <FileText className="h-10 w-10 text-slate-500" />
               </motion.div>
-            )}
+              <div className="space-y-2">
+                <p className="text-sm text-slate-400">
+                  No body content required
+                </p>
+                <p className="text-xs text-slate-500">
+                  Select a content type to configure request body
+                </p>
+              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2.5 px-4 py-3 mx-auto max-w-md bg-slate-900/40 rounded-lg border border-slate-800/60 shadow-sm"
+              >
+                <Info className="h-4 w-4 text-blue-400/80" />
+                <span className="text-xs text-slate-400/90">
+                  Configure body settings using the content type selector above
+                </span>
+              </motion.div>
+            </motion.div>
+          )}
 
           {contentTypeOption?.editor === "form" && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="h-full"
+              className="h-full overflow-auto"
             >
               <KeyValueEditor
                 pairs={Array.isArray(body.content) ? body.content : []}
@@ -1135,7 +1150,7 @@ function RequestBodyContent({
                 onAddToEnvironment={onAddToEnvironment}
                 expandedItemId={expandedItemId}
                 onExpandedChange={setExpandedItemId}
-                className="border-none rounded-none"
+                className="border-none rounded-none min-h-full"
                 isMobile={true}
               />
             </motion.div>

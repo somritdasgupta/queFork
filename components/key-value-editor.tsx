@@ -162,13 +162,15 @@ const KeyValueInput = React.memo(
           onPaste={props.onPaste}
           placeholder={props.placeholder}
           className={cn(
-            "h-8 bg-slate-900 border-slate-700 text-slate-300 select-none",
-            "focus:border-slate-600 focus:ring-slate-700",
+            "h-8 bg-transparent text-slate-300 select-none",
+            "border border-slate-800/60 focus:border-slate-600",
             "rounded-none text-[12px] leading-4 py-1",
             typeof window !== "undefined" && window.innerWidth < 640
               ? "pl-3"
               : "pl-9",
             "select-none touch-none",
+            "focus:ring-1 focus:ring-slate-600/50",
+            "transition-all duration-150",
             props.className
           )}
           inputMode="text"
@@ -284,6 +286,7 @@ export function KeyValueEditor({
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const navigableElements = useRef<NavigableElement[]>([]);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [containerHeight, setContainerHeight] = useState("auto");
 
   const { setFocus } = useKeyboardNavigation(
     navigableElements.current,
@@ -518,38 +521,44 @@ export function KeyValueEditor({
     index: number,
     field: "key" | "value"
   ) => {
-    e.preventDefault();
     const pastedText = e.clipboardData.getData("text").trim();
 
+    // Try smart paste first for special formats
     try {
-      // Try to parse as JSON first (our smart copy format)
       const parsed = JSON.parse(pastedText);
       if (parsed.key !== undefined && parsed.value !== undefined) {
+        // Smart paste - update both fields
         const newPairs = pairs.map((p, i) =>
           i === index ? { ...p, key: parsed.key, value: parsed.value } : p
         );
         onChange(newPairs);
         toast.success("Pasted key-value pair");
+        e.preventDefault();
         return;
       }
     } catch {
-      // If not JSON, try the colon format
+      // Try colon format
       if (pastedText.includes(":")) {
         const [key, ...valueParts] = pastedText.split(":");
         const value = valueParts.join(":").trim();
 
+        // Smart paste - update both fields
         const newPairs = pairs.map((p, i) =>
           i === index ? { ...p, key: key.trim(), value } : p
         );
         onChange(newPairs);
         toast.success("Pasted key-value pair");
+        e.preventDefault();
+        return;
+      }
+
+      // Regular paste - only update the current field
+      if (field === "key" || field === "value") {
+        updatePair(index, field, pastedText);
+        // Don't prevent default and don't show toast for normal paste
         return;
       }
     }
-
-    // Fallback to normal paste in the specific field
-    updatePair(index, field, pastedText);
-    toast.success(`Pasted as ${field}`);
   };
 
   const handleSmartCopy = (index: number) => {
@@ -729,15 +738,14 @@ export function KeyValueEditor({
           !hasContent && isSinglePair && "text-red-400/50"
         ),
         title: isSinglePair ? "Clear" : "Remove",
-        // Simplified disabled logic
-        disabled: false, // Never disable in environment editor
+        disabled: false,
       },
     ];
 
     return (
       <div className="flex items-center gap-1 relative">
         {/* Desktop buttons */}
-        <div className="hidden sm:flex items-center gap-1 p-0.5">
+        <div className="hidden sm:flex items-center gap-1 px-1">
           {actionButtons.map((button, i) => (
             <Button
               key={i}
@@ -757,7 +765,7 @@ export function KeyValueEditor({
         <div className="sm:hidden">
           <div
             className={cn(
-              "absolute bg-slate-900/80 right-full top-0 flex items-center transition-all duration-900 ease overflow-hidden",
+              "absolute bg-slate-900 right-full flex items-center transition-all duration-900 ease overflow-hidden",
               isExpanded ? "w-[115px] opacity-100" : "w-0 opacity-0"
             )}
           >
@@ -792,19 +800,6 @@ export function KeyValueEditor({
         </div>
       </div>
     );
-  };
-
-  // Calculate height based on number of pairs
-  const getEditorHeight = () => {
-    const pairHeight = 32; // Height of each pair row in pixels
-    const minHeight = pairHeight; // Minimum height for 1 pair
-    const maxPairs = 6; // Maximum pairs before scrolling
-    const currentPairs = pairs.length;
-
-    if (currentPairs <= maxPairs) {
-      return `${currentPairs * pairHeight}px`;
-    }
-    return `${maxPairs * pairHeight}px`;
   };
 
   const getActivePairsCount = () => {
@@ -914,82 +909,203 @@ export function KeyValueEditor({
     );
   };
 
+  // Calculate the width of 4 action buttons (28px each) plus gaps (4px each)
+  const ACTION_BUTTONS_WIDTH = "132px"; // (7 * 4 buttons = 28px) + (4px * 3 gaps) = 132px
+
+  useEffect(() => {
+    const updateHeight = () => {
+      const calculatedHeight = Math.min(
+        pairs.length * 32 + 36,
+        window.innerHeight * 0.5
+      );
+      setContainerHeight(`${calculatedHeight}px`);
+    };
+
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
+  }, [pairs.length]);
+
   return (
-    <div className="flex flex-col max-h-[36vh] relative">
-      <div
-        className="flex-1 overflow-auto -webkit-overflow-scrolling-touch scrollbar-none"
-        style={{
-          height: "calc(36vh - 58px)",
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none'
-        }}
-      >
+    <div
+      className="flex flex-col"
+      style={{
+        minHeight: containerHeight,
+        maxHeight: "50vh",
+      }}
+    >
+      <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
         {isBulkMode ? (
           <Textarea
             value={bulkContent}
             onChange={(e) => setBulkContent(e.target.value)}
             placeholder={`• Format: key: value\n• Examples:\n  • api_key: your-key-here\n  • base_url: https://api.example.com\n  • disabled_key: #key: value`}
-            className="w-full min-h-[300px] border border-slate-700 text-xs 
-              rounded-none bg-slate-950
+            className="w-full h-full min-h-[200px] bg-transparent
               text-slate-300 placeholder:text-slate-500
-              focus:outline-none focus:ring-1 focus:ring-slate-700
-              font-mono"
+              focus:outline-none focus:ring-1 focus:ring-slate-600/50 
+              border border-slate-800/60 focus:border-slate-600
+              font-mono resize-none transition-all duration-150"
           />
         ) : (
-          <div className="min-h-full w-full">
-            {renderDndContent()}
+          <div className="w-full h-full">
+            {isMounted && (
+              <DndContextClient
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+                modifiers={restrictToVerticalAxis.modifiers}
+              >
+                <SortableContextClient
+                  items={pairs.map((p) => p.id || `temp-${p.key}`)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-[1px]">
+                    {pairs.map((pair, index) => (
+                      <SortableItem
+                        key={pair.id || `stable-${index}`}
+                        pair={pair}
+                        index={index}
+                      >
+                        <div className="flex w-full hover:bg-slate-800/50 transition-colors group border border-slate-800/40 hover:border-slate-700/40">
+                          <div
+                            className={cn(
+                              "grid gap-[1px] flex-1",
+                              showDescription
+                                ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]"
+                                : "grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
+                              !pair.enabled && "opacity-50"
+                            )}
+                          >
+                            <KeyValueInput
+                              key={`key-${pair.id}-${index}`}
+                              value={pair.key}
+                              onChange={(value: string) =>
+                                updatePair(index, "key", value)
+                              }
+                              placeholder="Key"
+                              icon={Key}
+                              onPaste={(e) => handleSmartPaste(e, index, "key")}
+                              className="text-xs flex-1 bg-transparent 
+                                border-0 focus:ring-0
+                                text-slate-300 placeholder:text-slate-500 
+                                transition-colors group-hover:bg-slate-800/50"
+                              pairId={pair.id || `temp-${index}`}
+                              navigableElements={navigableElements}
+                              setFocus={setFocus}
+                            />
+                            <KeyValueInput
+                              key={`value-${pair.id}-${index}`}
+                              value={pair.value}
+                              onChange={(value: string) =>
+                                updatePair(index, "value", value)
+                              }
+                              placeholder="Value"
+                              icon={Type}
+                              onPaste={(e) =>
+                                handleSmartPaste(e, index, "value")
+                              }
+                              className="text-xs flex-1 bg-transparent 
+                                border-0 focus:ring-0
+                                text-slate-300 placeholder:text-slate-500 
+                                transition-colors group-hover:bg-slate-800/50"
+                              pairId={pair.id || `temp-${index}`}
+                              isValue
+                              navigableElements={navigableElements}
+                              setFocus={setFocus}
+                            />
+                            {showDescription && (
+                              <KeyValueInput
+                                key={`desc-${pair.id}-${index}`}
+                                value={pair.description || ""}
+                                onChange={(value: string) =>
+                                  updatePair(index, "description", value)
+                                }
+                                placeholder="Description"
+                                icon={AlignLeft}
+                                className="text-xs flex-1 bg-transparent 
+                                  border-0 focus:ring-0
+                                  text-slate-300 placeholder:text-slate-500 
+                                  transition-colors group-hover:bg-slate-800/50"
+                                pairId={pair.id || `temp-${index}`}
+                                navigableElements={navigableElements}
+                                setFocus={setFocus}
+                              />
+                            )}
+                          </div>
+                          {renderItemActions(pair, index)}
+                        </div>
+                      </SortableItem>
+                    ))}
+                  </div>
+                </SortableContextClient>
+              </DndContextClient>
+            )}
           </div>
         )}
       </div>
 
-      <div className="flex-none rounded-none flex border-t border-slate-700 bg-slate-900/50 backdrop-blur-sm h-8">
+      <div className="flex-none flex border-t border-slate-800 bg-slate-900/90 backdrop-blur-sm divide-x divide-slate-800">
         <Button
           variant="ghost"
           onClick={handleAddPair}
-          className="flex-1 h-8 rounded-none bg-slate-950 text-blue-400 hover:bg-slate-950 hover:text-slate-300 
-            border-r border-slate-700 transition-colors"
+          className="flex-1 h-9 rounded-none hover:bg-slate-800 text-blue-400 
+            bg-slate-900/50 border-slate-800
+            transition-all flex items-center justify-center gap-2
+            hover:border-slate-700 group"
         >
-          <span className="text-xs">
+          <Plus className="h-4 w-4 group-hover:scale-110 transition-transform" />
+          <span className="text-xs font-medium">
             {pairs.length === 0 ? "Add First Item" : addButtonText}
           </span>
           <Badge
             variant="secondary"
-            className="text-[10px] py-0 h-4 bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 transition-colors border border-slate-700/50"
+            className="ml-2 text-[10px] py-0 h-4 bg-slate-800 text-slate-400 
+              transition-colors border border-slate-700/50"
           >
             {getActivePairsCount()}
           </Badge>
         </Button>
+
+        {/* Desktop bulk edit button */}
         <Button
           variant="ghost"
-          onClick={() => {
-            if (isBulkMode) handleBulkEdit();
-            else {
-              setBulkContent(
-                pairs
-                  .filter((p) => p.key || p.value)
-                  .map((p) => `${!p.enabled ? "#" : ""}${p.key}: ${p.value}`)
-                  .join("\n")
-              );
-              setIsBulkMode(true);
-            }
-          }}
+          onClick={handleBulkEdit}
           className={cn(
-            "h-8 w-full w-[32px] sm:w-[128px] transition-colors flex items-center rounded-none justify-center gap-2 bg-slate-950",
-            isBulkMode
-              ? "text-blue-400 bg-slate-950 hover:text-slate-300 hover:bg-slate-950"
-              : "text-blue-400 bg-slate-950 hover:bg-slate-950 hover:text-slate-300"
+            "h-9 transition-all rounded-none justify-center gap-2",
+            "bg-slate-900/50 hover:bg-slate-800 text-blue-400",
+            "hidden sm:flex w-[132px]",
+            "border-slate-800 hover:border-slate-700",
+            "group"
           )}
         >
           {isBulkMode ? (
             <>
-              <List className="h-4 w-4" />
-              <span className="hidden sm:inline text-xs">Exit Bulk</span>
+              <List className="h-4 w-4 group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-medium">Exit Bulk</span>
             </>
           ) : (
             <>
-              <ListPlus className="h-4 w-4" />
-              <span className="hidden sm:inline text-xs">Bulk Edit</span>
+              <ListPlus className="h-4 w-4 group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-medium">Bulk Edit</span>
             </>
+          )}
+        </Button>
+
+        {/* Mobile bulk edit button */}
+        <Button
+          variant="ghost"
+          onClick={handleBulkEdit}
+          className={cn(
+            "h-9 px-4 transition-all rounded-none justify-center",
+            "bg-slate-900/50 hover:bg-slate-800 text-blue-400",
+            "sm:hidden border-slate-800 hover:border-slate-700",
+            "group"
+          )}
+        >
+          {isBulkMode ? (
+            <List className="h-4 w-4 group-hover:scale-110 transition-transform" />
+          ) : (
+            <ListPlus className="h-4 w-4 group-hover:scale-110 transition-transform" />
           )}
         </Button>
       </div>

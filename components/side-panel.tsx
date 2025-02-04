@@ -139,7 +139,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
       icon: (
         <BoxesIcon
           className="h-4 w-4"
-          strokeWidth={1}
+          strokeWidth={2}
           style={{
             stroke: "currentColor",
             fill: "yellow",
@@ -162,7 +162,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
       icon: (
         <RewindIcon
           className="h-4 w-4"
-          strokeWidth={1}
+          strokeWidth={2}
           style={{
             stroke: "currentColor",
             fill: "yellow",
@@ -192,7 +192,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
       icon: (
         <BoxIcon
           className="h-4 w-4"
-          strokeWidth={1}
+          strokeWidth={2}
           style={{
             stroke: "currentColor",
             fill: "yellow",
@@ -215,7 +215,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
     <div className="flex flex-col h-full">
       <div className="bg-slate-950">
         <Tabs className="flex w-full" defaultValue={activePanel}>
-          <TabsList className="flex w-full justify-start rounded-none bg-slate-950 border-b border-slate-700 p-0">
+          <TabsList className="flex w-full justify-start bg-slate-900/70 rounded-none border-b border-slate-700 p-0">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}

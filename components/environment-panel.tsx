@@ -592,12 +592,9 @@ export const EnvironmentPanel = forwardRef<
   }
 
   return (
-    <div
-      className="h-full flex flex-col bg-slate-900/50"
-      suppressHydrationWarning
-    >
+    <div className="h-full flex flex-col bg-slate-950" suppressHydrationWarning>
       {showSaveForm && pendingVariable && (
-        <div className="bg-slate-900/50">
+        <div className="bg-slate-900/70">
           <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium text-slate-300">
@@ -643,7 +640,7 @@ export const EnvironmentPanel = forwardRef<
           </div>
         </div>
       )}
-      <div className="sticky top-0 z-10 bg-slate-800">
+      <div className="sticky top-0 z-10 bg-slate-900">
         <Input
           placeholder="Search environments"
           value={search}
@@ -678,7 +675,10 @@ export const EnvironmentPanel = forwardRef<
           </div>
         </div>
       </div>
-      <ScrollArea direction="vertical" className="flex-1 overflow-hidden">
+      <ScrollArea
+        direction="vertical"
+        className="flex-1 overflow-hidden bg-slate-900/75"
+      >
         <DynamicAccordion
           type="multiple"
           value={Array.from(expandedEnvironments)}

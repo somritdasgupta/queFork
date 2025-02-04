@@ -736,7 +736,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   ) => {
     props.onSaveRequest(collectionId, {
       ...request,
-      // Preserve scripts and results from the active request
       preRequestScript:
         (window as any).__ACTIVE_REQUEST__?.preRequestScript ||
         request.preRequestScript,
@@ -840,10 +839,10 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
 
   return (
     <div
-      className="h-full flex flex-col bg-slate-900/25"
+      className="h-full flex flex-col bg-slate-950"
       suppressHydrationWarning
     >
-      <div className="h-full flex flex-col bg-slate-900/25">
+      <div className="h-full flex flex-col bg-slate-900/75">
         <Input
           placeholder="Search collections"
           value={search}

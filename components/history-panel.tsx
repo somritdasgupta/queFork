@@ -275,7 +275,10 @@ export function HistoryPanel({
           >
             {isSocketIO ? "SIO" : "WSS"}
           </Badge>
-          <div ref={urlContainerRef} className="flex-1 min-w-0 w-full sm:w-auto">
+          <div
+            ref={urlContainerRef}
+            className="flex-1 min-w-0 w-full sm:w-auto"
+          >
             <div className="text-xs font-medium text-slate-400 tracking-tighter truncate">
               {truncateUrl(item.url, containerWidth)}
             </div>
@@ -333,11 +336,14 @@ export function HistoryPanel({
           >
             {item.method}
           </Badge>
-          <div ref={urlContainerRef} className="flex-1 min-w-0 w-full sm:w-auto">
-            <div className="text-xs font-medium text-slate-400 tracking-tighter truncate">
+          <div
+            ref={urlContainerRef}
+            className="flex-1 min-w-0 w-full sm:w-auto"
+          >
+            <div className="text-xs font-medium text-slate-400 tracking-tight truncate">
               {truncateUrl(item.url, containerWidth)}
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-1 text-xs text-slate-500">
               <span>
                 {formatDistanceToNow(new Date(item.timestamp), {
                   addSuffix: true,
@@ -434,7 +440,7 @@ export function HistoryPanel({
   }, []);
 
   return (
-    <div className="h-full flex flex-col bg-slate-900/25">
+    <div className="h-full flex flex-col bg-slate-950">
       {/* Search input */}
       <Input
         placeholder="Search history"
@@ -442,7 +448,7 @@ export function HistoryPanel({
         onChange={(e) => setSearch(e.target.value)}
         className="h-8 rounded-none border-x-0 text-xs bg-slate-900 border-slate-700"
       />
-      <div className="sticky top-0 z-10 bg-slate-900/50 border-b border-slate-700">
+      <div className="sticky top-0 z-10 bg-slate-900/75 border-b border-slate-700">
         <div className="flex items-center p-2 gap-2">
           <div className="flex items-center gap-1 w-full">
             {/* Group by button */}
@@ -524,7 +530,7 @@ export function HistoryPanel({
         )}
       </div>
 
-      <ScrollArea direction="vertical" className="h-full bg-slate-900/25">
+      <ScrollArea direction="vertical" className="h-full bg-slate-900/75">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[calc(75vh)] space-y-4 p-4">
             <div className="flex flex-col items-center text-center space-y-2">
@@ -591,7 +597,7 @@ export function HistoryPanel({
                   </button>
                 )}
                 {(groupBy === "none" || expandedGroups.has(groupKey)) && (
-                  <div className="bg-slate-900/25 divide-y divide-slate-700/50">
+                  <div className="bg-transparent divide-y divide-slate-700/50">
                     {items.map((item) => (
                       <div key={item.id} className="group">
                         {renderHistoryItem(item)}
