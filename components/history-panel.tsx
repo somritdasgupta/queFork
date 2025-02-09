@@ -2,24 +2,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Trash2,
-  Clock,
-  History,
-  X,
-  ChevronDown,
-  ChevronRight,
-  Globe,
-  CalendarDays,
-  DownloadIcon,
-  Check,
-} from "lucide-react";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { Trash2, Clock, History, X, DownloadIcon, Check } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { HistoryItem } from "@/types";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { useWebSocket } from "./websocket/websocket-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useVirtualizer, VirtualItem } from "@tanstack/react-virtual";
 
 const truncateUrl = (url: string, containerWidth: number) => {
   // Store original URL for click handling
@@ -63,38 +53,7 @@ interface HistoryPanelProps {
   onExportHistory: () => void;
 }
 
-// Add new types
-interface HistoryGroup {
-  domain: string;
-  items: HistoryItem[];
-  stats: {
-    total: number;
-    success: number;
-    failed: number;
-    lastAccessed: Date;
-  };
-}
-
 // Add grouping utilities
-const getDomain = (url: string) => {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url.split("/")[0];
-  }
-};
-
-const getDateGroup = (date: Date) => {
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const days = diff / (1000 * 60 * 60 * 24);
-
-  if (days < 1) return "Today";
-  if (days < 2) return "Yesterday";
-  if (days < 7) return "Last Week";
-  if (days < 30) return "Last Month";
-  return "Older";
-};
 
 export function HistoryPanel({
   history,
@@ -109,79 +68,14 @@ export function HistoryPanel({
   const [containerWidth, setContainerWidth] = useState(0);
   const urlContainerRef = useRef<HTMLDivElement>(null);
   const [groupBy, setGroupBy] = useState<"none" | "domain" | "date">("none");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<boolean>(false);
 
-  const { url: currentUrl, isConnected } = useWebSocket();
+  const { isConnected } = useWebSocket();
 
   const filteredHistory = history.filter((item) =>
     item.url.toLowerCase().includes(search.toLowerCase())
   );
-
-  const groupedHistory = useMemo(() => {
-    if (groupBy === "none") return { ungrouped: filteredHistory };
-
-    return filteredHistory.reduce(
-      (groups: Record<string, HistoryItem[]>, item) => {
-        const key =
-          groupBy === "domain"
-            ? getDomain(item.url)
-            : getDateGroup(new Date(item.timestamp));
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(item);
-        return groups;
-      },
-      {}
-    );
-  }, [filteredHistory, groupBy]);
-
-  const groupStats = useMemo(() => {
-    return Object.entries(groupedHistory).reduce(
-      (stats, [key, items]) => {
-        const responseItems = items.filter((i) => i.response?.status);
-        const successfulRequests = responseItems.filter(
-          (i) => i.response!.status < 400
-        );
-        const failedRequests = responseItems.filter(
-          (i) => i.response!.status >= 400
-        );
-
-        const itemsWithTime = items.filter((i) => {
-          const timeStr = i.response?.time;
-          return (
-            timeStr !== undefined &&
-            timeStr !== null &&
-            !isNaN(parseInt(timeStr))
-          );
-        });
-
-        const totalTime = itemsWithTime.reduce((sum, i) => {
-          const timeStr = i.response?.time || "0";
-          return sum + parseInt(timeStr);
-        }, 0);
-
-        stats[key] = {
-          total: items.length,
-          success: successfulRequests.length,
-          failed: failedRequests.length,
-          lastAccessed: new Date(
-            Math.max(...items.map((i) => new Date(i.timestamp).getTime()))
-          ),
-        };
-        return stats;
-      },
-      {} as Record<string, HistoryGroup["stats"]>
-    );
-  }, [groupedHistory]);
-
-  const toggleGroup = (groupKey: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupKey)) next.delete(groupKey);
-      else next.add(groupKey);
-      return next;
-    });
-  };
 
   const handleHistoryClick = (item: HistoryItem) => {
     if (isConnected) {
@@ -252,7 +146,6 @@ export function HistoryPanel({
 
   const renderHistoryItem = (item: HistoryItem) => {
     if (item.type === "websocket") {
-      const isActive = item.url === currentUrl;
       const isSocketIO =
         item.url.includes("socket.io") ||
         item.wsStats?.protocols?.includes("io") ||
@@ -439,6 +332,55 @@ export function HistoryPanel({
     return () => resizeObserver.disconnect();
   }, []);
 
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredHistory.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 50,
+    overscan: 5,
+  });
+
+  // Optimized render for history items
+  const renderVirtualizedHistory = () => (
+    <div
+      ref={parentRef}
+      className="h-full overflow-auto"
+      style={{
+        height: `100%`,
+        width: "100%",
+        position: "relative",
+      }}
+    >
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow: VirtualItem) => {
+          const item = filteredHistory[virtualRow.index];
+          return (
+            <div
+              key={item.id}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              {renderHistoryItem(item)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-full flex flex-col bg-slate-950">
       {/* Search input */}
@@ -561,53 +503,7 @@ export function HistoryPanel({
             </div>
           </div>
         ) : (
-          <div>
-            {Object.entries(groupedHistory).map(([groupKey, items]) => (
-              <div key={groupKey} className="border-b border-slate-700">
-                {groupBy !== "none" && (
-                  <button
-                    onClick={() => toggleGroup(groupKey)}
-                    className="flex items-center justify-between w-full px-3 py-2 hover:bg-slate-800 [&[data-state=open]]:bg-slate-800 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      {expandedGroups.has(groupKey) ? (
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-slate-400" />
-                      )}
-                      <span className="text-sm font-medium text-slate-300">
-                        {groupKey}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        ({items.length})
-                      </span>
-                    </div>
-                    {groupStats[groupKey] && (
-                      <div className="flex items-center gap-4 text-xs text-slate-500">
-                        <span className="text-emerald-400">
-                          {groupStats[groupKey].success} ✓
-                        </span>
-                        {groupStats[groupKey].failed > 0 && (
-                          <span className="text-red-400">
-                            {groupStats[groupKey].failed} ✗
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </button>
-                )}
-                {(groupBy === "none" || expandedGroups.has(groupKey)) && (
-                  <div className="bg-transparent divide-y divide-slate-700/50">
-                    {items.map((item) => (
-                      <div key={item.id} className="group">
-                        {renderHistoryItem(item)}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          renderVirtualizedHistory()
         )}
       </ScrollArea>
     </div>

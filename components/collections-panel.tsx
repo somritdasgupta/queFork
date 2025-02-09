@@ -18,7 +18,6 @@ import {
   Filter,
   SortAsc,
   Trash2,
-  Clock,
   FolderOpen,
   X,
   Copy,
@@ -68,7 +67,6 @@ interface CollectionsPanelProps {
 // Change the CollectionHeader to use div elements
 const CollectionHeader = ({
   collection,
-  onAction,
 }: {
   collection: Collection;
   onAction: (action: string) => void;
@@ -116,7 +114,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   const [editName, setEditName] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const navigableElements = useRef<NavigableElement[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     id: string;
@@ -131,9 +128,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     setActiveRequest((window as any).__ACTIVE_REQUEST__);
   }, []);
 
-  const hasActiveRequest = useMemo(() => {
-    return activeRequest?.url && activeRequest?.method;
-  }, [activeRequest]);
 
   useEffect(() => {
     const handleSaveRequest = (e: CustomEvent) => {
@@ -684,9 +678,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     [canQuickSave, handleQuickSave, handleDuplicateCollection]
   );
 
-  const handleExportCollection = (collection: Collection) => {
-    props.onExportCollection(collection.id);
-  };
 
   const renderCollectionItem = (collection: Collection) => (
     <DynamicAccordionItem

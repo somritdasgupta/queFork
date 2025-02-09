@@ -1,43 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  Signal,
-  Activity,
-  Unplug,
-  PlugZap2,
-  Network,
-  Timer,
-} from "lucide-react";
+import React from "react";
+import { Activity, Unplug, PlugZap2, Network } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useWebSocket } from "./websocket-context";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-
-interface StatsPanelProps {
-  stats: {
-    latency: number | null;
-    messagesSent: number;
-    messagesReceived: number;
-    lastActivity: string;
-    connectionDuration: number;
-    reconnectAttempts: number;
-    packetLoss: number;
-  };
-  latencyHistory: { timestamp: number; value: number }[];
-  isConnected: boolean;
-}
-
-interface ConnectionStats {
-  latency: number | null;
-  messagesSent: number;
-  messagesReceived: number;
-  lastActivity: string;
-  connectionDuration: number;
-  reconnectAttempts: number;
-  packetLoss: number;
-}
 
 export function ConnectionTab() {
   const { isConnected, connectionStatus, stats, connectionTime, url } =

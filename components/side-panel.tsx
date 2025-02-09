@@ -1,9 +1,7 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import { CollectionsPanel } from "@/components/collections-panel";
 import { HistoryPanel } from "@/components/history-panel";
-import { SidePanelProps } from "@/types";
+import type { SidePanelProps } from "@/types";
 import { BoxesIcon, BoxIcon, Layers, RewindIcon, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnvironmentPanel } from "@/components/environment-panel";
@@ -16,7 +14,31 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const SidePanel = (props: SidePanelProps): JSX.Element => {
+export const SidePanel: React.FC<SidePanelProps> = ({
+  collections,
+  history,
+  onSelectRequest,
+  onSelectHistoryItem,
+  onClearHistory,
+  onCreateCollection,
+  onSaveRequest,
+  onDeleteCollection,
+  onDeleteRequest,
+  onDeleteHistoryItem,
+  isHistorySavingEnabled,
+  onToggleHistorySaving,
+  onExportCollections,
+  onExportHistory,
+  onExportCollection,
+  environments,
+  currentEnvironment,
+  onEnvironmentChange,
+  onEnvironmentsUpdate,
+  onUpdateCollections,
+  onImportCollections,
+  isMobile,
+  className,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [shouldShowLabels, setShouldShowLabels] = useState(true);
   const [activePanel, setActivePanel] = useState<
@@ -41,7 +63,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
       setActivePanel("collections");
 
       // Only open sheet if we're in mobile mode and the event indicates mobile
-      if (props.isMobile && e.detail.isMobile) {
+      if (isMobile && e.detail.isMobile) {
         setIsOpen(true);
       }
 
@@ -64,7 +86,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
         handleSaveRequestAction as EventListener
       );
     };
-  }, [props.isMobile]);
+  }, [isMobile]);
 
   useEffect(() => {
     const handleSaveAndShow = (e: CustomEvent) => {
@@ -72,7 +94,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
 
       // Set panel and open sheet if mobile
       setActivePanel("collections");
-      if (props.isMobile && isMobile) {
+      if (isMobile && isMobile) {
         setIsOpen(true);
       }
 
@@ -96,13 +118,13 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
         handleSaveAndShow as EventListener
       );
     };
-  }, [props.isMobile]);
+  }, [isMobile]);
 
   useEffect(() => {
     const handleEnvironmentAction = (e: CustomEvent) => {
       // First, switch the panel and open sheet if needed
       setActivePanel("environments");
-      if (props.isMobile && e.detail.isMobile) {
+      if (isMobile && e.detail.isMobile) {
         setIsOpen(true);
       }
 
@@ -130,7 +152,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
         handleEnvironmentAction as EventListener
       );
     };
-  }, [props.isMobile]);
+  }, [isMobile]);
 
   const tabs = [
     {
@@ -149,10 +171,18 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
       ),
       content: (
         <CollectionsPanel
-          {...props}
+          collections={collections}
           key="collections-panel"
           onSwitchToCollections={() => setActivePanel("collections")}
-          onUpdateCollections={props.onUpdateCollections}
+          onUpdateCollections={onUpdateCollections}
+          onSelectRequest={onSelectRequest}
+          onSaveRequest={onSaveRequest}
+          onCreateCollection={onCreateCollection}
+          onDeleteCollection={onDeleteCollection}
+          onDeleteRequest={onDeleteRequest}
+          onExportCollection={onExportCollection}
+          onExportCollections={onExportCollections}
+          onImportCollections={onImportCollections}
         />
       ),
     },
@@ -172,17 +202,16 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
       ),
       content: (
         <HistoryPanel
-          {...props}
-          history={props.history}
-          onClearHistory={props.onClearHistory}
-          isHistorySavingEnabled={props.isHistorySavingEnabled}
-          onToggleHistorySaving={props.onToggleHistorySaving}
+          history={history}
+          onClearHistory={onClearHistory}
+          isHistorySavingEnabled={isHistorySavingEnabled}
+          onToggleHistorySaving={onToggleHistorySaving}
           onSelectItem={(item) => {
-            props.onSelectHistoryItem(item);
-            if (props.isMobile) setIsOpen(false);
+            onSelectHistoryItem(item);
+            if (isMobile) setIsOpen(false);
           }}
-          onDeleteItem={props.onDeleteHistoryItem}
-          onExportHistory={props.onExportHistory}
+          onDeleteItem={onDeleteHistoryItem}
+          onExportHistory={onExportHistory}
         />
       ),
     },
@@ -202,10 +231,10 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
       ),
       content: (
         <EnvironmentPanel
-          environments={props.environments}
-          currentEnvironment={props.currentEnvironment}
-          onEnvironmentChange={props.onEnvironmentChange}
-          onEnvironmentsUpdate={props.onEnvironmentsUpdate}
+          environments={environments}
+          currentEnvironment={currentEnvironment}
+          onEnvironmentChange={onEnvironmentChange}
+          onEnvironmentsUpdate={onEnvironmentsUpdate}
         />
       ),
     },
@@ -246,23 +275,23 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
     </div>
   );
 
-  if (props.isMobile) {
+  if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex flex-col gap-2 w-full rounded-lg">
             <Button
               variant="default"
               size="icon"
-              className="w-full h-10 p-4 bg-slate-900 hover:bg-slate-800 border border-slate-700 md:hidden transition-colors rounded-md flex items-center justify-center"
+              className="w-full h-6 p-4 border-2 border-slate-800 bg-slate-900 hover:bg-slate-800 transition-colors rounded-lg flex items-center justify-center"
             >
-              <Layers className="h-5 w-5 text-slate-400" />
+              <Layers className="h-4 w-4 text-slate-400" />
             </Button>
           </div>
         </SheetTrigger>
         <SheetContent
           position="bottom"
-          className="w-[100vw] p-0 h-[88vh] rounded-t-3xl bg-slate-950
+          className="w-[100vw] p-0 h-[88vh] rounded-t-2xl bg-slate-950
             backdrop-blur-xl
             border-t-2 border-slate-800/60
             shadow-[0_-15px_50px_-15px_rgba(0,0,0,0.45)]
@@ -297,10 +326,7 @@ const SidePanel = (props: SidePanelProps): JSX.Element => {
 
   return (
     <div
-      className={cn(
-        "h-full flex flex-col bg-slate-900/40 w-full",
-        props.className
-      )}
+      className={cn("h-full flex flex-col bg-slate-900/40 w-full", className)}
     >
       <PanelContent />
     </div>

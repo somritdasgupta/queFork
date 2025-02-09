@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { PANEL_SIZING } from "@/lib/constants";
 import { toast } from "sonner";
-import { RequestPanel } from "@/components/request-panel";
-import { ResponsePanel } from "@/components/response-panel";
+import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import { MobileNav } from "@/components/mobile-nav";
 import {
   ResizablePanel,
@@ -20,6 +26,9 @@ import {
   Environment,
   SidePanelProps,
   ImportSource,
+  RequestPanelProps,
+  ResponsePanelProps,
+  Tab, // Add this
 } from "@/types";
 import { EnvironmentPanelRef } from "@/components/environment-panel";
 import { v4 as uuidv4 } from "uuid";
@@ -27,10 +36,34 @@ import Footer from "@/components/footer";
 import { useWebSocket } from "@/components/websocket/websocket-context";
 import saveAs from "file-saver";
 import { UrlBar } from "@/components/url-bar";
-import SidePanel from "@/components/side-panel";
 import { EnvironmentSelector } from "@/components/environment-selector";
 import { importFromUrl, parseImportData } from "@/lib/import-utils";
 import { useAPIInterceptor } from "@/components/APIInterceptor";
+import { TabProvider, TabBar, useTabManager } from "@/components/tab-manager";
+import { TabWebSocketProvider } from "@/components/websocket/tab-websocket-provider";
+import TabWebSocketManager from "@/components/websocket/tab-websocket-manager";
+
+// Properly type the dynamic imports
+const RequestPanel = dynamic<RequestPanelProps>(
+  () => import("@/components/request-panel").then((mod) => mod.RequestPanel),
+  {
+    loading: () => <div className="w-full h-full bg-slate-900/50" />,
+  }
+);
+
+const ResponsePanel = dynamic<ResponsePanelProps>(
+  () => import("@/components/response-panel").then((mod) => mod.ResponsePanel),
+  {
+    loading: () => <div className="w-full h-full bg-slate-900/50" />,
+  }
+);
+
+const SidePanel = dynamic<SidePanelProps>(
+  () => import("@/components/side-panel").then((mod) => mod.default),
+  {
+    loading: () => <div className="w-full h-full bg-slate-900/50" />,
+  }
+);
 
 const MAX_HISTORY_ITEMS = 500;
 const cleanupStorage = () => {
@@ -71,6 +104,99 @@ const safeSetItem = (key: string, value: string) => {
 };
 
 export default function Page() {
+  return (
+    <TabProvider>
+      <main className="flex flex-col h-screen overflow-hidden bg-slate-900">
+        <TabContent />
+      </main>
+    </TabProvider>
+  );
+}
+
+function TabContent() {
+  const { tabs, activeTab } = useTabManager();
+
+  return (
+    <>
+      {tabs.map((tab) => (
+        <TabWebSocketManager key={tab.id} tabId={tab.id}>
+          <div className={tab.id === activeTab ? "block" : "hidden"}>
+            <MainContentWrapper tab={tab} />
+          </div>
+        </TabWebSocketManager>
+      ))}
+    </>
+  );
+}
+
+// Create a wrapper component that returns JSX
+function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
+  const { tabs, activeTab, updateTab } = useTabManager();
+  const currentTab = tabs.find((t) => t.id === activeTab);
+
+  // Add default tab state first, before any function declarations
+  const defaultTabState = {
+    method: "GET",
+    url: "",
+    headers: [
+      { key: "", value: "", enabled: true, showSecrets: false, type: "" },
+    ],
+    params: [
+      { key: "", value: "", enabled: true, showSecrets: false, type: "" },
+    ],
+    body: { type: "none" as const, content: "" },
+    auth: { type: "none" as const },
+    isWebSocketMode: false,
+    response: null,
+    isLoading: false,
+    wsState: {
+      isConnected: false,
+      connectionStatus: "disconnected" as const,
+      messages: [],
+    },
+  };
+
+  // Use currentTab.state with fallback to defaultTabState
+  const tabState = currentTab?.state ?? defaultTabState;
+
+  const {
+    hasExtension,
+    interceptorEnabled,
+    toggleInterceptor,
+    interceptRequest,
+  } = useAPIInterceptor({
+    onRequestIntercept: async (request) => {
+      try {
+        const response = await fetch("/api/proxy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(request),
+        });
+        return response.json();
+      } catch (error) {
+        console.error("Proxy request failed:", error);
+        throw error;
+      }
+    },
+  });
+
+  // Update handlers to work with current tab's state
+  const handleStateUpdate = useCallback(
+    (updates: Partial<Tab["state"]>) => {
+      if (!currentTab) return;
+
+      // Batch multiple state updates
+      React.startTransition(() => {
+        updateTab(currentTab.id, {
+          state: { ...currentTab.state, ...updates },
+          unsaved: true,
+        });
+      });
+    },
+    [currentTab, updateTab]
+  );
+
+  // Rest of your state declarations...
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("");
   const [headers, setHeaders] = useState<KeyValuePair[]>([
@@ -133,27 +259,6 @@ export default function Page() {
   const [testScript, setTestScript] = useState<string | null>(null);
   const [scriptLogs, setScriptLogs] = useState<string[]>([]);
   const [testResults, setTestResults] = useState<any[]>([]);
-
-  const {
-    hasExtension,
-    interceptorEnabled,
-    toggleInterceptor,
-    interceptRequest,
-  } = useAPIInterceptor({
-    onRequestIntercept: async (request) => {
-      try {
-        const response = await fetch("/api/proxy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(request),
-        });
-        return response.json();
-      } catch (error) {
-        console.error("Proxy request failed:", error);
-        throw error;
-      }
-    },
-  });
 
   useEffect(() => {
     const loadSavedEnvironments = () => {
@@ -283,22 +388,11 @@ export default function Page() {
   }, []);
 
   const executeRequest = async () => {
-    if (!url) {
-      toast.error("Please enter a URL");
-      return;
-    }
-
-    setIsLoading(true);
-    const startTime = Date.now();
+    if (!currentTab) return;
 
     try {
-      // Run pre-request script if exists
-      if (preRequestScript) {
-        // ...existing pre-request script
-      }
-
-      // Prepare the request object
-      const queryString = params
+      // Use tabState instead of local state
+      const queryString = tabState.params
         .filter((p) => p.key && p.value && p.enabled)
         .map(
           (p) =>
@@ -307,38 +401,53 @@ export default function Page() {
         .join("&");
 
       const requestHeaders: Record<string, string> = {};
-      headers
+      tabState.headers
         .filter((h) => h.key && h.value && h.enabled)
         .forEach((h) => {
           requestHeaders[h.key] = replaceEnvironmentVariables(h.value);
         });
 
-      // Add auth headers
-      if (auth.type === "bearer" && auth.token) {
+      // Add auth headers with null checks and type guards
+      if (
+        tabState.auth.type === "bearer" &&
+        "token" in tabState.auth &&
+        tabState.auth.token
+      ) {
         requestHeaders["Authorization"] =
-          `Bearer ${replaceEnvironmentVariables(auth.token)}`;
-      } else if (auth.type === "basic" && auth.username && auth.password) {
+          `Bearer ${replaceEnvironmentVariables(tabState.auth.token)}`;
+      } else if (
+        tabState.auth.type === "basic" &&
+        "username" in tabState.auth &&
+        "password" in tabState.auth &&
+        tabState.auth.username &&
+        tabState.auth.password
+      ) {
         requestHeaders["Authorization"] = `Basic ${btoa(
-          `${replaceEnvironmentVariables(auth.username)}:${replaceEnvironmentVariables(auth.password)}`
+          `${replaceEnvironmentVariables(tabState.auth.username)}:${replaceEnvironmentVariables(tabState.auth.password)}`
         )}`;
-      } else if (auth.type === "apiKey" && auth.key) {
-        requestHeaders["X-API-Key"] = replaceEnvironmentVariables(auth.key);
+      } else if (
+        tabState.auth.type === "apiKey" &&
+        "key" in tabState.auth &&
+        tabState.auth.key
+      ) {
+        requestHeaders["X-API-Key"] = replaceEnvironmentVariables(
+          tabState.auth.key
+        );
       }
 
-      const fullUrl = `${replaceEnvironmentVariables(url)}${queryString ? `?${queryString}` : ""}`;
+      const fullUrl = `${replaceEnvironmentVariables(tabState.url)}${queryString ? `?${queryString}` : ""}`;
 
       const requestObj = {
-        method,
+        method: tabState.method,
         url: fullUrl,
         headers: requestHeaders,
-        body: body.type !== "none" ? body.content : undefined,
+        body: tabState.body.type !== "none" ? tabState.body.content : undefined,
       };
 
       // Use interceptor or direct proxy based on hasExtension
       let responseData;
       if (hasExtension && interceptorEnabled) {
         responseData = await interceptRequest(requestObj);
-        // Add intercepted flag
         responseData = {
           ...responseData,
           intercepted: true,
@@ -353,84 +462,94 @@ export default function Page() {
         responseData.intercepted = false;
       }
 
-      // Process response
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-
-      const finalResponse = {
-        ...responseData,
-        time: `${duration}ms`,
-        timestamp: new Date().toISOString(),
-      };
-
-      setResponse(finalResponse);
-
-      // Add to history if enabled
-      if (isHistorySavingEnabled) {
-        const historyItem: HistoryItem = {
-          id: Date.now().toString(),
-          timestamp: new Date().toISOString(),
-          method,
-          url: fullUrl,
-          request: {
-            headers,
-            params,
-            body,
-            auth,
-            preRequestScript: preRequestScript || "",
-            testScript: testScript || "",
-            testResults: testResults || [],
-            scriptLogs: scriptLogs || [],
-          },
-          response: finalResponse,
-          type: "rest",
-        };
-
-        setHistory((prev) => {
-          const newHistory = [historyItem, ...prev].slice(0, MAX_HISTORY_ITEMS);
-          safeSetItem("apiHistory", JSON.stringify(newHistory));
-          return newHistory;
-        });
-      }
-
-      // Run test script if exists
-      if (testScript && responseData) {
-        // ...existing test script will add later :)
-      }
-
-      toast.success(`${method} request successful`);
+      return responseData;
     } catch (error) {
-      console.error("Request failed:", error);
-      toast.error(error instanceof Error ? error.message : "Request failed");
-    } finally {
-      setIsLoading(false);
+      throw error;
     }
   };
 
   const handleSendRequest = async () => {
-    // Remove URL validation from here since it's handled in UrlBar
-    // Just checking for existence and unresolved variables
-    if (!url) {
-      toast.error("Please enter a URL");
-      return;
-    }
+    if (!currentTab) return;
 
-    // Check for unresolved variables
-    const unresolvedVars = (url.match(/\{\{([^}]+)\}\}/g) || []).filter(
-      (match) => {
+    handleStateUpdate({ isLoading: true });
+
+    try {
+      // Validation checks...
+      if (!tabState.url) {
+        toast.error("Please enter a URL");
+        return;
+      }
+
+      // Check for unresolved variables
+      const unresolvedVars = (
+        tabState.url.match(/\{\{([^}]+)\}\}/g) || []
+      ).filter((match) => {
         const key = match.slice(2, -2);
         return !mergedEnvVariables.find((v) => v.key === key);
+      });
+
+      if (unresolvedVars.length > 0) {
+        toast.error(
+          `Missing environment variables: ${unresolvedVars.join(", ")}`
+        );
+        return;
       }
-    );
 
-    if (unresolvedVars.length > 0) {
-      toast.error(
-        `Missing environment variables: ${unresolvedVars.join(", ")}`
-      );
-      return;
+      const startTime = Date.now();
+      const response = await executeRequest();
+      const endTime = Date.now();
+
+      if (response) {
+        const finalResponse = {
+          ...response,
+          time: `${endTime - startTime}ms`,
+          timestamp: new Date().toISOString(),
+        };
+
+        // Update tab state with response
+        handleStateUpdate({
+          response: finalResponse,
+          isLoading: false,
+        });
+
+        // Handle history and other side effects...
+        if (isHistorySavingEnabled) {
+          const historyItem: HistoryItem = {
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString(),
+            type: tabState.isWebSocketMode ? "websocket" : "rest",
+            method: tabState.method,
+            url: tabState.url,
+            request: {
+              headers: tabState.headers,
+              params: tabState.params,
+              body: tabState.body,
+              auth: tabState.auth,
+              preRequestScript: preRequestScript || "",
+              testScript: testScript || "",
+              testResults: testResults || [],
+              scriptLogs: scriptLogs || [],
+            },
+            response: finalResponse,
+          };
+
+          setHistory((prev) => {
+            const newHistory = [historyItem, ...prev].slice(
+              0,
+              MAX_HISTORY_ITEMS
+            );
+            safeSetItem("apiHistory", JSON.stringify(newHistory));
+            return newHistory;
+          });
+        }
+
+        toast.success(`${tabState.method} request successful`);
+      }
+    } catch (error) {
+      handleStateUpdate({ isLoading: false });
+      console.error("Request failed:", error);
+      toast.error(error instanceof Error ? error.message : "Request failed");
     }
-
-    await executeRequest();
   };
 
   const handleClearHistory = () => {
@@ -471,12 +590,55 @@ export default function Page() {
     }
   };
 
-  const handleLoadHistoryItem = (item: HistoryItem) => {
-    if (item.type === "websocket") {
-      // Switch to WebSocket mode
-      setIsWebSocketMode(true);
-      if (item.url) {
-        // Dispatch event to set WebSocket URL and protocol
+  const handleLoadHistoryItem = useCallback(
+    (item: HistoryItem) => {
+      // Update tab state in a single batch
+      handleStateUpdate({
+        method: item.method,
+        url: item.url,
+        headers: item.request.headers,
+        params: item.request.params,
+        body: item.request.body,
+        auth: ((): Tab["state"]["auth"] => {
+          const auth = item.request.auth;
+          switch (auth?.type) {
+            case "bearer":
+              return { type: "bearer", token: auth.token || "" };
+            case "basic":
+              return {
+                type: "basic",
+                username: auth.username || "",
+                password: auth.password || "",
+              };
+            case "apiKey":
+              return { type: "apiKey", key: auth.key || "" };
+            default:
+              return { type: "none" };
+          }
+        })(),
+        response: item.response,
+        isWebSocketMode: item.type === "websocket",
+      });
+
+      // Update scripts
+      if (item.request) {
+        setPreRequestScript(item.request.preRequestScript || "");
+        setTestScript(item.request.testScript || "");
+        setTestResults(item.request.testResults || []);
+        setScriptLogs(item.request.scriptLogs || []);
+
+        // Update active request
+        (window as any).__ACTIVE_REQUEST__ = {
+          ...item.request,
+          preRequestScript: item.request.preRequestScript,
+          testScript: item.request.testScript,
+          testResults: item.request.testResults,
+          scriptLogs: item.request.scriptLogs,
+        };
+      }
+
+      // Handle WebSocket specific setup if needed
+      if (item.type === "websocket" && item.url) {
         window.dispatchEvent(
           new CustomEvent("setWebSocketProtocol", {
             detail: {
@@ -486,59 +648,9 @@ export default function Page() {
           })
         );
       }
-    } else {
-      // Switch to REST mode
-      setIsWebSocketMode(false);
-      setMethod(item.method);
-      setUrl(item.url);
-      setHeaders(item.request.headers);
-      setParams(item.request.params);
-      setBody(item.request.body);
-      if (item.request.auth) {
-        const auth = item.request.auth;
-        switch (auth.type) {
-          case "bearer":
-            if ("token" in auth) setAuth({ type: "bearer", token: auth.token });
-            break;
-          case "basic":
-            if ("username" in auth && "password" in auth) {
-              setAuth({
-                type: "basic",
-                username: auth.username,
-                password: auth.password,
-              });
-            }
-            break;
-          case "apiKey":
-            if ("key" in auth) setAuth({ type: "apiKey", key: auth.key });
-            break;
-          case "none":
-            setAuth({ type: "none" });
-            break;
-        }
-      }
-      if (item.response) {
-        setResponse(item.response);
-      }
-    }
-
-    // Add these lines to restore scripts
-    if (item.request) {
-      setPreRequestScript(item.request.preRequestScript || "");
-      setTestScript(item.request.testScript || "");
-      setTestResults(item.request.testResults || []);
-      setScriptLogs(item.request.scriptLogs || []);
-
-      // Update active request
-      (window as any).__ACTIVE_REQUEST__ = {
-        ...item.request,
-        preRequestScript: item.request.preRequestScript,
-        testScript: item.request.testScript,
-        testResults: item.request.testResults,
-        scriptLogs: item.request.scriptLogs,
-      };
-    }
-  };
+    },
+    [handleStateUpdate]
+  );
 
   const saveCollections = (newCollections: Collection[]) => {
     setCollections(newCollections);
@@ -679,68 +791,6 @@ export default function Page() {
     }
   };
 
-  const handleWebSocketToggle = () => {
-    setIsWebSocketMode((prev) => !prev);
-    if (isWebSocketMode) {
-      // Switching from WebSocket to REST
-      if (wsConnected) {
-        disconnect();
-      }
-      setResponse(null);
-      setMethod("GET");
-      setHeaders([
-        { key: "", value: "", enabled: true, showSecrets: false, type: "" },
-      ]);
-      setParams([
-        { key: "", value: "", enabled: true, showSecrets: false, type: "" },
-      ]);
-      setBody({ type: "none", content: "" });
-      setAuth({ type: "none" });
-    } else {
-      // Switching from REST to WebSocket
-      setResponse(null);
-      // Format URL if needed
-      if (url && !url.startsWith("ws://") && !url.startsWith("wss://")) {
-        const newUrl = url.startsWith("http://")
-          ? url.replace("http://", "ws://")
-          : url.startsWith("https://")
-            ? url.replace("https://", "wss://")
-            : `ws://${url}`;
-        setUrl(newUrl);
-      }
-    }
-  };
-
-  const handleUrlChange = (newUrl: string) => {
-    setUrl(newUrl);
-
-    // Auto-detect WebSocket URLs and handle mode switching
-    const isWebSocketUrl =
-      newUrl.startsWith("ws://") ||
-      newUrl.startsWith("wss://") ||
-      newUrl.includes("socket.io") ||
-      newUrl.includes("websocket");
-
-    // Switch back to HTTP mode if URL is cleared or not a WebSocket URL
-    if ((!newUrl || !isWebSocketUrl) && isWebSocketMode) {
-      setIsWebSocketMode(false);
-      if (wsConnected) {
-        disconnect();
-      }
-    }
-    // Switch to WebSocket mode for WebSocket URLs
-    else if (isWebSocketUrl && !isWebSocketMode) {
-      setIsWebSocketMode(true);
-    }
-
-    // Update recent URLs only for non-empty URLs
-    if (newUrl && !recentUrls.includes(newUrl)) {
-      const updated = [newUrl, ...recentUrls].slice(0, 10);
-      setRecentUrls(updated);
-      localStorage.setItem("recent-urls", JSON.stringify(updated));
-    }
-  };
-
   const handleAddToEnvironment = (key: string, value: string) => {
     if (!currentEnvironment) {
       toast.error("Please select an environment first");
@@ -808,7 +858,7 @@ export default function Page() {
   };
 
   // Define panel props
-  const sidebarProps = {
+  const sidebarProps: SidePanelProps = {
     collections,
     history,
     onSelectRequest: handleLoadRequest,
@@ -830,18 +880,45 @@ export default function Page() {
     onEnvironmentsUpdate: handleEnvironmentsUpdate,
     onUpdateCollections: handleUpdateCollections,
     onImportCollections: handleImportCollections,
+    hasExtension,
+    interceptorEnabled,
   };
 
+  const onHeadersChange = (headers: KeyValuePair[]) => {
+    handleStateUpdate({ headers });
+  };
+
+  const onParamsChange = (params: KeyValuePair[]) => {
+    handleStateUpdate({ params });
+  };
+
+  const onBodyChange = (body: RequestBody) => {
+    handleStateUpdate({ body });
+  };
+
+  const onAuthChange = (auth: Tab["state"]["auth"]) => {
+    handleStateUpdate({ auth });
+  };
+
+  const onMethodChange = (method: string) => {
+    handleStateUpdate({ method });
+  };
+
+  const onUrlChange = (url: string) => {
+    handleStateUpdate({ url });
+  };
+
+  // Update the props to use tabState with default values
   const requestPanelProps = {
-    headers,
-    params,
-    body,
-    auth,
-    onHeadersChange: setHeaders,
-    onParamsChange: setParams,
-    onBodyChange: setBody,
-    onAuthChange: setAuth,
-    isWebSocketMode,
+    headers: tabState.headers || [],
+    params: tabState.params || [],
+    body: tabState.body || { type: "none", content: "" },
+    auth: tabState.auth || { type: "none" },
+    onHeadersChange,
+    onParamsChange,
+    onBodyChange,
+    onAuthChange,
+    isWebSocketMode: tabState.isWebSocketMode ?? false, // Add default false
     environments,
     currentEnvironment,
     onEnvironmentChange: handleEnvironmentChange,
@@ -850,13 +927,13 @@ export default function Page() {
   };
 
   const responsePanelProps = {
-    response,
-    isLoading,
+    response: tabState.response || null,
+    isLoading: tabState.isLoading ?? false, // Add default false
     collections,
     onSaveToCollection: handleSaveRequest,
-    method,
-    url,
-    isWebSocketMode,
+    method: tabState.method || "GET",
+    url: tabState.url || "",
+    isWebSocketMode: tabState.isWebSocketMode ?? false, // Add default false
   };
 
   // Define mobile nav props
@@ -883,6 +960,8 @@ export default function Page() {
     onUpdateCollections: handleUpdateCollections, // Add this line
     onImportCollections: handleImportCollections,
     isMobile: true,
+    hasExtension,
+    interceptorEnabled,
   };
 
   useEffect(() => {
@@ -925,122 +1004,166 @@ export default function Page() {
     };
   }, [environments, currentEnvironment]);
 
-  return (
-    <main className="flex flex-col h-screen bg-slate-900">
-      {/* Header Section */}
-      <header className="flex flex-col border-b border-slate-800">
-        {/* Mobile/Desktop Layout Container */}
-        <div className="w-full flex flex-col md:flex-row items-stretch gap-2 p-4">
-          <div className="flex gap-2 md:w-[280px] shrink-0">
-            {hasExtension && (
-              <button
-                onClick={toggleInterceptor}
-                className={`hidden md:flex h-10 w-10 items-center justify-center rounded-lg transition-colors border ${
-                  interceptorEnabled
-                    ? "bg-slate-900 hover:border-blue-900 border-slate-800 border-2 text-slate-300"
-                    : "bg-slate-900 hover:border-blue-900 border-slate-800 border-2 text-slate-500"
-                }`}
-                title={`Interceptor ${interceptorEnabled ? "enabled" : "disabled"}`}
-              >
-                <img
-                  src="/icons/icon192.png"
-                  alt="queFork"
-                  className={`w-6 h-6 transition-all ${
-                    interceptorEnabled
-                      ? "opacity-100 animate-pulse duration-1200 easeIn"
-                      : "opacity-100 grayscale"
-                  }`}
-                />
-              </button>
-            )}
-            <div className="flex-1">
-              <EnvironmentSelector
-                environments={environments}
-                currentEnvironment={currentEnvironment}
-                onEnvironmentChange={handleEnvironmentChange}
-                hasExtension={hasExtension}
-                interceptorEnabled={interceptorEnabled}
-                className="h-10 w-full bg-slate-900 hover:bg-slate-800 border-2 border-slate-800 
-                  text-slate-300 rounded-lg transition-colors"
-              />
-            </div>
+  const mergedEnvironmentVariables = useMemo(() => {
+    const variableMap = new Map();
 
-            <div className="md:hidden">
-              <MobileNav {...mobileNavProps} />
+    // Process global environment first
+    const globalEnv = environments.find((env) => env.global);
+    if (globalEnv) {
+      globalEnv.variables
+        .filter((v) => v.enabled && v.key.trim())
+        .forEach((v) => variableMap.set(v.key, v));
+    }
+
+    // Override with current environment variables
+    if (currentEnvironment && !currentEnvironment.global) {
+      currentEnvironment.variables
+        .filter((v) => v.enabled && v.key.trim())
+        .forEach((v) => variableMap.set(v.key, v));
+    }
+
+    return Array.from(variableMap.values());
+  }, [environments, currentEnvironment]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (recentUrls.length > 0) {
+        localStorage.setItem("recent-urls", JSON.stringify(recentUrls));
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [recentUrls]);
+
+  const urlBarProps = {
+    method: tabState.method || "GET",
+    url: tabState.url || "",
+    isLoading: tabState.isLoading ?? false,
+    wsState: tabState.wsState, // Pass tab-specific WebSocket state
+    isWebSocketMode: tabState.isWebSocketMode ?? false,
+    variables: mergedEnvironmentVariables.map((v) => ({
+      key: v.key,
+      value: v.value,
+      type: v.type,
+    })),
+    recentUrls,
+    onMethodChange,
+    onUrlChange,
+    onSendRequest: handleSendRequest,
+    onWebSocketToggle: () => {
+      const newIsWebSocketMode = !tabState.isWebSocketMode;
+      handleStateUpdate({
+        isWebSocketMode: newIsWebSocketMode,
+        // Reset WebSocket state when toggling mode
+        wsState: newIsWebSocketMode
+          ? {
+              isConnected: false,
+              connectionStatus: "disconnected",
+              messages: [],
+            }
+          : undefined,
+      });
+    },
+    hasExtension,
+    interceptorEnabled,
+    isMobile: false,
+  };
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+      <header className="flex flex-col border-b border-slate-800 bg-slate-950 shrink-0">
+        <TabBar />
+        <div className="w-full flex flex-col 3xl:flex-row items-stretch gap-2 px-4 py-2">
+          <div className="flex gap-2 3xl:w-[280px] shrink-0">
+            <div className="flex items-center gap-2 w-full">
+              {hasExtension && (
+                <button
+                  onClick={toggleInterceptor}
+                  className={`hidden md:flex h-8 w-8 items-center justify-center rounded-lg transition-colors border ${
+                    interceptorEnabled
+                      ? "bg-slate-900 hover:border-blue-900 border-slate-800 border-2 text-slate-300"
+                      : "bg-slate-900 hover:border-blue-900 border-slate-800 border-2 text-slate-500"
+                  }`}
+                  title={`Interceptor ${interceptorEnabled ? "enabled" : "disabled"}`}
+                >
+                  <img
+                    src="/icons/icon192.png"
+                    alt="queFork"
+                    className={`w-6 h-6 transition-all ${
+                      interceptorEnabled
+                        ? "opacity-100 animate-pulse duration-1200 easeIn"
+                        : "opacity-100 grayscale"
+                    }`}
+                  />
+                </button>
+              )}
+              <div className="flex-1">
+                <EnvironmentSelector
+                  environments={environments}
+                  currentEnvironment={currentEnvironment}
+                  onEnvironmentChange={handleEnvironmentChange}
+                  hasExtension={hasExtension}
+                  interceptorEnabled={interceptorEnabled}
+                  className="h-8 w-full bg-slate-900 hover:bg-slate-800 border-2 border-slate-800
+            text-slate-300 rounded-lg transition-colors"
+                />
+              </div>
+              <div className="block 3xl:hidden">
+                <MobileNav {...mobileNavProps} />
+              </div>
             </div>
           </div>
           <div className="w-full flex flex-1 gap-2">
-            <UrlBar
-              method={method}
-              url={url}
-              isLoading={isLoading}
-              wsConnected={wsConnected}
-              isWebSocketMode={isWebSocketMode}
-              onMethodChange={setMethod}
-              onUrlChange={handleUrlChange}
-              onSendRequest={handleSendRequest}
-              onWebSocketToggle={handleWebSocketToggle}
-              variables={mergedEnvVariables}
-              recentUrls={recentUrls}
-              isMobile={false}
-              className="flex-1"
-              hasExtension={hasExtension}
-            />
+            <UrlBar {...urlBarProps} />
           </div>
         </div>
       </header>
 
-      {/* Rest of the layout */}
-      <div className="h-[calc(100vh-3rem)] overflow-hidden bg-slate-950">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Sidebar */}
-          <ResizablePanel
-            defaultSize={PANEL_SIZING.SIDEBAR}
-            className="hidden md:block border-r-2 border-slate-700"
-            response={null}
-          >
-            <SidePanel {...sidebarProps} />
-          </ResizablePanel>
-
-          {/* Main Content */}
-          <ResizablePanel
-            defaultSize={PANEL_SIZING.MAIN}
-            className="bg-slate-950"
-            response={null}
-          >
-            <ResizablePanelGroup direction="vertical">
-              {/* Request Panel */}
-              <ResizablePanel
-                defaultSize={
-                  response || isWebSocketMode ? PANEL_SIZING.DEFAULT : 100
-                }
-                className="overflow-hidden"
-                response={null}
+      <div className="flex-1 min-h-0 bg-slate-950">
+        {currentTab ? (
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel
+              defaultSize={PANEL_SIZING.SIDEBAR}
+              className="hidden 3xl:block border-r-2 border-slate-700"
+              response={null}
+            >
+              <Suspense
+                fallback={<div className="w-full h-full bg-slate-900/50" />}
               >
-                <RequestPanel {...requestPanelProps} />
-              </ResizablePanel>
-
-              {/* Response Panel */}
-              {(response || isWebSocketMode) && (
-                <>
-                  <ResizableHandle withHandle className="select-none" />
-                  <ResizablePanel
-                    defaultSize={PANEL_SIZING.DEFAULT}
-                    className="overflow-hidden"
-                    response={response}
-                  >
-                    <ResponsePanel {...responsePanelProps} />
-                  </ResizablePanel>
-                </>
-              )}
-            </ResizablePanelGroup>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+                <SidePanel {...sidebarProps} />
+              </Suspense>
+            </ResizablePanel>
+            <ResizablePanel
+              defaultSize={PANEL_SIZING.MAIN}
+              className="bg-slate-950"
+              response={null}
+            >
+              <ResizablePanelGroup direction="vertical">
+                <Suspense
+                  fallback={<div className="w-full h-full bg-slate-900/50" />}
+                >
+                  <RequestPanel {...requestPanelProps} />
+                </Suspense>
+                {(tabState.response || tabState.isWebSocketMode) && (
+                  <>
+                    <Suspense
+                      fallback={
+                        <div className="w-full h-full bg-slate-900/50" />
+                      }
+                    >
+                      <ResponsePanel {...responsePanelProps} />
+                    </Suspense>
+                  </>
+                )}
+              </ResizablePanelGroup>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <div className="flex items-center justify-center h-full text-slate-500">
+            No active tab
+          </div>
+        )}
       </div>
-
-      <footer className="border-t-2 border-slate-700 bg-slate-800">
-        <Footer />
-      </footer>
-    </main>
+    </div>
   );
 }

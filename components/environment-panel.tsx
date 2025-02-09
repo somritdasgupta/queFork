@@ -14,7 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Plus,
   Trash2,
-  Edit2,
   Download,
   Upload,
   Copy,
@@ -61,7 +60,7 @@ export const EnvironmentPanel = forwardRef<
   const [editingEnvironment, setEditingEnvironment] =
     useState<Environment | null>(null);
   const [search, setSearch] = useState("");
-  const [expandedEnv, setExpandedEnv] = useState<string | null>(null);
+  const [, setExpandedEnv] = useState<string | null>(null);
   const navigableElements = useRef<NavigableElement[]>([]);
   const [expandedEnvironments, setExpandedEnvironments] = useState<Set<string>>(
     new Set()
@@ -455,21 +454,10 @@ export const EnvironmentPanel = forwardRef<
   };
 
   const handleKeyValueChange = (env: Environment, pairs: KeyValuePair[]) => {
-    // Filter out empty pairs except the last one
-    const validPairs = pairs
-      .slice(0, -1)
-      .filter((p) => p.key.trim() && p.value.trim());
-
-    // Always keep the last pair for UI purposes
-    const lastPair = pairs[pairs.length - 1];
-    const finalPairs = [...validPairs];
-    if (lastPair) {
-      finalPairs.push(lastPair);
-    }
-
+    // Remove pairs filtering since it will be handled by KeyValueEditor
     const updatedEnv = {
       ...env,
-      variables: finalPairs.map((p) => ({
+      variables: pairs.map((p) => ({
         key: p.key,
         value: p.value,
         type: p.type as "text" | "secret",
@@ -562,10 +550,22 @@ export const EnvironmentPanel = forwardRef<
                 id: `env-${v.key}`,
                 description: "",
               }))}
-              onChange={(pairs) => {
+              onChange={(pairs: KeyValuePair[]) => {
                 const updatedEnv = {
                   ...editingEnvironment,
-                  variables: pairs.map((p) => ({
+                  variables: pairs.map((p: KeyValuePair) => ({
+                    key: p.key,
+                    value: p.value,
+                    type: p.type as "text" | "secret",
+                    enabled: p.enabled ?? true,
+                  })),
+                };
+                setEditingEnvironment(updatedEnv);
+              }}
+              onSave={(pairs: KeyValuePair[]) => {
+                const updatedEnv = {
+                  ...editingEnvironment,
+                  variables: pairs.map((p: KeyValuePair) => ({
                     key: p.key,
                     value: p.value,
                     type: p.type as "text" | "secret",
@@ -574,16 +574,15 @@ export const EnvironmentPanel = forwardRef<
                   lastModified: new Date().toISOString(),
                 };
 
-                setEditingEnvironment(updatedEnv);
                 const updatedEnvironments = environments.map((env) =>
                   env.id === editingEnvironment.id ? updatedEnv : env
                 );
                 onEnvironmentsUpdate(updatedEnvironments);
+                setEditingEnvironment(null);
               }}
               requireUniqueKeys={true}
               isEnvironmentEditor={true}
               preventFirstItemDeletion={true}
-              autoSave={true}
             />
           </div>
         </ScrollArea>
@@ -773,7 +772,6 @@ export const EnvironmentPanel = forwardRef<
                   requireUniqueKeys={true}
                   isEnvironmentEditor={true}
                   preventFirstItemDeletion={true}
-                  autoSave={true}
                   isMobile={true} // Force mobile UI
                   className="border-0 shadow-none h-full" // Remove any borders/shadows and added full height
                 />

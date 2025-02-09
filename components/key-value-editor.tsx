@@ -1,4 +1,11 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  memo,
+  useMemo,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,8 +18,6 @@ import {
   AlignLeft,
   Copy,
   GripVertical,
-  Eye,
-  EyeOff,
   ListPlus,
   List,
   PackagePlusIcon,
@@ -40,13 +45,14 @@ import {
 import { Transform } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
-import { useId } from "react";
 import dynamic from "next/dynamic";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { debounce } from "lodash";
 
 // generateStableId is now predictable
 const generateStableId = (index: number, existingId?: string) => {
   if (existingId) return existingId;
-  return `pair-${index}-${Date.now()}`;
+  return `pair-${index}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
 // These are client-only DnD components...
@@ -79,6 +85,7 @@ interface KeyValueEditorProps {
   className?: string;
   expandedItemId?: string | null;
   onExpandedChange?: (id: string | null) => void;
+  onSave?: (pairs: KeyValuePair[]) => void;
 }
 
 interface KeyValueInputProps {
@@ -91,102 +98,112 @@ interface KeyValueInputProps {
   pairId: string;
   isValue?: boolean;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  navigableElements: React.RefObject<NavigableElement[]>;
+  setFocus: (id: string) => void;
 }
 
-const KeyValueInput = React.memo(
-  ({
-    ...props
-  }: KeyValueInputProps & {
-    navigableElements: React.RefObject<NavigableElement[]>;
-    setFocus: (id: string) => void;
-  }) => {
-    const [localValue, setLocalValue] = useState(props.value);
-    const [isFocused, setIsFocused] = useState(false);
-    const changeTimeoutRef = useRef<NodeJS.Timeout>();
-    const inputRef = useRef<HTMLInputElement>(null);
-    const inputId = useRef(`kv-${Math.random()}`).current;
+const useStableId = (prefix: string, id?: string) => {
+  const generatedId = useRef(
+    `${prefix}-${Math.random().toString(36).slice(2)}`
+  );
+  return id || generatedId.current;
+};
 
-    useEffect(() => {
-      if (!isFocused) {
-        setLocalValue(props.value);
-      }
-      return () => {
-        if (changeTimeoutRef.current) {
-          clearTimeout(changeTimeoutRef.current);
-        }
-      };
-    }, [props.value, isFocused]);
+const useDebounced = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
 
-    const handleChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = e.target.value;
-        setLocalValue(newValue);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
 
-        if (changeTimeoutRef.current) {
-          clearTimeout(changeTimeoutRef.current);
-        }
+  return debouncedValue;
+};
 
-        changeTimeoutRef.current = setTimeout(() => {
-          props.onChange(newValue);
-        }, 300);
-      },
-      [props.onChange]
-    );
+// Memoize KeyValueInput component
+const KeyValueInput = memo(function KeyValueInput({
+  value,
+  onChange,
+  placeholder,
+  icon: Icon,
+  onPaste,
+  className,
+  pairId,
+  isValue,
+  onKeyDown,
+  navigableElements,
+}: KeyValueInputProps) {
+  const [localValue, setLocalValue] = useState(value);
+  const debouncedValue = useDebounced(localValue, 150);
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useRef(`kv-${Math.random()}`).current;
 
-    useEffect(() => {
-      if (inputRef.current && props.navigableElements.current) {
-        props.navigableElements.current.push({
-          id: inputId,
-          ref: inputRef.current,
-          type: "key-value-pair",
-          groupId: props.pairId,
-          parentId: props.isValue
-            ? `value-${props.pairId}`
-            : `key-${props.pairId}`,
-        });
-      }
-    }, [inputId, props.pairId, props.isValue, props.navigableElements]);
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalValue(value);
+    }
+  }, [value, isFocused]);
 
-    return (
-      <div className="relative">
-        <props.icon className="absolute left-2.5 top-2 h-4 w-4 text-slate-500 hidden sm:block" />
-        <Input
-          ref={inputRef}
-          value={localValue}
-          onChange={handleChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => {
-            setIsFocused(false);
-            props.onChange(localValue);
-          }}
-          onPaste={props.onPaste}
-          placeholder={props.placeholder}
-          className={cn(
-            "h-8 bg-transparent text-slate-300 select-none",
-            "border border-slate-800/60 focus:border-slate-600",
-            "rounded-none text-[12px] leading-4 py-1",
-            typeof window !== "undefined" && window.innerWidth < 640
-              ? "pl-3"
-              : "pl-9",
-            "select-none touch-none",
-            "focus:ring-1 focus:ring-slate-600/50",
-            "transition-all duration-150",
-            props.className
-          )}
-          inputMode="text"
-          data-lpignore="true"
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck="false"
-          onKeyDown={props.onKeyDown}
-        />
-      </div>
-    );
-  }
-);
+  useEffect(() => {
+    if (debouncedValue !== value) {
+      onChange(debouncedValue);
+    }
+  }, [debouncedValue, onChange, value]);
 
-KeyValueInput.displayName = "KeyValueInput";
+  useEffect(() => {
+    if (inputRef.current && navigableElements.current) {
+      navigableElements.current.push({
+        id: inputId,
+        ref: inputRef.current,
+        type: "key-value-pair",
+        groupId: pairId,
+        parentId: isValue ? `value-${pairId}` : `key-${pairId}`,
+      });
+    }
+  }, [inputId, pairId, isValue, navigableElements]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+  };
+
+  return (
+    <div className="relative">
+      <Icon className="absolute left-2.5 top-2 h-4 w-4 text-slate-500 hidden sm:block" />
+      <Input
+        ref={inputRef}
+        value={localValue}
+        onChange={handleChange}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => {
+          setIsFocused(false);
+          onChange(localValue);
+        }}
+        onPaste={onPaste}
+        placeholder={placeholder}
+        className={cn(
+          "h-8 bg-transparent text-slate-300 select-none",
+          "border border-slate-800/60 focus:border-slate-600",
+          "rounded-none text-[12px] leading-4 py-1",
+          typeof window !== "undefined" && window.innerWidth < 640
+            ? "pl-3"
+            : "pl-9",
+          "select-none touch-none",
+          "focus:ring-1 focus:ring-slate-600/50",
+          "transition-all duration-150",
+          className
+        )}
+        inputMode="text"
+        data-lpignore="true"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck="false"
+        onKeyDown={onKeyDown}
+      />
+    </div>
+  );
+});
 
 // Modify SortableItem component
 const SortableItem = React.memo(
@@ -199,7 +216,7 @@ const SortableItem = React.memo(
     index: number;
     children: React.ReactNode;
   }) => {
-    const itemId = useId(); // Use React's useId for stable IDs
+    const itemId = useStableId("sortable-item", pair.id); // Use stable ID hook
     const {
       attributes,
       listeners,
@@ -265,20 +282,13 @@ export function KeyValueEditor({
   onChange,
   addButtonText = "Add Item",
   showDescription = false,
-  presetKeys = [],
   requireUniqueKeys = false,
   onAddToEnvironment,
   environments = [],
   currentEnvironment,
-  onEnvironmentChange,
-  onEnvironmentsUpdate,
   isEnvironmentEditor = false,
   preventFirstItemDeletion = false,
   autoSave = false,
-  isMobile = false,
-  className,
-  expandedItemId,
-  onExpandedChange,
 }: KeyValueEditorProps) {
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkContent, setBulkContent] = useState("");
@@ -440,63 +450,19 @@ export function KeyValueEditor({
     onChange([...pairs, newPair]);
   }, [pairs, onChange]);
 
-  const removePair = useCallback(
-    (index: number) => {
-      // Special handling for environment editor
-      if (isEnvironmentEditor) {
-        if (pairs.length <= 1) {
-          // Always allow clearing the first/only pair in environment editor
-          const clearedPair = {
-            ...pairs[0],
-            key: "",
-            value: "",
-            description: "",
-            enabled: true,
-          };
-          onChange([clearedPair]);
-          if (autoSave) toast.success("Cleared pair");
-          return;
-        }
-
-        // Allow deletion of any pair in environment editor
-        onChange(pairs.filter((_, i) => i !== index));
-        if (autoSave) toast.success("Item removed");
-        return;
-      }
-
-      // Normal key-value editor behavior
-      if (pairs.length <= 1) {
-        const clearedPair = {
-          ...pairs[0],
-          key: "",
-          value: "",
-          description: "",
-          enabled: true,
-        };
-        onChange([clearedPair]);
-        toast.success("Cleared pair");
-        return;
-      }
-
-      if (preventFirstItemDeletion && index === 0) {
-        toast.error("Cannot delete the first item");
-        return;
-      }
-
-      onChange(pairs.filter((_, i) => i !== index));
-    },
-    [pairs, onChange, preventFirstItemDeletion, isEnvironmentEditor, autoSave]
+  const debouncedOnChange = useMemo(
+    () =>
+      debounce((newPairs: KeyValuePair[]) => {
+        onChange(newPairs);
+      }, 100),
+    [onChange]
   );
 
   const updatePair = useCallback(
     (index: number, field: keyof KeyValuePair, value: string | boolean) => {
-      const newPairs = pairs.map((pair, i) => {
-        if (i === index) {
-          // Preserve all existing fields while updating the specified one
-          return { ...pair, [field]: value };
-        }
-        return pair;
-      });
+      const newPairs = [...pairs];
+      const updatedPair = { ...newPairs[index], [field]: value };
+      newPairs[index] = updatedPair;
 
       if (field === "key" && requireUniqueKeys && typeof value === "string") {
         const isDuplicate = newPairs.some(
@@ -508,123 +474,163 @@ export function KeyValueEditor({
         }
       }
 
+      debouncedOnChange(newPairs);
+      // Immediate feedback for UI
       onChange(newPairs);
-      if (autoSave) {
-        toast.success("Variable updated");
-      }
     },
-    [pairs, onChange, requireUniqueKeys, autoSave]
+    [pairs, requireUniqueKeys, debouncedOnChange, onChange]
   );
 
-  const handleSmartPaste = (
-    e: React.ClipboardEvent<HTMLInputElement>,
-    index: number,
-    field: "key" | "value"
-  ) => {
-    const pastedText = e.clipboardData.getData("text").trim();
+  const handleSmartPaste = useCallback(
+    (
+      e: React.ClipboardEvent<HTMLInputElement>,
+      index: number,
+      field: "key" | "value"
+    ) => {
+      const pastedText = e.clipboardData.getData("text").trim();
 
-    // Try smart paste first for special formats
-    try {
-      const parsed = JSON.parse(pastedText);
-      if (parsed.key !== undefined && parsed.value !== undefined) {
-        // Smart paste - update both fields
-        const newPairs = pairs.map((p, i) =>
-          i === index ? { ...p, key: parsed.key, value: parsed.value } : p
-        );
+      // Helper to update both key and value
+      const updateBothFields = (key: string, value: string) => {
+        const newPairs = [...pairs];
+        newPairs[index] = {
+          ...newPairs[index],
+          key: key.trim(),
+          value: value.trim(),
+        };
+
+        if (requireUniqueKeys) {
+          const isDuplicate = newPairs.some(
+            (p, i) => i !== index && p.key === key.trim() && key.trim() !== ""
+          );
+          if (isDuplicate) {
+            toast.error("Key already exists");
+            return false;
+          }
+        }
+
         onChange(newPairs);
         toast.success("Pasted key-value pair");
-        e.preventDefault();
-        return;
-      }
-    } catch {
-      // Try colon format
+        return true;
+      };
+
+      // Try different paste formats
       if (pastedText.includes(":")) {
-        const [key, ...valueParts] = pastedText.split(":");
-        const value = valueParts.join(":").trim();
+        const colonIndex = pastedText.indexOf(":");
+        const key = pastedText.substring(0, colonIndex);
+        const value = pastedText.substring(colonIndex + 1);
 
-        // Smart paste - update both fields
-        const newPairs = pairs.map((p, i) =>
-          i === index ? { ...p, key: key.trim(), value } : p
-        );
-        onChange(newPairs);
-        toast.success("Pasted key-value pair");
-        e.preventDefault();
-        return;
+        if (key && value) {
+          if (updateBothFields(key, value)) {
+            e.preventDefault();
+            return;
+          }
+        }
       }
 
-      // Regular paste - only update the current field
+      try {
+        const parsed = JSON.parse(pastedText);
+        if (parsed && typeof parsed === "object") {
+          if (parsed.key !== undefined && parsed.value !== undefined) {
+            if (updateBothFields(parsed.key, parsed.value)) {
+              e.preventDefault();
+              return;
+            }
+          }
+        }
+      } catch {}
+
+      // Default to normal paste if smart paste fails
       if (field === "key" || field === "value") {
         updatePair(index, field, pastedText);
-        // Don't prevent default and don't show toast for normal paste
-        return;
       }
-    }
-  };
-
-  const handleSmartCopy = (index: number) => {
-    const pair = pairs[index];
-    const copyFormat = JSON.stringify({ key: pair.key, value: pair.value });
-    navigator.clipboard.writeText(copyFormat).then(() => {
-      setCopiedIndex(index);
-      toast.success("Copied key-value pair", {
-        description: `${pair.key}: ${pair.value}`,
-      });
-      // Reset copy feedback after 2 seconds
-      setTimeout(() => setCopiedIndex(null), 2000);
-    });
-  };
+    },
+    [pairs, onChange, requireUniqueKeys, updatePair]
+  );
 
   const handleBulkEdit = () => {
     if (isBulkMode) {
-      const newPairs = bulkContent
-        .split("\n")
-        .filter((line) => line.trim())
-        .map((line) => {
-          const isDisabled = line.startsWith("#");
-          const cleanLine = isDisabled ? line.slice(1) : line;
-          const [key, ...valueParts] = cleanLine.split(":");
-          const value = valueParts.join(":").trim();
+      try {
+        const newPairs = bulkContent
+          .split("\n")
+          .filter((line) => line.trim())
+          .map((line) => {
+            const isDisabled = line.startsWith("#");
+            const cleanLine = isDisabled ? line.slice(1).trim() : line.trim();
 
-          return {
-            id: generateStableId(Math.random()),
-            key: key?.trim() || "",
-            value: value || "",
-            description: "",
-            enabled: !isDisabled,
-            type: "text",
-            showSecrets: false,
-          };
-        });
+            // Handle both colon and JSON formats
+            let key = "",
+              value = "";
 
-      if (
-        requireUniqueKeys &&
-        new Set(newPairs.map((p) => p.key)).size !== newPairs.length
-      ) {
-        toast.error("Duplicate keys found in bulk edit");
-        return;
+            if (cleanLine.startsWith("{")) {
+              try {
+                const parsed = JSON.parse(cleanLine);
+                key = parsed.key || "";
+                value = parsed.value || "";
+              } catch {
+                const colonIndex = cleanLine.indexOf(":");
+                if (colonIndex > -1) {
+                  key = cleanLine.substring(0, colonIndex).trim();
+                  value = cleanLine.substring(colonIndex + 1).trim();
+                }
+              }
+            } else if (cleanLine.includes(":")) {
+              const colonIndex = cleanLine.indexOf(":");
+              key = cleanLine.substring(0, colonIndex).trim();
+              value = cleanLine.substring(colonIndex + 1).trim();
+            }
+
+            return {
+              id: generateStableId(Math.random()),
+              key,
+              value,
+              description: "",
+              enabled: !isDisabled,
+              type: "text",
+              showSecrets: false,
+            };
+          })
+          .filter((pair) => pair.key || pair.value); // Remove empty pairs
+
+        if (requireUniqueKeys) {
+          const keys = new Set();
+          const hasDuplicates = newPairs.some((pair) => {
+            if (!pair.key) return false;
+            if (keys.has(pair.key)) return true;
+            keys.add(pair.key);
+            return false;
+          });
+
+          if (hasDuplicates) {
+            toast.error("Duplicate keys found in bulk edit");
+            return;
+          }
+        }
+
+        onChange(
+          newPairs.length > 0
+            ? newPairs
+            : [
+                {
+                  id: generateStableId(0),
+                  key: "",
+                  value: "",
+                  description: "",
+                  enabled: true,
+                  type: "text",
+                  showSecrets: false,
+                },
+              ]
+        );
+
+        setIsBulkMode(false);
+        setBulkContent("");
+        toast.success(`Bulk edit applied - ${newPairs.length} items`);
+      } catch (error) {
+        toast.error("Error processing bulk edit");
+        console.error(error);
       }
-
-      // Apply changes immediately
-      const finalPairs =
-        newPairs.length > 0
-          ? newPairs
-          : [
-              {
-                id: generateStableId(0),
-                key: "",
-                value: "",
-                description: "",
-                enabled: true,
-                type: "text",
-                showSecrets: false,
-              },
-            ];
-
-      onChange(finalPairs);
-      setIsBulkMode(false);
-      setBulkContent("");
-      toast.success(`Bulk edit applied - ${finalPairs.length} items`);
     } else {
+      // Entering bulk mode - format existing pairs
       const content = pairs
         .filter((p) => p.key || p.value)
         .map((p) => `${!p.enabled ? "#" : ""}${p.key}: ${p.value}`)
@@ -748,7 +754,7 @@ export function KeyValueEditor({
         <div className="hidden sm:flex items-center gap-1 px-1">
           {actionButtons.map((button, i) => (
             <Button
-              key={i}
+              key={`desktop-${button.title}-${i}`} // Added unique key
               variant="ghost"
               size="sm"
               onClick={button.onClick}
@@ -771,7 +777,7 @@ export function KeyValueEditor({
           >
             {actionButtons.map((button, i) => (
               <Button
-                key={i}
+                key={`mobile-${button.title}-${i}`} // Added unique key
                 variant="ghost"
                 size="sm"
                 onClick={button.onClick}
@@ -814,158 +820,191 @@ export function KeyValueEditor({
   };
 
   // Wrap DnD content in client-only rendering
-  const renderDndContent = () => {
-    if (!isMounted) return null;
-
-    return (
-      <DndContextClient
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-        modifiers={restrictToVerticalAxis.modifiers}
-      >
-        <SortableContextClient
-          items={pairs.map((p) => p.id || `temp-${p.key}`)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="divide-y divide-slate-700/50 touch-pan-y">
-            {pairs.map((pair, index) => (
-              <SortableItem
-                key={pair.id || `stable-${index}`}
-                pair={pair}
-                index={index}
-              >
-                <div className="flex w-full hover:bg-slate-800/50 transition-colors">
-                  <div
-                    className={cn(
-                      "grid flex-1",
-                      showDescription
-                        ? "grid-cols-[1fr_1fr_1fr]"
-                        : "grid-cols-[1fr_1fr]",
-                      !pair.enabled && "opacity-30"
-                    )}
-                  >
-                    <KeyValueInput
-                      key={`key-${pair.id}-${index}`}
-                      value={pair.key}
-                      onChange={(value: string) =>
-                        updatePair(index, "key", value)
-                      }
-                      placeholder="Key"
-                      icon={Key}
-                      onPaste={(e) => handleSmartPaste(e, index, "key")}
-                      className="text-xs flex-1 bg-slate-900 border-slate-700 text-slate-300 
-                        placeholder:text-slate-500 focus:border-slate-800 
-                        focus:ring-0 focus:ring-slate-800 
-                        transition-colors"
-                      pairId={pair.id || `temp-${index}`}
-                      navigableElements={navigableElements}
-                      setFocus={setFocus}
-                    />
-                    <KeyValueInput
-                      key={`value-${pair.id}-${index}`}
-                      value={pair.value}
-                      onChange={(value: string) =>
-                        updatePair(index, "value", value)
-                      }
-                      placeholder="Value"
-                      icon={Type}
-                      onPaste={(e) => handleSmartPaste(e, index, "value")}
-                      className="text-xs flex-1 bg-slate-900 border-slate-700 text-slate-300 
-                        placeholder:text-slate-500 focus:border-slate-800 
-                        focus:ring-0 focus:ring-slate-800 
-                        transition-colors"
-                      pairId={pair.id || `temp-${index}`}
-                      isValue
-                      navigableElements={navigableElements}
-                      setFocus={setFocus}
-                    />
-                    {showDescription && (
-                      <KeyValueInput
-                        key={`desc-${pair.id}-${index}`}
-                        value={pair.description || ""}
-                        onChange={(value: string) =>
-                          updatePair(index, "description", value)
-                        }
-                        placeholder="Description"
-                        icon={AlignLeft}
-                        className="flex-1 bg-slate-900 border-slate-700 text-slate-300 
-                          placeholder:text-slate-500 focus:border-slate-800 
-                          focus:ring-0 focus:ring-slate-800 
-                          transition-colors"
-                        pairId={pair.id || `temp-${index}`}
-                        navigableElements={navigableElements}
-                        setFocus={setFocus}
-                      />
-                    )}
-                  </div>
-                  {renderItemActions(pair, index)}
-                </div>
-              </SortableItem>
-            ))}
-          </div>
-        </SortableContextClient>
-      </DndContextClient>
-    );
-  };
 
   // Calculate the width of 4 action buttons (28px each) plus gaps (4px each)
-  const ACTION_BUTTONS_WIDTH = "132px"; // (7 * 4 buttons = 28px) + (4px * 3 gaps) = 132px
 
   useEffect(() => {
     const updateHeight = () => {
-      const calculatedHeight = Math.min(
-        pairs.length * 32 + 36,
-        window.innerHeight * 0.5
-      );
+      const maxHeight = window.innerHeight * 0.4; // 40vh
+      let calculatedHeight;
+
+      if (isBulkMode) {
+        // Bulk mode always uses maximum height
+        calculatedHeight = maxHeight;
+      } else {
+        // Regular mode: height based on number of pairs, but capped at 40vh
+        calculatedHeight = Math.min(
+          pairs.length * 32 + 36, // 32px per row + 36px padding
+          maxHeight
+        );
+      }
+
       setContainerHeight(`${calculatedHeight}px`);
     };
 
     updateHeight();
     window.addEventListener("resize", updateHeight);
     return () => window.removeEventListener("resize", updateHeight);
-  }, [pairs.length]);
+  }, [pairs.length, isBulkMode]);
+
+  // Add virtualization
+  const parentRef = useRef<HTMLDivElement>(null);
+  const [parentWidth, setParentWidth] = useState(0);
+
+  // Optimize virtualization
+  const rowVirtualizer = useVirtualizer({
+    count: pairs.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 32, // height of each row
+    overscan: 5, // number of items to render outside visible area
+  });
+
+  // Optimize width calculations
+  useEffect(() => {
+    if (parentRef.current) {
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          setParentWidth(entry.contentRect.width);
+        }
+      });
+      resizeObserver.observe(parentRef.current);
+      return () => resizeObserver.disconnect();
+    }
+  }, []);
+
+  // Optimized pair update function
+
+  // Optimized clear/remove functionality
+  const removePair = useCallback(
+    (index: number) => {
+      if (pairs.length <= 1) {
+        const clearedPair = {
+          ...pairs[0],
+          id: generateStableId(0),
+          key: "",
+          value: "",
+          description: "",
+          enabled: true,
+        };
+        onChange([clearedPair]);
+        if (autoSave) toast.success("Cleared pair");
+        return;
+      }
+
+      if (preventFirstItemDeletion && index === 0) {
+        toast.error("Cannot delete the first item");
+        return;
+      }
+
+      const newPairs = pairs.filter((_, i) => i !== index);
+      onChange(newPairs);
+      if (autoSave) toast.success("Item removed");
+    },
+    [pairs, onChange, preventFirstItemDeletion, autoSave]
+  );
+
+  // Optimized copy functionality with memoization
+  const handleSmartCopy = useCallback(
+    (index: number) => {
+      const pair = pairs[index];
+      if (!pair) return;
+
+      const copyFormat = JSON.stringify({
+        key: pair.key,
+        value: pair.value,
+      });
+
+      navigator.clipboard
+        .writeText(copyFormat)
+        .then(() => {
+          setCopiedIndex(index);
+          toast.success("Copied key-value pair", {
+            description: `${pair.key}: ${pair.value}`,
+          });
+          setTimeout(() => setCopiedIndex(null), 2000);
+        })
+        .catch(() => toast.error("Failed to copy to clipboard"));
+    },
+    [pairs]
+  );
+
+  const renderBulkEditor = () => (
+    <div className="flex flex-col h-full">
+      <Textarea
+        value={bulkContent}
+        onChange={(e) => setBulkContent(e.target.value)}
+        placeholder={`Format: key: value\n\nExamples:\napi_key: your-key-here\nbase_url: https://api.example.com\n#disabled_key: value\n\nOr JSON format:\n{"key": "api_key", "value": "your-key-here"}`}
+        className={cn(
+          "w-full flex-1 bg-transparent",
+          "text-slate-300 placeholder:text-slate-500",
+          "focus:outline-none focus:ring-1 focus:ring-slate-600/50",
+          "border border-slate-800/60 focus:border-slate-600",
+          "font-mono text-sm leading-relaxed",
+          "resize-none transition-all duration-150",
+          "p-4"
+        )}
+      />
+      <div className="flex-none p-2 bg-slate-800/50 border-t border-slate-700/50">
+        <span className="text-xs text-slate-400">
+          Tip: Use # to disable a line, or JSON format for complex values
+        </span>
+      </div>
+    </div>
+  );
 
   return (
     <div
       className="flex flex-col"
       style={{
-        minHeight: containerHeight,
-        maxHeight: "50vh",
+        height: containerHeight,
+        maxHeight: "38vh", // Ensure max height is enforced
       }}
     >
-      <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+      <div
+        ref={parentRef}
+        className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+      >
         {isBulkMode ? (
-          <Textarea
-            value={bulkContent}
-            onChange={(e) => setBulkContent(e.target.value)}
-            placeholder={`• Format: key: value\n• Examples:\n  • api_key: your-key-here\n  • base_url: https://api.example.com\n  • disabled_key: #key: value`}
-            className="w-full h-full min-h-[200px] bg-transparent
-              text-slate-300 placeholder:text-slate-500
-              focus:outline-none focus:ring-1 focus:ring-slate-600/50 
-              border border-slate-800/60 focus:border-slate-600
-              font-mono resize-none transition-all duration-150"
-          />
+          renderBulkEditor()
         ) : (
-          <div className="w-full h-full">
-            {isMounted && (
-              <DndContextClient
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-                modifiers={restrictToVerticalAxis.modifiers}
+          <div
+            className="w-full relative"
+            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+          >
+            <DndContextClient
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              modifiers={restrictToVerticalAxis.modifiers}
+            >
+              <SortableContextClient
+                items={pairs.map((p) => {
+                  // Ensure each item has a guaranteed unique ID
+                  if (!p.id) {
+                    p.id = generateStableId(pairs.indexOf(p));
+                  }
+                  return p.id;
+                })}
+                strategy={verticalListSortingStrategy}
               >
-                <SortableContextClient
-                  items={pairs.map((p) => p.id || `temp-${p.key}`)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-[1px]">
-                    {pairs.map((pair, index) => (
-                      <SortableItem
-                        key={pair.id || `stable-${index}`}
-                        pair={pair}
-                        index={index}
-                      >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const pair = pairs[virtualRow.index];
+                  if (!pair.id) {
+                    pair.id = generateStableId(virtualRow.index);
+                  }
+                  return (
+                    <div
+                      key={pair.id}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <SortableItem pair={pair} index={virtualRow.index}>
                         <div className="flex w-full hover:bg-slate-800/50 transition-colors group border border-slate-800/40 hover:border-slate-700/40">
                           <div
                             className={cn(
@@ -977,48 +1016,54 @@ export function KeyValueEditor({
                             )}
                           >
                             <KeyValueInput
-                              key={`key-${pair.id}-${index}`}
+                              key={`key-${pair.id}-${virtualRow.index}`}
                               value={pair.key}
                               onChange={(value: string) =>
-                                updatePair(index, "key", value)
+                                updatePair(virtualRow.index, "key", value)
                               }
                               placeholder="Key"
                               icon={Key}
-                              onPaste={(e) => handleSmartPaste(e, index, "key")}
+                              onPaste={(e) =>
+                                handleSmartPaste(e, virtualRow.index, "key")
+                              }
                               className="text-xs flex-1 bg-transparent 
                                 border-0 focus:ring-0
                                 text-slate-300 placeholder:text-slate-500 
                                 transition-colors group-hover:bg-slate-800/50"
-                              pairId={pair.id || `temp-${index}`}
+                              pairId={pair.id || `temp-${virtualRow.index}`}
                               navigableElements={navigableElements}
                               setFocus={setFocus}
                             />
                             <KeyValueInput
-                              key={`value-${pair.id}-${index}`}
+                              key={`value-${pair.id}-${virtualRow.index}`}
                               value={pair.value}
                               onChange={(value: string) =>
-                                updatePair(index, "value", value)
+                                updatePair(virtualRow.index, "value", value)
                               }
                               placeholder="Value"
                               icon={Type}
                               onPaste={(e) =>
-                                handleSmartPaste(e, index, "value")
+                                handleSmartPaste(e, virtualRow.index, "value")
                               }
                               className="text-xs flex-1 bg-transparent 
                                 border-0 focus:ring-0
                                 text-slate-300 placeholder:text-slate-500 
                                 transition-colors group-hover:bg-slate-800/50"
-                              pairId={pair.id || `temp-${index}`}
+                              pairId={pair.id || `temp-${virtualRow.index}`}
                               isValue
                               navigableElements={navigableElements}
                               setFocus={setFocus}
                             />
                             {showDescription && (
                               <KeyValueInput
-                                key={`desc-${pair.id}-${index}`}
+                                key={`desc-${pair.id}-${virtualRow.index}`}
                                 value={pair.description || ""}
                                 onChange={(value: string) =>
-                                  updatePair(index, "description", value)
+                                  updatePair(
+                                    virtualRow.index,
+                                    "description",
+                                    value
+                                  )
                                 }
                                 placeholder="Description"
                                 icon={AlignLeft}
@@ -1026,29 +1071,29 @@ export function KeyValueEditor({
                                   border-0 focus:ring-0
                                   text-slate-300 placeholder:text-slate-500 
                                   transition-colors group-hover:bg-slate-800/50"
-                                pairId={pair.id || `temp-${index}`}
+                                pairId={pair.id || `temp-${virtualRow.index}`}
                                 navigableElements={navigableElements}
                                 setFocus={setFocus}
                               />
                             )}
                           </div>
-                          {renderItemActions(pair, index)}
+                          {renderItemActions(pair, virtualRow.index)}
                         </div>
                       </SortableItem>
-                    ))}
-                  </div>
-                </SortableContextClient>
-              </DndContextClient>
-            )}
+                    </div>
+                  );
+                })}
+              </SortableContextClient>
+            </DndContextClient>
           </div>
         )}
       </div>
 
-      <div className="flex-none flex border-t border-slate-800 bg-slate-900/90 backdrop-blur-sm divide-x divide-slate-800">
+      <div className="flex-none flex border-y border-slate-800 bg-slate-900/90 backdrop-blur-sm divide-x divide-slate-800">
         <Button
           variant="ghost"
           onClick={handleAddPair}
-          className="flex-1 h-9 rounded-none hover:bg-slate-800 text-blue-400 
+          className="flex-1 h-8 rounded-none hover:bg-slate-800 text-blue-400 
             bg-slate-900/50 border-slate-800
             transition-all flex items-center justify-center gap-2
             hover:border-slate-700 group"
@@ -1071,7 +1116,7 @@ export function KeyValueEditor({
           variant="ghost"
           onClick={handleBulkEdit}
           className={cn(
-            "h-9 transition-all rounded-none justify-center gap-2",
+            "h-8 transition-all rounded-none justify-center gap-2",
             "bg-slate-900/50 hover:bg-slate-800 text-blue-400",
             "hidden sm:flex w-[132px]",
             "border-slate-800 hover:border-slate-700",
@@ -1096,7 +1141,7 @@ export function KeyValueEditor({
           variant="ghost"
           onClick={handleBulkEdit}
           className={cn(
-            "h-9 px-4 transition-all rounded-none justify-center",
+            "h-8 w-8 transition-all rounded-none justify-center",
             "bg-slate-900/50 hover:bg-slate-800 text-blue-400",
             "sm:hidden border-slate-800 hover:border-slate-700",
             "group"
@@ -1112,3 +1157,12 @@ export function KeyValueEditor({
     </div>
   );
 }
+
+export const useSortedPairs = (pairs: KeyValuePair[]) => {
+  return useMemo(() => {
+    return [...pairs].sort((a, b) => {
+      if (a.enabled !== b.enabled) return b.enabled ? 1 : -1;
+      return a.key.localeCompare(b.key);
+    });
+  }, [pairs]);
+};

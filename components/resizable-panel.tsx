@@ -77,9 +77,7 @@ interface ResizeHandleProps {
 
 const ResizableHandle = ({
   withHandle,
-  className,
-  ...props
-}: ResizeHandleProps) => {
+  className}: ResizeHandleProps) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [isTransitioning, setIsTransitioning] = React.useState(false);
 

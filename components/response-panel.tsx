@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import "highlight.js/styles/github-dark.css";
 import { languageConfigs, type CodeGenLanguage } from "@/utils/code-generators";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,23 +28,10 @@ import { Collection, SavedRequest } from "@/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MessagesTab } from "./websocket/messages-tab";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Editor } from "@monaco-editor/react";
 import { CodeLanguageSelector } from "./code-language-selector";
 import { useTheme } from "next-themes";
-
-const getLanguage = (contentType: string): string => {
-  switch (contentType) {
-    case "json":
-      return "json";
-    case "html":
-      return "html";
-    case "xml":
-      return "xml";
-    default:
-      return "text";
-  }
-};
+import type { editor } from "monaco-editor";
 
 interface TabItem {
   id: string;
@@ -72,6 +65,30 @@ interface ResponsePanelProps {
   isWebSocketMode: boolean;
 }
 
+// Add new LoadingDots component
+const LoadingDots = () => (
+  <div className="flex items-center justify-center h-full">
+    <div className="flex space-x-2">
+      {[1, 2, 3].map((i) => (
+        <div
+          key={`loading-dot-${i}`} // More unique key to avoid conflicts
+          className={cn(
+            "w-3 h-3 bg-slate-600 rounded-full",
+            "animate-bounce",
+            i === 1 && "animation-delay-0",
+            i === 2 && "animation-delay-150",
+            i === 3 && "animation-delay-300"
+          )}
+          style={{
+            animationDuration: "1s",
+            animationDelay: `${(i - 1) * 0.15}s`,
+          }}
+        />
+      ))}
+    </div>
+  </div>
+);
+
 const formatContent = (content: any, contentType: string): string => {
   if (contentType === "json") {
     try {
@@ -93,15 +110,85 @@ const getContentType = (headers: Record<string, string>): string => {
   return "text";
 };
 
+const useResponseFormatter = (content: any, contentType: string) => {
+  return useMemo(() => {
+    if (!content) return "";
+    try {
+      if (contentType === "json") {
+        const jsonString =
+          typeof content === "string" ? content : JSON.stringify(content);
+        return JSON.stringify(JSON.parse(jsonString), null, 2);
+      }
+      return typeof content === "string" ? content : JSON.stringify(content);
+    } catch (e) {
+      return typeof content === "string" ? content : JSON.stringify(content);
+    }
+  }, [content, contentType]);
+};
+
+const useDebounced = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debouncedValue;
+};
+
+const editorDefaultOptions = (
+  isPrettyPrint: boolean
+): editor.IStandaloneEditorConstructionOptions => ({
+  readOnly: true,
+  minimap: { enabled: true },
+  fontSize: 12,
+  lineNumbers: "on" as const,
+  folding: isPrettyPrint,
+  foldingStrategy: "indentation",
+  formatOnPaste: false,
+  formatOnType: false,
+  scrollBeyondLastLine: false,
+  automaticLayout: true,
+  tabSize: 2,
+  wordWrap: "on",
+  autoIndent: "advanced",
+  wrappingIndent: isPrettyPrint ? "deepIndent" : "none",
+  renderWhitespace: isPrettyPrint ? "all" : "none",
+  guides: {
+    indentation: true,
+    bracketPairs: true,
+    highlightActiveIndentation: true,
+    bracketPairsHorizontal: true,
+  },
+  lineNumbersMinChars: 3,
+  lineDecorationsWidth: 0,
+});
+
 export function ResponsePanel({
   response,
   isLoading,
-  collections,
-  onSaveToCollection,
   method,
   url,
   isWebSocketMode,
 }: ResponsePanelProps) {
+  // Move the helper function to the top
+  const getFormattedContent = (content: any, contentType: string): string => {
+    if (!content) return "";
+
+    try {
+      if (contentType === "json") {
+        const jsonString =
+          typeof content === "string" ? content : JSON.stringify(content);
+        return isPrettyPrint
+          ? JSON.stringify(JSON.parse(jsonString), null, 2)
+          : jsonString.replace(/\s+/g, "");
+      }
+
+      return typeof content === "string" ? content : JSON.stringify(content);
+    } catch (e) {
+      return typeof content === "string" ? content : JSON.stringify(content);
+    }
+  };
+
   // 1. All useState hooks
   const [activeTab, setActiveTab] = useState("response");
   const [isPrettyPrint, setIsPrettyPrint] = useState(true);
@@ -113,16 +200,17 @@ export function ResponsePanel({
   const [preRequestScript, setPreRequestScript] = useState<string>("");
   const [testScript, setTestScript] = useState<string>("");
   const [isOnline, setIsOnline] = useState(true);
-  const { theme } = useTheme();
+  useTheme();
 
   // 2. All useRef hooks
   const editorRef = useRef<any>(null);
-
+  const editorInstanceRef = useRef<any>(null);
+  const parentRef = useRef<any>(null);
   // 3. All useMemo hooks
-  const contentType = useMemo(() => {
-    if (!response?.headers) return "text";
-    return getContentType(response.headers);
-  }, [response?.headers]);
+  const contentType = useMemo(
+    () => (response?.headers ? getContentType(response.headers) : "text"),
+    [response?.headers]
+  );
 
   const tabs: TabItem[] = useMemo(
     () => [
@@ -169,7 +257,45 @@ export function ResponsePanel({
     [contentType, selectedLanguage]
   );
 
-  // 4. All useEffect hooks
+  const formattedContent = useResponseFormatter(response?.body, contentType);
+  const debouncedContent = useDebounced(formattedContent, 150);
+
+  const editorOptions = useMemo(
+    () => editorDefaultOptions(isPrettyPrint),
+    [isPrettyPrint]
+  );
+
+  const renderVirtualizedHeaders = useCallback(() => {
+    if (!response?.headers) return null;
+    const entries = Object.entries(response.headers);
+
+    return (
+      <div ref={parentRef} className="h-full overflow-auto">
+        <div className="divide-y divide-slate-700/50">
+          {entries.map(([key, value], index) => (
+            <div
+              key={`header-${key}-${index}`} // More unique key
+              className={cn(
+                "grid grid-cols-2 gap-4 px-4 py-2",
+                index % 2 === 0 ? "bg-slate-900" : "bg-slate-800/50",
+                "hover:bg-slate-700/50 transition-colors"
+              )}
+            >
+              <div className="font-mono text-xs text-blue-300 truncate">
+                {key}
+              </div>
+              <div className="font-mono text-xs text-slate-300 whitespace-pre-wrap break-all">
+                {typeof value === "string"
+                  ? value
+                  : JSON.stringify(value, null, 2)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }, [response?.headers]);
+
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -207,7 +333,14 @@ export function ResponsePanel({
     }
   }, [isPrettyPrint, contentType, activeTab, response]);
 
-  // Early returns
+  useEffect(() => {
+    if (editorInstanceRef.current && debouncedContent) {
+      requestAnimationFrame(() => {
+        editorInstanceRef.current.setValue(debouncedContent);
+      });
+    }
+  }, [debouncedContent]);
+
   if (!response && !isWebSocketMode) {
     return null;
   }
@@ -333,7 +466,7 @@ export function ResponsePanel({
 
   const renderStatusBar = () =>
     !isWebSocketMode ? (
-      <div className="sticky top-0 w-full px-4 py-3 border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm flex items-center justify-between">
+      <div className="sticky top-0 w-full px-4 py-2 border-y border-slate-800 bg-slate-800/25 backdrop-blur-sm flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Badge className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-blue-400 border-blue-500/30 px-3 py-1 rounded-lg">
             {response?.intercepted && (
@@ -395,79 +528,42 @@ export function ResponsePanel({
       </div>
     ) : null;
 
-  // Only hide the response content, not the entire panel
   const shouldShowContent = response || isWebSocketMode;
-
-  // Merge raw and pretty content handling into one function
-  const getFormattedContent = (content: any, contentType: string): string => {
-    if (!content) return "";
-
-    try {
-      // For JSON content
-      if (contentType === "json") {
-        const jsonString =
-          typeof content === "string" ? content : JSON.stringify(content);
-        return isPrettyPrint
-          ? JSON.stringify(JSON.parse(jsonString), null, 2)
-          : jsonString.replace(/\s+/g, "");
-      }
-
-      // For other content types
-      return typeof content === "string" ? content : JSON.stringify(content);
-    } catch (e) {
-      // If parsing fails, return as-is
-      return typeof content === "string" ? content : JSON.stringify(content);
-    }
-  };
 
   const renderResponseContent = () => (
     <div className="h-full flex flex-col">
       <div className="flex-1 bg-slate-900">
-        <div className="h-full [&_.monaco-editor]:!bg-slate-900 [&_.monaco-editor_.monaco-scrollable-element_.monaco-editor-background]:!bg-slate-900">
-          <Editor
-            height="100%"
-            defaultLanguage={contentType === "json" ? "json" : "text"}
-            value={getFormattedContent(response?.body, contentType)}
-            theme="vs-dark"
-            options={{
-              readOnly: true,
-              minimap: { enabled: false },
-              fontSize: 12,
-              lineNumbers: "on",
-              folding: isPrettyPrint,
-              foldingStrategy: "indentation",
-              formatOnPaste: false, // Disable automatic formatting
-              formatOnType: false, // Disable automatic formatting
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 2,
-              wordWrap: "on",
-              autoIndent: "advanced",
-              wrappingIndent: isPrettyPrint ? "deepIndent" : "none",
-              renderWhitespace: isPrettyPrint ? "all" : "none",
-              guides: {
-                indentation: true,
-                bracketPairs: true,
-                highlightActiveIndentation: true,
-                bracketPairsHorizontal: true,
-              },
-            }}
-            beforeMount={(monaco) => {
-              monaco.editor.defineTheme("customTheme", {
-                base: "vs-dark",
-                inherit: true,
-                rules: [],
-                colors: {
-                  "editor.background": "#0f172a",
-                },
-              });
-              monaco.editor.setTheme("customTheme");
-            }}
-            onMount={(editor) => {
-              editorRef.current = editor;
-            }}
-          />
-        </div>
+        {isLoading ? (
+          <LoadingDots />
+        ) : (
+          <div className="h-full [&_.monaco-editor]:!bg-slate-900 [&_.monaco-editor_.monaco-scrollable-element_.monaco-editor-background]:!bg-slate-900">
+            <Editor
+              height="100%"
+              defaultLanguage={contentType === "json" ? "json" : "text"}
+              value={getFormattedContent(response?.body, contentType)}
+              theme="vs-dark"
+              options={editorOptions}
+              beforeMount={(monaco) => {
+                monaco.editor.defineTheme("customTheme", {
+                  base: "vs-dark",
+                  inherit: true,
+                  rules: [],
+                  colors: {
+                    "editor.background": "#0f172a",
+                    "editorLineNumber.foreground": "#475569", // Slate-500 for line numbers
+                    "editorLineNumber.activeForeground": "#94a3b8", // Slate-400 for active line
+                    "editorGutter.background": "#0f112a", // Match editor background
+                  },
+                });
+                monaco.editor.setTheme("customTheme");
+              }}
+              onMount={(editor) => {
+                editorRef.current = editor;
+                editorInstanceRef.current = editor;
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -497,7 +593,6 @@ export function ResponsePanel({
                   ))}
                 </TabsList>
 
-                {/* Right-side controls with better mobile layout */}
                 <div className="flex items-center gap-2 px-2 h-10">
                   {contentType === "json" && activeTab === "response" && (
                     <div className=" sm:flex items-center gap-2 pr-2 border-r border-slate-700">
@@ -572,32 +667,15 @@ export function ResponsePanel({
 
             <div className="flex-1 relative bg-slate-900/50">
               <TabsContent value="response" className="absolute inset-0 m-0">
-                {renderResponseContent()}
+                {isLoading ? <LoadingDots /> : renderResponseContent()}
               </TabsContent>
 
               <TabsContent value="headers" className="absolute inset-0 m-0">
-                <ScrollArea direction="vertical" className="h-full">
-                  <div className="p-4">
+                <ScrollArea className="h-full">
+                  <div className="bg-slate-900/50">
                     {response?.headers &&
                     Object.keys(response.headers).length > 0 ? (
-                      <div className="w-full table border-separate border-spacing-0">
-                        {Object.entries(response.headers).map(
-                          ([key, value]) => (
-                            <div
-                              key={key}
-                              className="table-row group hover:bg-slate-800/50"
-                            >
-                              <div className="table-cell py-2 pr-4 text-xs font-semibold text-blue-100 whitespace-nowrap align-top border-b border-slate-700">
-                                {key}
-                                <div className="hidden group-hover:block absolute h-4 w-px bg-slate-700/50 -right-0.5 top-1/2 -translate-y-1/2" />
-                              </div>
-                              <div className="table-cell py-2 pl-4 text-xs font-mono break-all text-blue-300 align-top border-b border-slate-700">
-                                {value}
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
+                      renderVirtualizedHeaders()
                     ) : (
                       <div className="flex flex-col items-center justify-center h-32 text-slate-400">
                         <Database className="h-8 w-8 mb-2 opacity-50" />
@@ -615,29 +693,7 @@ export function ResponsePanel({
                       language={languageConfigs[selectedLanguage].highlight}
                       value={getGeneratedCode()}
                       theme="vs-dark"
-                      options={{
-                        readOnly: true,
-                        minimap: { enabled: true },
-                        fontSize: 12,
-                        lineNumbers: "on",
-                        folding: true,
-                        wordWrap: "on",
-                        automaticLayout: true,
-                        scrollBeyondLastLine: false,
-                        tabSize: 4,
-                        formatOnPaste: true,
-                        formatOnType: true,
-                        autoIndent: "advanced",
-                        renderWhitespace: "all",
-                        detectIndentation: true,
-                        wrappingIndent: "indent",
-                        guides: {
-                          indentation: true,
-                          bracketPairs: true,
-                          highlightActiveIndentation: true,
-                          bracketPairsHorizontal: true,
-                        },
-                      }}
+                      options={editorOptions}
                       beforeMount={(monaco) => {
                         monaco.editor.defineTheme("customTheme", {
                           base: "vs-dark",
@@ -645,6 +701,9 @@ export function ResponsePanel({
                           rules: [],
                           colors: {
                             "editor.background": "#0f172a",
+                            "editorLineNumber.foreground": "#475569", // Slate-500 for line numbers
+                            "editorLineNumber.activeForeground": "#94a3b8", // Slate-400 for active line
+                            "editorGutter.background": "#0f172a", // Match editor background
                           },
                         });
                         monaco.editor.setTheme("customTheme");
@@ -661,11 +720,29 @@ export function ResponsePanel({
         </>
       ) : (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-slate-500 text-sm">
-            Make a request to see the response
-          </div>
+          {isLoading ? (
+            <LoadingDots />
+          ) : (
+            <div className="text-slate-500 text-sm">
+              Make a request to see the response
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
+
+// Add to your global CSS or tailwind.config.js
+// @keyframes bounce {
+//   0%, 100% { transform: translateY(0); }
+//   50% { transform: translateY(-10px); }
+// }
+//
+// .animation-delay-150 {
+//   animation-delay: 150ms;
+// }
+//
+// .animation-delay-300 {
+//   animation-delay: 300ms;
+// }

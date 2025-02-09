@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
-import { HistoryItem } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,19 +20,109 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useWebSocket } from "./websocket/websocket-context";
 import { motion, AnimatePresence } from "framer-motion";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useTabManager } from "./tab-manager";
+import { Tab } from "@/types/tabs";
+
+const pulseVariants = {
+  idle: {
+    opacity: [0.5, 1, 0.5],
+    transition: {
+      repeat: Infinity,
+      duration: 2,
+      ease: "easeInOut",
+    },
+  },
+};
+
+const methodBadgeVariants = {
+  initial: { opacity: 0, y: -10 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 500,
+      damping: 30,
+    },
+  },
+  exit: { opacity: 0, y: 10 },
+};
+
+const loadingOverlayVariants = {
+  hidden: { opacity: 0, x: "-100%" },
+  visible: {
+    opacity: 1,
+    x: "100%",
+    transition: {
+      duration: 1.5,
+      repeat: Infinity,
+      ease: "linear",
+    },
+  },
+};
+
+const inputFocusAnimation = {
+  scale: 1.002,
+  transition: { duration: 0.2, ease: "easeInOut" },
+};
+
+const neonTrailVariants = {
+  animate: {
+    pathLength: [0, 1],
+    pathOffset: [0, 1],
+    transition: {
+      duration: 8,
+      ease: "linear",
+      repeat: Infinity,
+    },
+  },
+};
+
+const PLACEHOLDER_TEXTS = [
+  "Enter request URL or type '{{' for variables",
+  "Type '{{' to access environment variables",
+  "Use 'wss://' or 'ws://' for WebSocket mode",
+  "Welcome to queFork - Your API Testing Companion",
+  "Press '/' to focus the URL bar",
+  "Supports REST, WebSocket and Socket.IO",
+] as const;
+
+const placeholderVariants = {
+  exit: {
+    opacity: 0,
+    y: -10,
+    transition: { duration: 0.2 },
+  },
+  enter: {
+    opacity: 0,
+    y: 10,
+    transition: { duration: 0.2 },
+  },
+  center: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: "easeOut",
+    },
+  },
+};
 
 interface UrlBarProps {
   method: string;
   url: string;
   isLoading: boolean;
-  wsConnected: boolean;
+  wsState?: {
+    isConnected: boolean;
+    connectionStatus: "disconnected" | "connecting" | "connected" | "error";
+  };
   isWebSocketMode: boolean;
-  variables: {
+  variables: Array<{
     key: string;
     value: string;
     type?: "text" | "secret";
-  }[];
-  isMobile: boolean;
+  }>;
   recentUrls?: string[];
   onMethodChange: (method: string) => void;
   onUrlChange: (url: string) => void;
@@ -43,23 +132,11 @@ interface UrlBarProps {
   onConnect?: () => void;
   onDisconnect?: () => void;
   className?: string;
+  isMobile?: boolean;
   hasExtension?: boolean;
 }
 
-interface SuggestionType {
-  type: "variable" | "history" | "template";
-  value: string;
-  label: string;
-  description?: string;
-}
-
-type UrlType = "http" | "websocket";
 type UrlProtocol = "wss" | "sio";
-
-const detectUrlType = (url: string): UrlType => {
-  if (!url) return "http";
-  return /^wss?:\/\/|socket\.io|websocket/.test(url) ? "websocket" : "http";
-};
 
 const detectWebSocketProtocol = (url: string): UrlProtocol => {
   return /socket\.io|engine\.io|\?EIO=[3-4]|transport=websocket|\/socket\.io\/?/.test(
@@ -69,119 +146,273 @@ const detectWebSocketProtocol = (url: string): UrlProtocol => {
     : "wss";
 };
 
-const placeholderTexts = [
-  "Welcome to queFork",
-  "Enter an API endpoint...",
-  "Try a WebSocket URL...",
-  "Type '{{' to use envar",
-  "Press '/' to focus",
-];
-const idleAnimationVariants = {
-  idle: {
-    boxShadow: [
-      "0 0 0 0 rgba(59, 130, 246, 0)",
-      "0 0 0 2px rgba(59, 130, 246, 0.08)",
-      "0 0 0 0 rgba(59, 130, 246, 0)",
-    ],
-    transition: {
-      duration: 3,
-      repeat: Infinity,
-      ease: "easeInOut",
-    },
-  },
-  active: {
-    boxShadow: "0 0 0 0 rgba(59, 130, 246, 0)",
-  },
+const AnimatedPlaceholder = ({ text }: { text: string }) => (
+  <motion.div
+    className="absolute inset-0 flex items-center px-4 pointer-events-none text-xs sm:text-sm"
+    initial="enter"
+    animate="center"
+    exit="exit"
+    variants={placeholderVariants}
+  >
+    <span className="font-mono text-slate-600/80 truncate">{text}</span>
+  </motion.div>
+);
+
+// 1. Optimize debounce function with proper typing and caching
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): ((...args: Parameters<T>) => void) => {
+  let timeoutId: NodeJS.Timeout | null = null;
+  return (...args: Parameters<T>) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      timeoutId = null;
+      func(...args);
+    }, wait);
+  };
 };
 
-type PlaceholderTextProps = {
-  text: string;
-  direction: number;
-};
-const typewriterVariants = {
-  hidden: { opacity: 0, x: -20 },
-  visible: (custom: { delay: number; duration: number }) => ({
-    opacity: 1,
-    x: 0,
-    transition: {
-      delay: custom.delay,
-      duration: custom.duration,
-      ease: "easeOut",
-    },
-  }),
-  exit: {
-    opacity: 0,
-    x: 20,
-    transition: {
-      duration: 0.2,
-      ease: "easeIn",
-    },
-  },
-};
-
-const AnimatedPlaceholder = ({ text, direction }: PlaceholderTextProps) => {
-  const characters = text.split("");
-
-  return (
-    <motion.div
-      key={text}
-      className="absolute inset-0 flex items-center px-4 pointer-events-none text-xs sm:text-sm"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-    >
-      <div className="flex items-center h-full">
-        {characters.map((char, index) => (
-          <motion.span
-            key={index}
-            variants={typewriterVariants}
-            custom={{
-              delay: index * 0.03, // typing speed
-              duration: 0.1, // duration
-            }}
-            className={cn(
-              "font-mono tracking-tighter text-slate-600/80",
-              "font-bold antialiased"
-            )}
-            style={{
-              fontFamily: "JetBrains Mono, Menlo, Monaco, Consolas, monospace",
-              textShadow: "0 0 10px rgba(16, 61, 185, 0.2)", // Green glow effect
-            }}
-          >
-            {char === " " ? "\u00A0" : char}
-          </motion.span>
-        ))}
-      </div>
-    </motion.div>
-  );
-};
+// 2. Memoize the URL regex patterns
+const URL_PATTERNS = {
+  websocket: /^wss?:\/\/|socket\.io|websocket/,
+  socketIO:
+    /socket\.io|engine\.io|\?EIO=[3-4]|transport=websocket|\/socket\.io\/?/,
+} as const;
 
 export function UrlBar({
   method,
   url,
   isLoading,
-  wsConnected,
   isWebSocketMode,
   variables,
   isMobile,
-  recentUrls = [],
   onMethodChange,
   onUrlChange: propsOnUrlChange,
   onSendRequest,
   onWebSocketToggle,
-  hasExtension = false,
 }: UrlBarProps) {
-  // 1. Grouped all hooks at the top
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState(0);
-  const [showEnvSuggestions, setShowEnvSuggestions] = useState(false);
-  const [searchPrefix, setSearchPrefix] = useState("");
-  const [isIdle, setIsIdle] = useState(true);
-  const [isTyping, setIsTyping] = useState(false);
-  const [[page, direction], setPage] = useState([0, 0]);
+  // Add this ref to track cursor position
+  const lastCursorPositionRef = useRef<number>(0);
+  const isUserTypingRef = useRef(false);
 
+  // Replace state object with individual states to prevent unnecessary re-renders
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<typeof variables>([]);
+
+  // Use refs for values that don't need re-renders
   const inputRef = useRef<HTMLInputElement>(null);
-  const typingTimeout = useRef<NodeJS.Timeout>();
+  const cursorRef = useRef<number>(0);
+  const searchPrefixRef = useRef("");
+  const isTypingRef = useRef(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Debounced URL validation
+  const debouncedValidateUrl = useMemo(
+    () =>
+      debounce((value: string) => {
+        const isValid = isValidUrl(value);
+        // Only update if necessary
+        if (inputRef.current) {
+          inputRef.current.setAttribute("aria-invalid", (!isValid).toString());
+        }
+      }, 200),
+    []
+  );
+
+  // Optimize suggestion processing
+  const processSuggestions = useCallback(
+    (value: string, cursorPos: number) => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        const beforeCursor = value.slice(0, cursorPos);
+        const match = beforeCursor.match(/\{\{([^}]*)$/);
+
+        if (match) {
+          const searchTerm = match[1].toLowerCase();
+          searchPrefixRef.current = searchTerm;
+
+          // Use requestAnimationFrame for smoother UI updates
+          requestAnimationFrame(() => {
+            const filtered = variables
+              .filter((v) => v.key.toLowerCase().includes(searchTerm))
+              .slice(0, 100);
+
+            setShowSuggestions(true);
+            setSuggestions(filtered);
+          });
+        } else {
+          setShowSuggestions(false);
+          setSuggestions([]);
+        }
+      }, 100);
+    },
+    [variables]
+  );
+
+  // Optimize input handling
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const input = e.target;
+      const newValue = input.value;
+      const newPosition = input.selectionStart || 0;
+
+      // Store cursor position before React updates
+      lastCursorPositionRef.current = newPosition;
+      isUserTypingRef.current = true;
+
+      // Update URL
+      propsOnUrlChange(newValue);
+
+      // Schedule cursor position restoration
+      requestAnimationFrame(() => {
+        if (isUserTypingRef.current && input) {
+          input.setSelectionRange(
+            lastCursorPositionRef.current,
+            lastCursorPositionRef.current
+          );
+          isUserTypingRef.current = false;
+        }
+      });
+
+      // Handle suggestions after cursor is restored
+      if (!isTypingRef.current) {
+        isTypingRef.current = true;
+        requestAnimationFrame(() => {
+          debouncedValidateUrl(newValue);
+          processSuggestions(newValue, newPosition);
+          isTypingRef.current = false;
+        });
+      }
+    },
+    [propsOnUrlChange, debouncedValidateUrl, processSuggestions]
+  );
+
+  // Optimize variable insertion
+  const handleVariableSelect = useCallback(
+    (varKey: string) => {
+      if (!inputRef.current) return;
+
+      const cursorPos = lastCursorPositionRef.current;
+      const currentValue = inputRef.current.value;
+      const beforeCursor = currentValue.slice(0, cursorPos);
+      const afterCursor = currentValue.slice(cursorPos);
+      const varStart = beforeCursor.lastIndexOf("{{");
+
+      const newUrl =
+        varStart === -1
+          ? beforeCursor + `{{${varKey}}}` + afterCursor
+          : beforeCursor.slice(0, varStart) + `{{${varKey}}}` + afterCursor;
+
+      const newPosition =
+        (varStart === -1 ? beforeCursor.length : varStart) + varKey.length + 4;
+
+      // Store the new cursor position
+      lastCursorPositionRef.current = newPosition;
+      isUserTypingRef.current = true;
+
+      // Update URL
+      propsOnUrlChange(newUrl);
+
+      // Focus and set cursor position
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.setSelectionRange(newPosition, newPosition);
+          isUserTypingRef.current = false;
+        }
+      });
+    },
+    [propsOnUrlChange]
+  );
+
+  // Add tab context and get current tab state
+  const { activeTab, updateTab, tabs } = useTabManager();
+  const currentTab = tabs.find((t) => t.id === activeTab);
+  const tabState = currentTab?.state;
+
+  // Add handleStateUpdate function
+  const handleStateUpdate = useCallback(
+    (updates: Partial<Tab["state"]>) => {
+      if (!currentTab) return;
+
+      // Update tab state with new values while preserving existing state
+      updateTab(activeTab, {
+        state: { ...currentTab.state, ...updates },
+        unsaved: true,
+      });
+    },
+    [currentTab, activeTab, updateTab]
+  );
+
+  // Optimize state management with useRef for values that don't need renders
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Add refs for cursor and value tracking
+
+  // Batch state updates
+  const [state, setState] = useState({
+    searchPrefix: "",
+    cursorPosition: 0,
+    isIdle: true,
+    isTyping: false,
+  });
+
+  // Create virtualized list for suggestions
+  const virtualizer = useVirtualizer({
+    count: suggestions.length,
+    getScrollElement: () => suggestionsRef.current,
+    estimateSize: () => 36, // height of each suggestion item
+    overscan: 5,
+  });
+
+  // Add controlled selection management
+  const [selection, setSelection] = useState<{
+    start: number;
+    end: number;
+  } | null>(null);
+
+  // Update useEffect for cursor position management
+  useEffect(() => {
+    if (inputRef.current && selection) {
+      inputRef.current.setSelectionRange(selection.start, selection.end);
+      setSelection(null); // Clear selection after applying
+    }
+  }, [selection]);
+
+  // Memoize suggestion rendering
+  const renderSuggestion = useCallback(
+    (index: number) => {
+      const variable = suggestions[index];
+      return (
+        <button
+          key={variable.key}
+          onClick={() => handleVariableSelect(variable.key)}
+          className="w-full flex items-center px-3 py-2 hover:bg-slate-800 transition-colors"
+        >
+          <div className="flex items-center gap-2 truncate">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50" />
+            <span className="font-mono text-xs text-blue-300">
+              {variable.key}
+            </span>
+            <span className="text-xs text-slate-500">=</span>
+            <span className="text-xs text-slate-400 truncate">
+              {variable.type === "secret" ? "•••••••" : variable.value}
+            </span>
+          </div>
+        </button>
+      );
+    },
+    [suggestions]
+  );
+
+  const [cursorPosition, setCursorPosition] = useState<number | null>(null);
+  const cursorUpdatePending = useRef(false);
+  const [[]] = useState([0, 0]);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   const {
     connect: wsConnect,
@@ -189,93 +420,95 @@ export function UrlBar({
     isConnected,
     connectionStatus,
     onUrlChange: wsUrlChange,
-    url: wsUrl,
   } = useWebSocket();
 
-  // 2. Moved all useMemo hooks together
-  const urlType = useMemo(() => detectUrlType(url), [url]);
-  const wsProtocol = useMemo(() => detectWebSocketProtocol(url), [url]);
-  const filteredVariables = useMemo(() => {
-    const validVariables = Array.isArray(variables) ? variables : [];
-    return validVariables
-      .filter((v) => {
-        const searchTerm = searchPrefix.toLowerCase().trim();
-        return v.key.toLowerCase().includes(searchTerm);
-      })
-      .sort((a, b) => {
-        const aStartsWith = a.key
-          .toLowerCase()
-          .startsWith(searchPrefix.toLowerCase());
-        const bStartsWith = b.key
-          .toLowerCase()
-          .startsWith(searchPrefix.toLowerCase());
-        if (aStartsWith && !bStartsWith) return -1;
-        if (!aStartsWith && bStartsWith) return 1;
-        return a.key.localeCompare(b.key);
-      });
-  }, [variables, searchPrefix]);
+  // 4. Memoize handlers that don't need frequent updates
 
-  const debouncedHandleInput = useMemo(
-    () =>
-      debounce((value: string, cursorPos: number) => {
-        propsOnUrlChange(value);
-        setCursorPosition(cursorPos);
-        setIsTyping(true);
-        clearTimeout(typingTimeout.current);
-        typingTimeout.current = setTimeout(() => {
-          setIsTyping(false);
-          setIsIdle(!value);
-        }, 1000);
-      }, 50),
-    [propsOnUrlChange]
+  // 6. Memoize filtered variables computation
+
+  // 7. Optimize URL validation with memoization
+  const isValidUrl = useCallback(
+    (urlString: string): boolean => {
+      if (!urlString || urlString.match(/^(https?:\/\/|wss?:\/\/)$/))
+        return false;
+
+      const hasVariables = urlString.includes("{{");
+      if (hasVariables) {
+        const unresolvedVars = (urlString.match(/\{\{([^}]+)\}\}/g) || []).some(
+          (match) => !variables.find((v) => v.key === match.slice(2, -2))
+        );
+        if (unresolvedVars) return false;
+      }
+
+      // Use precompiled regex patterns
+      return /^(https?:\/\/|wss?:\/\/)?(localhost|[\w-]+\.[\w.-]+)(:\d+)?([/?].*)?$/.test(
+        urlString
+      );
+    },
+    [variables]
   );
 
-  // 3. Also Grouped useCallback hooks :)
-  const handleUrlChange = (newUrl: string) => {
-    const urlProtocol = detectUrlType(newUrl);
-    propsOnUrlChange(newUrl);
+  // 8. Memoize the URL type detection
+  const urlType = useMemo(
+    () => (URL_PATTERNS.websocket.test(url) ? "websocket" : "http"),
+    [url]
+  );
 
-    if ((!newUrl || urlProtocol === "http") && isWebSocketMode) {
-      if (wsConnected) {
-        wsDisconnect();
-      }
-      onWebSocketToggle();
-    } else if (newUrl && urlProtocol === "websocket" && !isWebSocketMode) {
-      onWebSocketToggle();
-    }
+  // Add separate effect for WebSocket mode handling
+  useEffect(() => {
+    const isWebSocketUrl = URL_PATTERNS.websocket.test(url);
+    const shouldBeWebSocketMode = isWebSocketUrl;
 
-    if (isWebSocketMode) {
-      wsUrlChange(newUrl);
-    }
-  };
-
-  const handleHistoryItemLoad = useCallback(
-    (historyItem: HistoryItem) => {
-      if (!historyItem) return;
-      if (historyItem.type === "websocket") {
-        handleUrlChange(historyItem.url);
-        if (isConnected) {
-          wsDisconnect();
-        }
+    // Only toggle if the mode needs to change
+    if (shouldBeWebSocketMode !== isWebSocketMode) {
+      // Use setTimeout to avoid state updates during render
+      setTimeout(() => {
+        handleStateUpdate({
+          isWebSocketMode: shouldBeWebSocketMode,
+          method: shouldBeWebSocketMode ? "WSS" : "GET",
+        });
         onWebSocketToggle();
-        toast.info(
-          `Last session: ${historyItem.wsStats?.messagesSent || 0} sent, ${
-            historyItem.wsStats?.messagesReceived || 0
-          } received`
-        );
+      }, 0);
+    }
+  }, [url, isWebSocketMode, handleStateUpdate, onWebSocketToggle]);
+
+  const wsProtocol = useMemo(() => detectWebSocketProtocol(url), [url]);
+
+  const handleUrlChange = useCallback(
+    (newUrl: string) => {
+      if (!tabState) return;
+
+      // Only update URL and basic state
+      handleStateUpdate({
+        url: newUrl,
+        response: null,
+      });
+
+      // Handle WebSocket URL update
+      if (isWebSocketMode) {
+        wsUrlChange(newUrl);
       }
+
+      // Notify parent
+      propsOnUrlChange(newUrl);
     },
-    [isConnected, wsDisconnect, onWebSocketToggle]
+    [
+      tabState,
+      isWebSocketMode,
+      wsUrlChange,
+      propsOnUrlChange,
+      handleStateUpdate,
+    ]
   );
 
   useEffect(() => {
-    if (!url && isIdle) {
+    if (!url && state.isIdle) {
       const interval = setInterval(() => {
-        setPage(([prevPage]) => [(prevPage + 1) % placeholderTexts.length, 1]);
-      }, 4000);
+        setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDER_TEXTS.length);
+      }, 3000); // Change every 3 seconds
       return () => clearInterval(interval);
     }
-  }, [url, isIdle]);
+  }, [url, state.isIdle]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -361,52 +594,6 @@ export function UrlBar({
     };
   }, []);
 
-  const resolveVariables = (urlString: string): string => {
-    return urlString.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
-      const variable = variables.find((v) => v.key === key);
-      return variable ? variable.value : "{{" + key + "}}";
-    });
-  };
-
-  const isValidUrl = (urlString: string): boolean => {
-    if (!urlString) return false;
-
-    if (
-      urlString === "http://" ||
-      urlString === "https://" ||
-      urlString === "ws://" ||
-      urlString === "wss://"
-    ) {
-      return false;
-    }
-
-    const hasVariables = urlString.includes("{{");
-    if (hasVariables) {
-      const hasUnclosedVariables =
-        (urlString.match(/\{\{/g) || []).length !==
-        (urlString.match(/\}\}/g) || []).length;
-      if (hasUnclosedVariables) return false;
-
-      const variableMatches = urlString.match(/\{\{([^}]+)\}\}/g) || [];
-      const allVariablesDefined = variableMatches.every((match) => {
-        const varName = match.slice(2, -2);
-        return variables.some((v) => v.key === varName);
-      });
-
-      if (!allVariablesDefined) return false;
-    }
-
-    const resolvedUrl = resolveVariables(urlString);
-
-    // Updated patterns to allow localhost and IP addresses
-    const httpPattern =
-      /^https?:\/\/(?:localhost(?::[0-9]+)?|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::[0-9]+)?|[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6})\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
-    const wsPattern =
-      /^wss?:\/\/(?:localhost(?::[0-9]+)?|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::[0-9]+)?|[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6})\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
-
-    return httpPattern.test(resolvedUrl) || wsPattern.test(resolvedUrl);
-  };
-
   const getMethodColor = (method: string) => {
     const colors = {
       GET: "emerald",
@@ -418,55 +605,32 @@ export function UrlBar({
     return colors[method as keyof typeof colors] || "slate";
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    const cursorPos = e.target.selectionStart || 0;
-
-    debouncedHandleInput(newValue, cursorPos);
-
-    const beforeCursor = newValue.slice(0, cursorPos);
-    const match = beforeCursor.match(/\{\{([^}]*)$/);
-
-    if (match) {
-      const searchTerm = match[1].toLowerCase();
-      setSearchPrefix(searchTerm);
-      setShowEnvSuggestions(true);
-    } else {
-      setShowEnvSuggestions(false);
+  // Add this effect to restore cursor position after render
+  useEffect(() => {
+    if (
+      cursorUpdatePending.current &&
+      inputRef.current &&
+      cursorPosition !== null
+    ) {
+      inputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+      cursorUpdatePending.current = false;
     }
+  }, [url, cursorPosition]);
 
-    setIsIdle(false);
-  };
-
-  const insertVariable = (varKey: string) => {
-    if (!inputRef.current) return;
-
-    const beforeCursor = url.slice(0, cursorPosition);
-    const afterCursor = url.slice(cursorPosition);
-    const varStart = beforeCursor.lastIndexOf("{{");
-
-    const newUrl =
-      beforeCursor.slice(0, varStart) + `{{${varKey}}}` + afterCursor;
-
-    handleUrlChange(newUrl);
-    setShowSuggestions(false);
-
-    const newPosition = varStart + varKey.length + 4;
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.setSelectionRange(newPosition, newPosition);
-        inputRef.current.focus();
-      }
-    }, 0);
-  };
-
-  const handleWebSocketAction = () => {
-    if (!url) return;
+  const handleWebSocketAction = useCallback(() => {
+    if (!url || !tabState) return;
 
     if (isConnected) {
+      // When disconnecting, first disconnect WebSocket
       wsDisconnect();
+      // Then update the tab state
+      updateTab(activeTab, {
+        state: { ...tabState, isWebSocketMode: false },
+      });
+      onWebSocketToggle();
     } else {
       try {
+        // Format the URL first
         const formattedUrl =
           url.startsWith("ws://") || url.startsWith("wss://")
             ? url
@@ -476,18 +640,38 @@ export function UrlBar({
                 ? url.replace("https://", "wss://")
                 : `ws://${url}`;
 
-        handleUrlChange(formattedUrl);
-        const protocol = detectWebSocketProtocol(formattedUrl);
-        wsConnect([protocol]);
+        // Update URL in WebSocket context
+        wsUrlChange(formattedUrl);
+
+        // Connect to WebSocket
+        wsConnect();
+
+        // Update tab state
+        if (!isWebSocketMode) {
+          updateTab(activeTab, {
+            state: { ...tabState, isWebSocketMode: true },
+          });
+          onWebSocketToggle();
+        }
       } catch (error) {
         console.error("WebSocket setup error:", error);
         toast.error("Failed to setup WebSocket connection");
       }
     }
-  };
+  }, [
+    url,
+    isConnected,
+    wsConnect,
+    wsDisconnect,
+    wsUrlChange,
+    onWebSocketToggle,
+    activeTab,
+    isWebSocketMode,
+    tabState,
+  ]);
 
   const renderActionButtons = () => (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 rounded-lg">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -504,38 +688,44 @@ export function UrlBar({
                   : isLoading)
               }
               className={cn(
-                "w-full h-10 p-4 transition-all relative border-2 border-slate-800",
+                "w-full h-8 transition-all relative border-2 border-slate-800 rounded-lg",
                 urlType === "websocket"
                   ? isConnected
-                    ? "text-white after:absolute after:inset-0 after:animate-pulse"
+                    ? "text-white after:absolute after:inset-0"
                     : "bg-slate-900 hover:bg-slate-700 text-slate-400"
                   : isLoading
                     ? "bg-slate-900 text-slate-400 cursor-not-allowed overflow-hidden"
                     : "bg-slate-900 hover:bg-slate-800 text-slate-400",
                 (!isValidUrl(url) || isLoading) &&
-                  "opacity-50 cursor-not-allowed"
+                  "opacity-50 cursor-not-allowed",
+                "backdrop-blur-sm"
               )}
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <div className="absolute inset-0 bg-emerald-500/10 animate-overlay" />
+                  <motion.div
+                    className="absolute inset-0 bg-blue-500/10"
+                    variants={loadingOverlayVariants}
+                    initial="hidden"
+                    animate="visible"
+                  />
                 </div>
               ) : urlType === "websocket" ? (
                 isConnected ? (
-                  <div className="relative">
-                    <Unplug className="h-5 w-5 animate-pulse" />
-                  </div>
+                  <motion.div
+                    variants={pulseVariants}
+                    animate="idle"
+                    className="relative"
+                  >
+                    <Unplug className="h-5 w-5" />
+                  </motion.div>
                 ) : (
                   <PlugZap2 className="h-5 w-5" />
                 )
               ) : (
                 <Send
-                  className={cn(
-                    "h-5 w-5",
-                    "transition-transform duration-200",
-                    "group-hover:translate-x-1"
-                  )}
+                  className="h-5 w-5 transition-transform duration-200"
                   strokeWidth={1}
                   style={{
                     stroke: "white",
@@ -573,77 +763,94 @@ export function UrlBar({
     }
   };
 
+  const inputProps = {
+    ref: inputRef,
+    value: url,
+    disabled: isConnected,
+    onChange: handleInputChange,
+    onSelect: (e: React.SyntheticEvent<HTMLInputElement>) => {
+      const target = e.target as HTMLInputElement;
+      setCursorPosition(target.selectionStart || 0);
+    },
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (!isConnected) {
+        if (e.key === "Escape") {
+          setShowSuggestions(false);
+        }
+        handleEnterKey(e);
+      }
+    },
+    onFocus: () => setState((prev) => ({ ...prev, isIdle: false })),
+    className: cn(
+      "pr-20 font-mono bg-slate-900/90 backdrop-blur-sm",
+      "border border-slate-800 text-slate-500 rounded-lg",
+      "text-xs sm:text-sm tracking-tight leading-relaxed",
+      "transition-all duration-200",
+      isConnected && "opacity-50 cursor-not-allowed bg-slate-800",
+      !isValidUrl(url) && url && "border-red-500/50",
+      "transform-gpu will-change-[border-color]",
+      // Add subtle glow when focused
+      "focus:border-blue-500/20 focus:ring-1 focus:ring-blue-500/20"
+    ),
+  };
+
   const renderUrlInput = () => (
     <div className="w-full relative flex-1">
-      <motion.div
-        variants={idleAnimationVariants}
-        animate={isIdle && !url ? "idle" : "active"}
-        className="absolute inset-0 rounded-lg pointer-events-none"
-      />
-
-      <div className="relative">
-        <Input
-          ref={inputRef}
-          value={url}
-          disabled={isConnected}
-          onChange={handleInputChange}
-          onKeyDown={(e) => {
-            if (!isConnected) {
-              if (e.key === "Escape") setShowEnvSuggestions(false);
-              setIsIdle(false);
-              handleEnterKey(e);
-            }
-          }}
-          onFocus={() => setIsIdle(false)}
-          onBlur={() => {
-            if (!url) {
-              setTimeout(() => setIsIdle(true), 100);
-            }
-          }}
-          className={cn(
-            "pr-20 font-mono bg-slate-900",
-            "border border-slate-800 text-slate-500 rounded-lg",
-            "transition-all duration-300 ease-out",
-            "placeholder:text-slate-500 placeholder:font-mono",
-            "focus:ring-2 focus:ring-blue-500/20 focus:border-slate-800/30",
-            `focus:border-${getMethodColor(method)}-500/50`,
-            !isValidUrl(url) && url && "border-red-500/50",
-            "text-xs sm:text-sm",
-            "tracking-tight leading-relaxed",
-            isConnected && "opacity-50 cursor-not-allowed bg-slate-800",
-            isIdle && !url && "border-blue-800/80 border-2 animate-pulse",
-            isTyping &&
-              "border-slate-800/30 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]"
-          )}
-          style={{
-            fontFamily: "JetBrains Mono, Menlo, Monaco, Consolas, monospace",
-          }}
-        />
-
-        {!url && isIdle && (
-          <AnimatePresence mode="wait" initial={false}>
-            <AnimatedPlaceholder
-              key={page}
-              text={placeholderTexts[page]}
-              direction={direction}
+      <motion.div className="relative" whileFocus={inputFocusAnimation}>
+        <div className="absolute inset-0 -m-[1px] pointer-events-none">
+          <svg className="w-full h-full">
+            <motion.rect
+              x="0"
+              y="0"
+              width="100%"
+              height="100%"
+              fill="none"
+              strokeWidth="2"
+              stroke="url(#neonGradient)"
+              rx="8"
+              variants={neonTrailVariants}
+              initial="initial"
+              animate="animate"
             />
-          </AnimatePresence>
-        )}
-      </div>
+            <defs>
+              <linearGradient id="neonGradient" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="transparent" />
+                <stop offset="50%" stopColor="#3b82f6" /> {/* Blue-500 */}
+                <stop offset="100%" stopColor="transparent" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
 
-      {isIdle && !url && (
-        <motion.div
-          animate={{
-            opacity: [1, 0.15, 0.1],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="absolute inset-0 -z-10 bg-white rounded-lg blur-lg"
+        <Input
+          {...inputProps}
+          className={cn(
+            "pr-20 h-8 font-mono bg-slate-900/90 backdrop-blur-sm",
+            "border-2 border-slate-800 text-slate-500 rounded-lg",
+            "text-xs sm:text-sm tracking-tight leading-relaxed",
+            "transition-all duration-200",
+            isConnected && "opacity-50 cursor-not-allowed bg-slate-800",
+            !isValidUrl(url) && url && "border-red-500/50",
+            "transform-gpu will-change-[border-color]",
+            "focus:border-blue-500/20 focus:ring-1 focus:ring-blue-500/20"
+          )}
         />
-      )}
+
+        {/* Rest of existing input wrapper content */}
+        <AnimatePresence mode="wait">
+          {!url && (
+            <motion.div
+              key={placeholderIndex}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 pointer-events-none"
+            >
+              <AnimatedPlaceholder text={PLACEHOLDER_TEXTS[placeholderIndex]} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
         {variables && variables.length > 0 && (
@@ -658,85 +865,34 @@ export function UrlBar({
         )}
       </div>
 
-      {showEnvSuggestions && (
-        <div className="absolute top-full left-0 z-50 w-full mt-1 rounded-lg border border-slate-800 bg-slate-900 shadow-md max-h-[300px] overflow-y-auto">
-          <div className="sticky top-0 bg-slate-900 border-b border-slate-800 p-2">
-            <Input
-              value={searchPrefix}
-              onChange={(e) => setSearchPrefix(e.target.value)}
-              placeholder="Search variables..."
-              className="h-8 text-sm bg-slate-800 border-slate-600"
-            />
-          </div>
-          <div className="p-1">
-            {!variables || variables.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-slate-500">
-                No environment variables available
+      {showSuggestions && (
+        <div
+          ref={suggestionsRef}
+          className="absolute top-full left-0 z-50 w-full mt-1 max-h-[300px] overflow-auto
+            rounded-lg border border-slate-800 bg-slate-900 shadow-md"
+        >
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => (
+              <div
+                key={virtualItem.key}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: `${virtualItem.size}px`,
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                {renderSuggestion(virtualItem.index)}
               </div>
-            ) : filteredVariables.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-slate-500">
-                No matching variables found
-              </div>
-            ) : (
-              filteredVariables.map((variable) => (
-                <button
-                  key={variable.key}
-                  onClick={() => handleVariableSelect(variable.key)}
-                  className="w-full flex items-start justify-between px-3 py-2 hover:bg-slate-800 rounded-md group"
-                >
-                  <div className="flex items-center justify-between w-full group">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          className="w-1.5 h-1.5 rounded-full bg-blue-500/50"
-                        />
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "h-5 px-2 text-[10px] font-medium transition-colors",
-                            "bg-slate-800/50 border-slate-600/50",
-                            "group-hover:bg-slate-700/50 group-hover:border-slate-500/50",
-                            variable.type === "secret"
-                              ? "text-purple-300/90"
-                              : "text-emerald-300/90"
-                          )}
-                        >
-                          {variable.type || "text"}
-                        </Badge>
-                        <span
-                          className={cn(
-                            "font-mono text-xs tracking-tight transition-colors",
-                            "text-slate-400 group-hover:text-slate-200"
-                          )}
-                        >
-                          {highlightMatch(variable.key, searchPrefix)}
-                        </span>
-                        <span className="text-xs text-slate-500">=</span>
-                        <span
-                          className={cn(
-                            "text-xs font-mono truncate max-w-[250px] transition-colors",
-                            "text-slate-500 group-hover:text-slate-400",
-                            variable.type === "secret" &&
-                              "font-serif tracking-widest"
-                          )}
-                        >
-                          {variable.type === "secret"
-                            ? "•••••••"
-                            : variable.value}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 opacity-0 translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0">
-                      <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border border-slate-800/50 bg-slate-800/50 px-2 font-mono text-[10px] font-medium text-slate-400">
-                        enter
-                      </kbd>
-                    </div>
-                  </div>
-                </button>
-              ))
-            )}
+            ))}
           </div>
         </div>
       )}
@@ -744,75 +900,43 @@ export function UrlBar({
   );
 
   const renderProtocolBadge = (protocol: string) => (
-    <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg px-2 h-10">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className="flex items-center justify-center bg-slate-900 border border-slate-800 rounded-lg px-2 h-8"
+    >
+      <motion.div
+      variants={methodBadgeVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      className="flex items-center"
+      >
       <Badge
         variant="outline"
         className={cn(
-          "font-mono text-xs border-none",
-          protocol === "io"
-            ? "bg-blue-500/10 text-blue-400"
-            : "bg-purple-500/10 text-purple-400"
+        "font-mono text-xs border-none flex items-center",
+        protocol === "io"
+          ? "bg-blue-500/10 text-blue-400"
+          : "bg-purple-500/10 text-purple-400"
         )}
       >
         {protocol.toUpperCase()}
       </Badge>
-    </div>
+      </motion.div>
+    </motion.div>
   );
-
-  const handleVariableSelect = (varKey: string) => {
-    if (!inputRef.current) return;
-
-    const input = inputRef.current;
-    const cursorPos = input.selectionStart || 0;
-    const beforeCursor = url.slice(0, cursorPos);
-    const afterCursor = url.slice(cursorPos);
-    const varStart = beforeCursor.lastIndexOf("{{");
-
-    if (varStart === -1) {
-      const newUrl = beforeCursor + `{{${varKey}}}` + afterCursor;
-      handleUrlChange(newUrl);
-    } else {
-      const newUrl =
-        beforeCursor.slice(0, varStart) + `{{${varKey}}}` + afterCursor;
-      handleUrlChange(newUrl);
-    }
-
-    setShowEnvSuggestions(false);
-
-    setTimeout(() => {
-      const newPosition = varStart + varKey.length + 4;
-      input.setSelectionRange(newPosition, newPosition);
-      input.focus();
-    }, 0);
-  };
-
-  const highlightMatch = (text: string, query: string) => {
-    if (!query) return text;
-    const parts = text.split(new RegExp(`(${query})`, "gi"));
-    return (
-      <span>
-        {parts.map((part, i) =>
-          part.toLowerCase() === query.toLowerCase() ? (
-            <span key={i} className="bg-blue-500/20 text-blue-400">
-              {part}
-            </span>
-          ) : (
-            part
-          )
-        )}
-      </span>
-    );
-  };
 
   const handleSendRequest = () => {
     // Store the active request data with scripts on the window object
     (window as any).__ACTIVE_REQUEST__ = {
       method,
       url,
-      headers: [], // Add your actual headers here
-      params: [], // Add your actual params here
-      body: {}, // Add your actual body here
-      auth: {}, // Add your actual auth here
+      headers: [],
+      params: [],
+      body: {},
+      auth: {},
       preRequestScript: "", // Will be populated when script runs
       testScript: "", // Will be populated when script runs
       testResults: [], // Will be populated after tests run
@@ -886,19 +1010,20 @@ export function UrlBar({
         <div
           className={cn(
             "flex items-center bg-slate-900 border border-slate-800 rounded-lg px-0",
+            // Change from md: to lg: to include tablets
             isMobile ? "max-w-[60px]" : ""
           )}
         >
           <Select value={method} onValueChange={onMethodChange}>
             <SelectTrigger
               className={cn(
-                "w-auto min-w-[70px] max-w-[100px] font-mono font-black bg-transparent border border-slate-800 text-slate-400 hover:text-slate-300 gap-2",
+                "w-auto min-w-[70px] max-w-[100px] font-mono font-black bg-transparent border border-slate-800 text-slate-400 hover:text-slate-300 h-8 gap-2",
                 `text-xs text-${getMethodColor(method)}-400 py-1`
               )}
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="border border-slate-800 bg-slate-800 font-mono font-black text-xs">
+            <SelectContent className="border border-slate-800 bg-slate-800 font-mono max-w-[50px] font-black text-xs">
               {[
                 { value: "GET", color: "emerald" },
                 { value: "POST", color: "blue" },
@@ -926,21 +1051,3 @@ export function UrlBar({
     </div>
   );
 }
-
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
-
-const getWebSocketClasses = (connected: boolean) =>
-  cn(
-    "w-10 h-10 rounded-lg transition-all relative overflow-hidden bg-slate-900 hover:bg-slate-800",
-    connected &&
-      "after:absolute after:inset-0 after:bg-green-500/20 after:animate-ping"
-  );

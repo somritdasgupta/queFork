@@ -199,6 +199,16 @@ body {
   }
 }
 
+@layer utilities {
+  .url-input-glow {
+    --glow-size: 2px;
+    --glow-blur: 8px;
+    --glow-color: rgb(59 130 246 / 0.2); /* Blue-500 with opacity */
+    
+    box-shadow: 0 0 var(--glow-blur) var(--glow-size) var(--glow-color);
+  }
+}
+
 /* Animations */
 @keyframes ping {
   75%,
@@ -251,6 +261,11 @@ body {
   100% {
     transform: translateX(var(--scroll-offset)) scale(1, 1);
   }
+}
+
+@keyframes neonPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 
 .animate-ping {

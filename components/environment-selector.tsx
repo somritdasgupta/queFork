@@ -51,11 +51,7 @@ export function EnvironmentSelector({
                   <>
                     {interceptorEnabled ? (
                       <div className="flex items-center gap-2">
-                        <div
-                          className="z-50 w-2 h-1 rounded-full bg-green-400"
-                          title="Interceptor enabled"
-                        />
-                        <span className="text-xs text-green-400">
+                        <span className="text-xs px-2 text-green-600 bg-green-800/20 rounded-full">
                           interceptor
                         </span>
                       </div>

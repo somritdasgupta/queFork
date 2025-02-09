@@ -30,22 +30,22 @@ export interface EnvironmentSaveActionEvent extends CustomEvent {
 }
 
 export type ContentType =
-  | 'none' 
-  | 'json'
-  | 'form-data'
-  | 'x-www-form-urlencoded'
-  | 'raw'
-  | 'application/json'
-  | 'application/ld+json'
-  | 'application/hal+json'
-  | 'application/vnd.api+json'
-  | 'application/xml'
-  | 'text/xml'
-  | 'application/x-www-form-urlencoded'
-  | 'multipart/form-data'
-  | 'application/octet-stream'
-  | 'text/html'
-  | 'text/plain';
+  | "none"
+  | "json"
+  | "form-data"
+  | "x-www-form-urlencoded"
+  | "raw"
+  | "application/json"
+  | "application/ld+json"
+  | "application/hal+json"
+  | "application/vnd.api+json"
+  | "application/xml"
+  | "text/xml"
+  | "application/x-www-form-urlencoded"
+  | "multipart/form-data"
+  | "application/octet-stream"
+  | "text/html"
+  | "text/plain";
 
 export interface RequestBody {
   type: ContentType;
@@ -131,8 +131,8 @@ export interface SavedRequest {
     retryCount?: number;
     validateResponse?: boolean;
   };
-  preRequestScript: string;  // Change to required string
-  testScript: string;       // Change to required string
+  preRequestScript: string; // Change to required string
+  testScript: string; // Change to required string
   testResults: TestResult[];
   scriptLogs: string[];
 }
@@ -205,7 +205,7 @@ export interface WebSocketStats {
   messages?: WebSocketMessage[];
   lastConnected?: string;
   totalBytes?: number;
-  status?: 'connected' | 'closed' | 'connecting';
+  status?: "connected" | "closed" | "connecting";
 }
 
 export interface WebSocketHistoryItem extends HistoryItem {
@@ -258,7 +258,7 @@ export interface RequestRunResult {
   name: string;
   method: string;
   url: string;
-  status: 'success' | 'failed' | 'skipped';
+  status: "success" | "failed" | "skipped";
   statusCode?: number;
   duration: number;
   response?: any;
@@ -291,9 +291,11 @@ export interface SidePanelProps {
   isMobile?: boolean;
   className?: string; // Add this line
   onImportCollections: (source: ImportSource, data: string) => Promise<void>;
+  hasExtension?: boolean;
+  interceptorEnabled?: boolean;
 }
 
-export type ImportSource = 
+export type ImportSource =
   | "url"
   | "file"
   | "clipboard"
@@ -301,3 +303,107 @@ export type ImportSource =
   | "postman"
   | "insomnia"
   | "openapi";
+
+export interface RequestPanelProps {
+  headers: KeyValuePair[];
+  params: KeyValuePair[];
+  body: RequestBody;
+  auth: {
+    type: "none" | "bearer" | "basic" | "apiKey";
+    token?: string;
+    username?: string;
+    password?: string;
+    key?: string;
+  };
+  isWebSocketMode: boolean;
+  environments: Environment[];
+  currentEnvironment: Environment | null;
+  onEnvironmentChange: (environmentId: string) => void;
+  onEnvironmentsUpdate: (environments: Environment[]) => void;
+  onAddToEnvironment: (key: string, value: string) => void;
+  onHeadersChange: (headers: KeyValuePair[]) => void;
+  onParamsChange: (params: KeyValuePair[]) => void;
+  onBodyChange: (body: RequestBody) => void;
+  onAuthChange: (auth: any) => void;
+}
+
+export interface ResponsePanelProps {
+  response: any;
+  isLoading: boolean;
+  collections: Collection[];
+  onSaveToCollection: (
+    collectionId: string,
+    request: Partial<SavedRequest>
+  ) => void;
+  method: string;
+  url: string;
+  isWebSocketMode: boolean;
+}
+
+// Add new interfaces for tab management
+export interface Tab {
+  lastAccessed: number;
+  id: string;
+  title: string;
+  type: "rest" | "websocket" | "grpc" | "graphql";
+  active: boolean;
+  unsaved?: boolean;
+  state: {
+    method: string;
+    url: string;
+    headers: KeyValuePair[];
+    params: KeyValuePair[];
+    body: RequestBody;
+    auth: {
+      type: "none" | "bearer" | "basic" | "apiKey";
+      token?: string;
+      username?: string;
+      password?: string;
+      key?: string;
+    };
+    response?: any;
+    isLoading?: boolean;
+    isWebSocketMode?: boolean;
+    wsState?: {
+      isConnected: boolean;
+      connectionStatus: "disconnected" | "connecting" | "connected" | "error";
+      messages: WebSocketMessage[];
+    };
+    preRequestScript?: string;
+    testScript?: string;
+    testResults?: any[];
+    scriptLogs?: string[];
+  };
+}
+
+export interface TabContextType {
+  tabs: Tab[];
+  activeTab: string;
+  addTab: (tab?: Partial<Tab>) => void;
+  removeTab: (id: string) => void;
+  updateTab: (id: string, updates: Partial<Tab>) => void;
+  setActiveTab: (id: string) => void;
+  duplicateTab: (id: string) => void;
+  setTabs: React.Dispatch<React.SetStateAction<Tab[]>>; // Add this line
+}
+
+export interface UrlBarProps {
+  method: string;
+  url: string;
+  isLoading: boolean;
+  wsConnected: boolean;
+  isWebSocketMode: boolean;
+  variables: Array<{
+    key: string;
+    value: string;
+    type?: string;
+  }>;
+  recentUrls: string[];
+  onMethodChange: (method: string) => void;
+  onUrlChange: (url: string) => void;
+  onSendRequest: () => void;
+  onWebSocketToggle: () => void;
+  hasExtension?: boolean;
+  interceptorEnabled?: boolean;
+  isMobile: boolean;
+}

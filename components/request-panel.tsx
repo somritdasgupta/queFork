@@ -14,9 +14,7 @@ import {
 import {
   FileJson,
   FormInput,
-  Link,
   FileText,
-  KeyRound,
   MessageSquare,
   PlugZap2,
   FileCode,
@@ -49,17 +47,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectLabel,
-  SelectItem,
-  SelectGroup,
-} from "@radix-ui/react-select";
 import React from "react";
-import { Label } from "recharts";
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -206,22 +194,7 @@ export function RequestPanel({
     isWebSocketMode &&
     (isConnected || stats.messagesSent > 0 || stats.messagesReceived > 0);
 
-  const bodyTabs = ["json", "form-data", "x-www-form-urlencoded", "raw"];
 
-  const getBodyIcon = (type: string) => {
-    switch (type) {
-      case "json":
-        return <FileJson className="h-4 w-4" />;
-      case "form-data":
-        return <FormInput className="h-4 w-4" />;
-      case "x-www-form-urlencoded":
-        return <Link className="h-4 w-4" />;
-      case "raw":
-        return <FileText className="h-4 w-4" />;
-      default:
-        return null;
-    }
-  };
 
   const [preRequestScript, setPreRequestScript] = useState("");
   const [testScript, setTestScript] = useState("");
@@ -479,17 +452,17 @@ export function RequestPanel({
     }
   );
 
-  const handleResponse = (response: any) => {
-    // Dispatch response event
-    window.dispatchEvent(
-      new CustomEvent("apiResponse", {
-        detail: response,
-      })
-    );
-  };
+
+  // Add virtualization for key-value pairs
+  const scrollElementRef = useRef<HTMLDivElement>(null);
+
+
+  // Memoize expensive computations
+
+  // Cache editor instances
 
   return (
-    <div className="h-full flex flex-col bg-slate-900/70 overflow-hidden">
+    <div ref={scrollElementRef} className="h-full flex flex-col bg-slate-900 overflow-hidden">
       <AnimatePresence mode="wait">
         {!isWebSocketMode ? (
           <motion.div
@@ -504,12 +477,12 @@ export function RequestPanel({
               defaultValue="params"
               className="flex-1 flex flex-col h-full overflow-hidden"
             >
-              <div className="bg-slate-900/50 border-b border-slate-700 flex-shrink-0">
+              <div className="bg-slate-950 border-b border-slate-700 flex-shrink-0">
                 <div
                   className="overflow-x-auto scrollbar-none"
                   style={{ WebkitOverflowScrolling: "touch" }}
                 >
-                  <TabsList className="flex w-max min-w-full justify-center rounded-none bg-slate-900/50 p-0">
+                  <TabsList className="flex w-max min-w-full justify-center rounded-none bg-slate-900/70 p-0">
                     {tabs.map(
                       (tab) =>
                         !tab.hidden && (
@@ -1365,24 +1338,3 @@ function getEditorContent(content: any, type: string): string {
 }
 
 // Add type guard to validate ContentType
-function isContentType(value: string): value is ContentType {
-  const validContentTypes: ContentType[] = [
-    "none",
-    "json",
-    "form-data",
-    "x-www-form-urlencoded",
-    "raw",
-    "application/json",
-    "application/ld+json",
-    "application/hal+json",
-    "application/vnd.api+json",
-    "application/xml",
-    "text/xml",
-    "application/x-www-form-urlencoded",
-    "multipart/form-data",
-    "application/octet-stream",
-    "text/html",
-    "text/plain",
-  ];
-  return validContentTypes.includes(value as ContentType);
-}
