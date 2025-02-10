@@ -92,12 +92,12 @@ const placeholderVariants = {
   exit: {
     opacity: 0,
     y: -10,
-    transition: { duration: 0.2 },
+    transition: { duration: 0.5 },
   },
   enter: {
     opacity: 0,
     y: 10,
-    transition: { duration: 0.2 },
+    transition: { duration: 0.5 },
   },
   center: {
     opacity: 1,
@@ -421,12 +421,6 @@ export function UrlBar({
     connectionStatus,
     onUrlChange: wsUrlChange,
   } = useWebSocket();
-
-  // 4. Memoize handlers that don't need frequent updates
-
-  // 6. Memoize filtered variables computation
-
-  // 7. Optimize URL validation with memoization
   const isValidUrl = useCallback(
     (urlString: string): boolean => {
       if (!urlString || urlString.match(/^(https?:\/\/|wss?:\/\/)$/))
@@ -448,7 +442,6 @@ export function UrlBar({
     [variables]
   );
 
-  // 8. Memoize the URL type detection
   const urlType = useMemo(
     () => (URL_PATTERNS.websocket.test(url) ? "websocket" : "http"),
     [url]
@@ -505,7 +498,7 @@ export function UrlBar({
     if (!url && state.isIdle) {
       const interval = setInterval(() => {
         setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDER_TEXTS.length);
-      }, 3000); // Change every 3 seconds
+      }, 5000); // Change every 5 seconds
       return () => clearInterval(interval);
     }
   }, [url, state.isIdle]);
@@ -1017,7 +1010,7 @@ export function UrlBar({
           <Select value={method} onValueChange={onMethodChange}>
             <SelectTrigger
               className={cn(
-                "w-auto min-w-[70px] max-w-[100px] font-mono font-black bg-transparent border border-slate-800 text-slate-400 hover:text-slate-300 h-8 gap-2",
+                "w-auto min-w-[70px] max-w-[100px] rounded-lg font-mono font-black bg-transparent border border-slate-800 text-slate-400 hover:text-slate-300 h-8 gap-2",
                 `text-xs text-${getMethodColor(method)}-400 py-1`
               )}
             >

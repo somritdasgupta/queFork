@@ -772,7 +772,7 @@ export function KeyValueEditor({
           <div
             className={cn(
               "absolute bg-slate-900 right-full flex items-center transition-all duration-900 ease overflow-hidden",
-              isExpanded ? "w-[115px] opacity-100" : "w-0 opacity-0"
+              isExpanded ? "w-[115px] h-8 opacity-100" : "w-0 opacity-0"
             )}
           >
             {actionButtons.map((button, i) => (

@@ -18,11 +18,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { PANEL_SIZING } from "@/lib/constants";
 
-interface ResponsePanelProps {
-  response: RequestResponse | null;
-  minSize?: number;
-  maxSize?: number;
-}
 
 interface CustomPanelProps {
   onPanelStateChange?: () => void;
@@ -86,9 +81,7 @@ const ResizablePanel = React.forwardRef<
       preserveStatusBar,
       children,
       ...props
-    },
-    ref
-  ) => {
+    }  ) => {
     const panelRef =
       React.useRef<ResizablePrimitive.ImperativePanelHandle>(null);
     const [isResizing, setIsResizing] = React.useState(false);
@@ -185,7 +178,7 @@ interface ResizeHandleProps {
   >;
 }
 
-const ResizableHandle = ({ withHandle, className }: ResizeHandleProps) => {
+const ResizableHandle = ({ className }: ResizeHandleProps) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [isTransitioning, setIsTransitioning] = React.useState(false);
 
@@ -264,7 +257,7 @@ const ResizablePanelGroup = ({
       "resizable-panel-group relative",
       "flex h-full w-full",
       "data-[panel-group-direction=vertical]:flex-col",
-      "bg-slate-950",
+      "bg-slate-900",
       className
     )}
     autoSaveId="panel-group-layout"

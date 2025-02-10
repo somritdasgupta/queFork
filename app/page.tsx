@@ -1213,7 +1213,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 bg-slate-950">
+      <div className="flex-1 min-h-0 bg-slate-900">
         {currentTab ? (
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel
@@ -1222,14 +1222,14 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
               response={null}
             >
               <Suspense
-                fallback={<div className="w-full h-full bg-slate-900/50" />}
+                fallback={<div className="w-full h-full bg-slate-900" />}
               >
                 <SidePanel {...sidebarProps} />
               </Suspense>
             </ResizablePanel>
             <ResizablePanel
               defaultSize={PANEL_SIZING.MAIN}
-              className="bg-slate-950"
+              className="bg-slate-900"
               response={null}
             >
               <div className="h-full relative">

@@ -148,7 +148,7 @@ const editorDefaultOptions = (
   isPrettyPrint: boolean
 ): editor.IStandaloneEditorConstructionOptions => ({
   readOnly: true,
-  minimap: { enabled: true },
+  minimap: { enabled: false },
   fontSize: 12,
   lineNumbers: "on" as const,
   folding: isPrettyPrint,
@@ -411,7 +411,7 @@ export function ResponsePanel({
   const renderStatusBar = () =>
     !isWebSocketMode ? (
       <div className="sticky top-0 w-full px-4 py-2 border-y border-slate-800 bg-slate-800/25 backdrop-blur-sm flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <Badge className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-blue-400 border-blue-500/30 px-2 py-1 rounded-lg">
             {response?.intercepted && (
               <div
@@ -424,7 +424,7 @@ export function ResponsePanel({
 
           <div
             className={cn(
-              "flex items-center gap-2 px-2 py-1 rounded-lg border",
+              "flex items-center gap-1 px-2 py-1 rounded-lg border",
               (response?.status || 0) >= 200 && (response?.status || 0) < 300
                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                 : "bg-red-500/10 text-red-400 border-red-500/20"
@@ -441,9 +441,9 @@ export function ResponsePanel({
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {response?.time && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center">
               <div className="flex items-center px-2 py-1 rounded-lg border border-slate-700/50 bg-slate-800/50">
                 <Clock className="h-3.5 w-3.5 mr-1.5 text-blue-400" />
                 <span className="text-xs font-medium text-slate-300">
@@ -481,8 +481,8 @@ export function ResponsePanel({
             >
               <motion.div
                 animate={{
-                  rotate: panelState === "collapsed" ? 180 : 0,
-                  scale: panelState === "fullscreen" ? 0.8 : 1,
+                  rotate: panelState === "collapsed" ? 0 : 180,
+                  scale: panelState === "fullscreen" ? 1 : 1,
                 }}
                 className="text-slate-400 group-hover:text-slate-200"
               >

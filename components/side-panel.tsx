@@ -1,18 +1,14 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { CollectionsPanel } from "@/components/collections-panel";
 import { HistoryPanel } from "@/components/history-panel";
-import type { SidePanelProps, Tab } from "@/types";
+import type { SidePanelProps } from "@/types";
 import {
   BoxesIcon,
   BoxIcon,
   Layers,
   RewindIcon,
   X,
-  Plus,
-  Copy,
-  LayoutGrid,
-  GripVertical,
-  Search,
+  GalleryVerticalEnd,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnvironmentPanel } from "@/components/environment-panel";
@@ -24,53 +20,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useTabManager } from "@/components/tab-manager";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { VerticalTabList } from "@/components/tab-manager";
-
-const formatDomain = (url: string): string => {
-  try {
-    const urlObj = new URL(url.replace(/^ws(s)?:\/\//i, "http$1://"));
-    const parts = urlObj.hostname.split(".");
-    return parts.length > 2 ? parts[parts.length - 2] : parts[0];
-  } catch {
-    return url.split("/")[0];
-  }
-};
-
-const getMethodColorClass = (method: string) => {
-  switch (method?.toUpperCase()) {
-    case "GET":
-      return "text-emerald-400 border-emerald-500/20";
-    case "POST":
-      return "text-blue-400 border-blue-500/20";
-    case "PUT":
-      return "text-yellow-400 border-yellow-500/20";
-    case "DELETE":
-      return "text-red-400 border-red-500/20";
-    case "PATCH":
-      return "text-purple-400 border-purple-500/20";
-    default:
-      return "text-slate-400 border-slate-500/20";
-  }
-};
 
 export const SidePanel: React.FC<SidePanelProps> = ({
   collections,
@@ -216,7 +166,17 @@ export const SidePanel: React.FC<SidePanelProps> = ({
     {
       id: "tabs" as const,
       label: "Tabs",
-      icon: <LayoutGrid className="h-4 w-4" strokeWidth={2} />,
+      icon: (
+        <GalleryVerticalEnd
+          className="h-4 w-4"
+          strokeWidth={2}
+          style={{
+            stroke: "currentColor",
+            fill: "yellow",
+            fillOpacity: 0.2,
+          }}
+        />
+      ),
       content: <VerticalTabList />,
     },
     {
@@ -347,9 +307,17 @@ export const SidePanel: React.FC<SidePanelProps> = ({
             <Button
               variant="default"
               size="icon"
-              className="w-full h-6 p-4 border-2 border-slate-800 bg-slate-900 hover:bg-slate-800 transition-colors rounded-lg flex items-center justify-center"
+              className="w-full h-8 px-4 border-2 border-slate-800 bg-slate-900 hover:bg-slate-800 transition-colors rounded-lg flex items-center justify-center"
             >
-              <Layers className="h-4 w-4 text-slate-400" />
+              <Layers
+                className="h-4 w-4 transition-transform duration-200"
+                strokeWidth={1}
+                style={{
+                  stroke: "white",
+                  fill: "yellow",
+                  fillOpacity: 0.25,
+                }}
+              />
             </Button>
           </div>
         </SheetTrigger>
