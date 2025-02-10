@@ -1,10 +1,7 @@
 export const PANEL_SIZING = {
-  // Panel default sizes
-  DEFAULT: 100,
-  EXPANDED: 100, // When expanded
-  COLLAPSED: 0, // When collapsed
-
-  // Fixed panel widths
+  DEFAULT: 50, // Default 50% height
+  EXPANDED: 100, // Full height
+  COLLAPSED: 0, // Collapsed state
   SIDEBAR: 25, // Left sidebar width
   MAIN: 75, // Main content width
 } as const;

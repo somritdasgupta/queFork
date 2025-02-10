@@ -797,7 +797,7 @@ export function KeyValueEditor({
               setExpandedRowId(isExpanded ? null : pair.id || null)
             }
             className={cn(
-              "h-8 w-8 p-0 transition-transform duration-900",
+              "h-8 w-8 p-0 transition-transform duration-900 rounded-none",
               isExpanded && "rotate-90"
             )}
           >
@@ -944,7 +944,7 @@ export function KeyValueEditor({
           "p-4"
         )}
       />
-      <div className="flex-none p-2 bg-slate-800/50 border-t border-slate-700/50">
+      <div className="flex-none px-2 bg-slate-800/50 border-t border-slate-700/50">
         <span className="text-xs text-slate-400">
           Tip: Use # to disable a line, or JSON format for complex values
         </span>
@@ -1093,7 +1093,7 @@ export function KeyValueEditor({
         <Button
           variant="ghost"
           onClick={handleAddPair}
-          className="flex-1 h-8 rounded-none hover:bg-slate-800 text-blue-400 
+          className="flex-1 h-8 rounded-none text-blue-400 
             bg-slate-900/50 border-slate-800
             transition-all flex items-center justify-center gap-2
             hover:border-slate-700 group"
@@ -1117,7 +1117,7 @@ export function KeyValueEditor({
           onClick={handleBulkEdit}
           className={cn(
             "h-8 transition-all rounded-none justify-center gap-2",
-            "bg-slate-900/50 hover:bg-slate-800 text-blue-400",
+            "bg-slate-900/50 text-blue-400",
             "hidden sm:flex w-[132px]",
             "border-slate-800 hover:border-slate-700",
             "group"
@@ -1142,7 +1142,7 @@ export function KeyValueEditor({
           onClick={handleBulkEdit}
           className={cn(
             "h-8 w-8 transition-all rounded-none justify-center",
-            "bg-slate-900/50 hover:bg-slate-800 text-blue-400",
+            "bg-slate-900/50 text-blue-400",
             "sm:hidden border-slate-800 hover:border-slate-700",
             "group"
           )}

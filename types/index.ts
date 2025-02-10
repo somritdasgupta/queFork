@@ -166,10 +166,11 @@ export interface RequestResponse {
   statusText: string;
   headers: Record<string, string>;
   body: any;
-  size: string;
-  time: string;
-  timestamp: string;
-  error?: boolean;
+  time?: string;
+  size?: string;
+  method: string; // Add this
+  intercepted?: boolean; // Add this
+  error?: string;
 }
 
 export interface HistoryItem {

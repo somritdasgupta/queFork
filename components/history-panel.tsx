@@ -2,19 +2,29 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Clock, History, X, DownloadIcon, Check } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import {
+  Trash2,
+  Clock,
+  History,
+  X,
+  DownloadIcon,
+  Check,
+  Search,
+  GroupIcon,
+} from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { HistoryItem } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import { useWebSocket } from "./websocket/websocket-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useVirtualizer, VirtualItem } from "@tanstack/react-virtual";
+import { getEmptyTabState } from "@/lib/tab-utils";
 
 const truncateUrl = (url: string, containerWidth: number) => {
   // Store original URL for click handling
   const displayUrl = url
-    .replace(/^(https?:\/\/)?(www\.)?/, "") // Remove protocol and www
+    .replace(/^(https?:\/\/)?(www\.)?/, "")
     .replace(/\/$/, ""); // Remove trailing slash
 
   const minChars = 26;
@@ -41,6 +51,16 @@ const truncateUrl = (url: string, containerWidth: number) => {
 
   // If longer than maxChars, always truncate to maxChars
   return displayUrl.slice(0, maxChars) + "...";
+};
+
+const getBaseUrl = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    return `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
+  } catch {
+    // If URL parsing fails, return the original URL up to any query params
+    return url.split("?")[0];
+  }
 };
 
 interface HistoryPanelProps {
@@ -77,6 +97,35 @@ export function HistoryPanel({
     item.url.toLowerCase().includes(search.toLowerCase())
   );
 
+  const groupedHistory = useMemo(() => {
+    if (groupBy === "none") return filteredHistory;
+
+    return filteredHistory.reduce<Record<string, HistoryItem[]>>(
+      (groups, item: HistoryItem) => {
+        let groupKey = "";
+
+        if (groupBy === "domain") {
+          try {
+            const url = new URL(item.url);
+            groupKey = url.hostname;
+          } catch {
+            groupKey = "Other";
+          }
+        } else if (groupBy === "date") {
+          const date = new Date(item.timestamp);
+          groupKey = date.toLocaleDateString();
+        }
+
+        if (!groups[groupKey]) {
+          groups[groupKey] = [];
+        }
+        groups[groupKey].push(item);
+        return groups;
+      },
+      {}
+    );
+  }, [filteredHistory, groupBy]);
+
   const handleHistoryClick = (item: HistoryItem) => {
     if (isConnected) {
       toast.error(
@@ -110,38 +159,73 @@ export function HistoryPanel({
       return;
     }
 
-    // Update __ACTIVE_REQUEST__ with scripts
-    (window as any).__ACTIVE_REQUEST__ = {
-      method: item.method,
-      url: item.url,
-      headers: item.request.headers,
-      params: item.request.params,
-      body: item.request.body,
-      auth: item.request.auth,
-      response: item.response,
-      // Add scripts
-      preRequestScript: item.request.preRequestScript,
-      testScript: item.request.testScript,
-      testResults: item.request.testResults,
-      scriptLogs: item.request.scriptLogs,
-    };
-
+    // 1. First, clear everything by dispatching reset event
     window.dispatchEvent(
-      new CustomEvent("loadHistoryItem", {
-        detail: {
-          item,
-          url: item.url,
-          scripts: {
-            preRequestScript: item.request.preRequestScript || "",
-            testScript: item.request.testScript || "",
-            testResults: item.request.testResults || [],
-            scriptLogs: item.request.scriptLogs || [],
-          },
-        },
+      new CustomEvent("resetRequest", {
+        detail: { clearAll: true },
       })
     );
 
-    onSelectItem(item);
+    // 2. Short delay to ensure state is cleared
+    setTimeout(() => {
+      const baseUrl = getBaseUrl(item.url);
+
+      // 3. Set empty state first
+      (window as any).__ACTIVE_REQUEST__ = getEmptyTabState();
+
+      // 4. Then update with new data
+      (window as any).__ACTIVE_REQUEST__ = {
+        method: item.method,
+        url: baseUrl,
+        headers: Array.isArray(item.request.headers)
+          ? [...item.request.headers]
+          : [],
+        params: Array.isArray(item.request.params)
+          ? [...item.request.params]
+          : [],
+        body: item.request.body
+          ? { ...item.request.body }
+          : { type: "none", content: "" },
+        auth: item.request.auth ? { ...item.request.auth } : { type: "none" },
+        response: item.response ? { ...item.response } : null,
+        preRequestScript: item.request.preRequestScript || "",
+        testScript: item.request.testScript || "",
+        testResults: Array.isArray(item.request.testResults)
+          ? [...item.request.testResults]
+          : [],
+        scriptLogs: Array.isArray(item.request.scriptLogs)
+          ? [...item.request.scriptLogs]
+          : [],
+      };
+
+      // 5. Finally dispatch load event with fresh data copies
+      window.dispatchEvent(
+        new CustomEvent("loadHistoryItem", {
+          detail: {
+            clearBeforeLoad: true,
+            item: {
+              ...item,
+              url: baseUrl,
+              request: {
+                ...item.request,
+                headers: Array.isArray(item.request.headers)
+                  ? [...item.request.headers]
+                  : [],
+                params: Array.isArray(item.request.params)
+                  ? [...item.request.params]
+                  : [],
+              },
+            },
+          },
+        })
+      );
+
+      // 6. Update through props after state is reset
+      onSelectItem({
+        ...item,
+        url: baseUrl,
+      });
+    }, 50); // Small delay to ensure reset completes
   };
 
   const renderHistoryItem = (item: HistoryItem) => {
@@ -382,97 +466,94 @@ export function HistoryPanel({
   );
 
   return (
-    <div className="h-full flex flex-col bg-slate-950">
-      {/* Search input */}
-      <Input
-        placeholder="Search history"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="h-8 rounded-none border-x-0 text-xs bg-slate-900 border-slate-700"
-      />
-      <div className="sticky top-0 z-10 bg-slate-900/75 border-b border-slate-700">
-        <div className="flex items-center p-2 gap-2">
-          <div className="flex items-center gap-1 w-full">
-            {/* Group by button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                setGroupBy((g) =>
-                  g === "none" ? "domain" : g === "domain" ? "date" : "none"
-                )
-              }
-              className="w-full h-8 px-2 sm:px-3 text-xs border border-slate-700"
-            >
-              <Clock className="h-4 w-4 text-blue-400" />
-              <span className="hidden lg:inline">
-                {groupBy === "none" ? "None" : `${groupBy}`}
-              </span>
-            </Button>
-
-            {/* Save toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
+    <div className="h-full flex flex-col bg-slate-900/50">
+      {/* Search input section - updated to match tab panel */}
+      <div className="p-2 space-y-2 border-b border-slate-800">
+        {/* Search input row */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search history..."
+              className="w-full bg-slate-900 text-sm rounded-md pl-8 pr-4 py-1.5
+                border border-slate-800 focus:border-slate-700
+                text-slate-300 placeholder:text-slate-500
+                focus:outline-none focus:ring-1 focus:ring-slate-700"
+            />
+          </div>
+          <div className="flex gap-1">
+            <button
               onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
               className={cn(
-                "w-full h-8 px-2 sm:px-3 text-xs border border-slate-700",
-                isHistorySavingEnabled ? "text-emerald-400" : "text-slate-400"
+                "p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800",
+                isHistorySavingEnabled && "text-emerald-400"
               )}
+              title={
+                isHistorySavingEnabled
+                  ? "History saving enabled"
+                  : "History saving disabled"
+              }
             >
               <History className="h-4 w-4" />
-              <span className="hidden lg:inline">
-                {isHistorySavingEnabled ? "Saving" : "Off"}
-              </span>
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
+            </button>
+            <button
+              onClick={() =>
+                setGroupBy((prev) =>
+                  prev === "none"
+                    ? "domain"
+                    : prev === "domain"
+                      ? "date"
+                      : "none"
+                )
+              }
+              className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
+              title={`Group by ${groupBy === "none" ? "domain" : groupBy === "domain" ? "date" : "none"}`}
+            >
+              <GroupIcon className="h-4 w-4 text-blue-400" />
+            </button>
+            <button
               onClick={onExportHistory}
-              className="w-full h-8 px-2 sm:px-3 text-xs border border-slate-700"
+              className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
+              title="Export history"
             >
-              <DownloadIcon className="h-4 w-4 text-emerald-400" />
-            </Button>
-
-            {/* Clear button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDeleteConfirm(true)}
-              className="w-full h-8 px-2 sm:px-3 text-xs border border-slate-700"
+              <DownloadIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleClearHistory}
+              className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
+              title="Clear history"
             >
-              <Trash2 className="h-4 w-4 text-red-400" />
-            </Button>
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
         </div>
-
-        {deleteConfirm && (
-          <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
-            <span className="text-xs text-slate-400">Clear all history?</span>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setDeleteConfirm(false)}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4 text-slate-400" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearHistory}
-                className="h-6 w-6 p-0"
-              >
-                <Check className="h-4 w-4 text-emerald-400" />
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
 
-      <ScrollArea direction="vertical" className="h-full bg-slate-900/75">
+      {/* Delete confirmation - updated styling */}
+      {deleteConfirm && (
+        <div className="flex items-center justify-between p-2 bg-slate-800/50 border-b border-slate-700">
+          <span className="text-xs text-slate-400">Clear all history?</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setDeleteConfirm(false)}
+              className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onClearHistory}
+              className="p-1.5 hover:bg-slate-700/50 rounded text-emerald-400"
+            >
+              <Check className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <ScrollArea direction="vertical" className="h-full">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[calc(75vh)] space-y-4 p-4">
             <div className="flex flex-col items-center text-center space-y-2">
@@ -502,8 +583,23 @@ export function HistoryPanel({
               </Button>
             </div>
           </div>
-        ) : (
+        ) : groupBy === "none" ? (
           renderVirtualizedHistory()
+        ) : (
+          // Render grouped history
+          <div className="divide-y divide-slate-700/50">
+            {Object.entries(groupedHistory).map(([group, items]) => (
+              <div key={group} className="bg-slate-900/75">
+                <div className="px-4 py-2 text-xs font-medium text-slate-400 bg-slate-800/50">
+                  {group}
+                  <span className="ml-2 text-slate-500">({items.length})</span>
+                </div>
+                <div className="divide-y divide-slate-700/50">
+                  {items.map((item: HistoryItem) => renderHistoryItem(item))}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </ScrollArea>
     </div>

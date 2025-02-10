@@ -26,6 +26,7 @@ import {
   DownloadIcon,
   Upload,
   Check,
+  Search,
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Collection, SavedRequest, ImportSource } from "@/types";
@@ -127,7 +128,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     // Access window only after component is mounted (client-side)
     setActiveRequest((window as any).__ACTIVE_REQUEST__);
   }, []);
-
 
   useEffect(() => {
     const handleSaveRequest = (e: CustomEvent) => {
@@ -678,7 +678,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     [canQuickSave, handleQuickSave, handleDuplicateCollection]
   );
 
-
   const renderCollectionItem = (collection: Collection) => (
     <DynamicAccordionItem
       key={`collection-${collection.id}`}
@@ -829,413 +828,398 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
   };
 
   return (
-    <div
-      className="h-full flex flex-col bg-slate-950"
-      suppressHydrationWarning
-    >
-      <div className="h-full flex flex-col bg-slate-900/75">
-        <Input
-          placeholder="Search collections"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-8 rounded-none border-x-0 text-xs bg-slate-900 border-slate-700"
-        />
-        <div className="sticky top-0 z-10 bg-slate-900/25 border-b border-slate-700">
-          <div className="flex items-center p-2 gap-2">
-            <div className="flex items-center gap-1 w-full">
-              {/* Sort button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setSortBy((prev) =>
-                    prev === "name"
-                      ? "date"
-                      : prev === "date"
-                        ? "method"
-                        : "name"
-                  )
-                }
-                className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
-              >
-                <SortAsc className="h-4 w-4 text-blue-400" />
-                <span className="hidden lg:inline capitalize">{sortBy}</span>
-              </Button>
-
-              {/* Filter dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
-                  >
-                    <Filter className="h-4 w-4 text-purple-400" />
-                    <span className="hidden lg:inline">
-                      {filterBy || "All"}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="w-32 bg-slate-800/90 border-slate-700 text-slate-400"
-                >
-                  <DropdownMenuItem onClick={() => setFilterBy("")}>
-                    All Methods
-                  </DropdownMenuItem>
-                  {["GET", "POST", "PUT", "DELETE", "PATCH"].map((method) => (
-                    <DropdownMenuItem
-                      key={method}
-                      onClick={() => setFilterBy(method)}
-                    >
-                      {method}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept=".json,.har,.yaml,.yml"
-                className="hidden"
-              />
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsCreating(true)}
-                className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
-              >
-                <Plus className="h-4 w-4 text-emerald-400" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsImporting(true)}
-                className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
-              >
-                <Upload className="h-4 w-4 text-yellow-400" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={props.onExportCollections}
-                className="w-full h-8 px-2 bg-slate-900/25 border border-slate-700 text-xs"
-              >
-                <DownloadIcon className="h-4 w-4 text-emerald-400" />
-              </Button>
-            </div>
+    <div className="h-full flex flex-col bg-slate-900/50">
+      <div className="p-2 space-y-2 border-b border-slate-800">
+        {/* Top row - Search and action buttons */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search collections..."
+              className="w-full bg-slate-900 text-sm rounded-md pl-8 pr-4 py-1.5
+                border border-slate-800 focus:border-slate-700
+                text-slate-300 placeholder:text-slate-500
+                focus:outline-none focus:ring-1 focus:ring-slate-700"
+            />
           </div>
+          <button
+            onClick={() => setIsCreating(true)}
+            className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
+            title="New collection"
+          >
+            <Plus className="h-4 w-4 text-emerald-400" />
+          </button>
+          <button
+            onClick={() => setIsImporting(true)}
+            className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
+            title="Import collection"
+          >
+            <Upload className="h-4 w-4 text-yellow-400" />
+          </button>
+          <button
+            onClick={props.onExportCollections}
+            className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
+            title="Export all collections"
+          >
+            <DownloadIcon className="h-4 w-4 text-emerald-400" />
+          </button>
         </div>
 
-        <ScrollArea className="flex-1">
-          {isImporting && (
-            <div className="p-4 bg-slate-900/50 border-b border-slate-700">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-medium text-slate-300">
-                    Import Collection
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsImporting(false)}
-                    className="h-7 w-7 p-0 hover:bg-slate-900/25"
-                  >
-                    <X className="h-4 w-4 text-slate-400" />
-                  </Button>
-                </div>
+        {/* Bottom row - Sort and Filter */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() =>
+              setSortBy((prev) =>
+                prev === "name" ? "date" : prev === "date" ? "method" : "name"
+              )
+            }
+            className="flex items-center gap-2 p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800 flex-1"
+            title={`Sort by ${sortBy}`}
+          >
+            <SortAsc className="h-4 w-4 text-blue-400" />
+            <span className="text-xs capitalize">{sortBy}</span>
+          </button>
 
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-400">
-                      Import from URL
-                    </label>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Enter URL (Postman, OpenAPI, etc.)"
-                        value={importUrl}
-                        onChange={(e) => setImportUrl(e.target.value)}
-                        className="h-8 bg-slate-900/25 border-slate-700 text-sm"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleImportUrl}
-                        disabled={!importUrl.trim()}
-                        className={cn(
-                          "h-8 px-3 bg-slate-900/25 hover:bg-slate-700 border border-slate-700",
-                          "text-slate-300 hover:text-slate-200 transition-colors",
-                          !importUrl.trim() && "opacity-50"
-                        )}
-                      >
-                        Import
-                      </Button>
-                    </div>
-                  </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800 flex-1">
+                <Filter className="h-4 w-4 text-purple-400" />
+                <span className="text-xs">{filterBy || "All Methods"}</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="w-32 bg-slate-800/90 border-slate-700 text-slate-400"
+            >
+              <DropdownMenuItem onClick={() => setFilterBy("")}>
+                All Methods
+              </DropdownMenuItem>
+              {["GET", "POST", "PUT", "DELETE", "PATCH"].map((method) => (
+                <DropdownMenuItem
+                  key={method}
+                  onClick={() => setFilterBy(method)}
+                >
+                  {method}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-400">
-                      Import from file
-                    </label>
+      {/* Rest of the component remains unchanged */}
+      <ScrollArea className="flex-1">
+        {isImporting && (
+          <div className="p-4 bg-slate-900/50 border-b border-slate-700">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-medium text-slate-300">
+                  Import Collection
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsImporting(false)}
+                  className="h-7 w-7 p-0 hover:bg-slate-900/25"
+                >
+                  <X className="h-4 w-4 text-slate-400" />
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-400">
+                    Import from URL
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter URL (Postman, OpenAPI, etc.)"
+                      value={importUrl}
+                      onChange={(e) => setImportUrl(e.target.value)}
+                      className="h-8 bg-slate-900/25 border-slate-700 text-sm"
+                    />
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full h-8 bg-slate-900/25 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700"
+                      onClick={handleImportUrl}
+                      disabled={!importUrl.trim()}
+                      className={cn(
+                        "h-8 px-3 bg-slate-900/25 hover:bg-slate-700 border border-slate-700",
+                        "text-slate-300 hover:text-slate-200 transition-colors",
+                        !importUrl.trim() && "opacity-50"
+                      )}
                     >
-                      Choose File
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-400">
-                      Import from clipboard
-                    </label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handlePaste}
-                      className="w-full h-8 bg-slate-900/25 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700"
-                    >
-                      Paste from Clipboard
+                      Import
                     </Button>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {isCreating && (
-            <div className="p-4 bg-slate-900/50 border-b border-slate-700">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-medium text-slate-300">
-                    Create Collection
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setIsCreating(false);
-                      setNewCollection({
-                        name: "",
-                        description: "",
-                        apiVersion: "",
-                      });
-                    }}
-                    className="h-7 w-7 p-0 hover:bg-slate-900/25"
-                  >
-                    <X className="h-4 w-4 text-slate-400" />
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-400">
-                      Collection Name
-                    </label>
-                    <Input
-                      placeholder="Enter collection name"
-                      value={newCollection.name}
-                      maxLength={15}
-                      onChange={(e) =>
-                        setNewCollection((prev) => ({
-                          ...prev,
-                          name: e.target.value.slice(0, 15),
-                        }))
-                      }
-                      className="h-8 bg-slate-900/25 border-slate-700 text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-400">
-                      API Version
-                    </label>
-                    <Input
-                      placeholder="e.g., 1.0.0"
-                      value={newCollection.apiVersion}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (
-                          /^[0-9.]*$/.test(value) &&
-                          (value.match(/\./g) || []).length <= 3
-                        ) {
-                          const groups = value.split(".");
-                          const isValid = groups.every(
-                            (group) =>
-                              !group ||
-                              (parseInt(group) <= 999 && group.length <= 3)
-                          );
-                          if (isValid) {
-                            setNewCollection((prev) => ({
-                              ...prev,
-                              apiVersion: value,
-                            }));
-                          }
-                        }
-                      }}
-                      className="h-8 bg-slate-900/25 border-slate-700 text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-400">
-                      Description (Optional)
-                    </label>
-                    <Textarea
-                      placeholder="Enter collection description"
-                      value={newCollection.description}
-                      onChange={(e) =>
-                        setNewCollection((prev) => ({
-                          ...prev,
-                          description: e.target.value,
-                        }))
-                      }
-                      className="bg-slate-900/25 border-slate-700 min-h-[80px] text-sm"
-                    />
-                  </div>
-
-                  <Button
-                    onClick={() => handleCreateCollection()}
-                    disabled={
-                      !newCollection.name.trim() ||
-                      !newCollection.apiVersion.trim()
-                    }
-                    className={cn(
-                      "w-full h-8 bg-slate-900/25 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700",
-                      "disabled:opacity-50"
-                    )}
-                  >
-                    Create Collection
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showSaveForm && pendingSaveRequest && (
-            <div className="border-b border-slate-700 bg-slate-900/50">
-              <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-medium text-slate-300">
-                    Save Request
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setPendingSaveRequest(null);
-                      setRequestName("");
-                      setShowSaveForm(false);
-                    }}
-                    className="h-7 w-7 p-0"
-                  >
-                    <X className="h-4 w-4 text-slate-400" />
-                  </Button>
-                </div>
-
-                <Input
-                  autoFocus
-                  placeholder="Request name"
-                  value={requestName}
-                  onChange={(e) => setRequestName(e.target.value)}
-                  className="h-8 bg-slate-950 border-slate-700"
-                  maxLength={15}
-                />
 
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-slate-400 mb-2">
-                    Select Collection
-                  </div>
-                  <div className="space-y-1">
-                    {props.collections.map((collection) => (
-                      <Button
-                        key={collection.id}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (!requestName) {
-                            toast.error("Please enter a request name");
-                            return;
-                          }
-                          handleSaveToCollection(collection.id, {
-                            ...pendingSaveRequest,
-                            name: requestName,
-                          });
-                        }}
-                        className="w-full justify-start text-left h-8 px-3 text-slate-300 hover:text-slate-200 hover:bg-slate-900/25"
-                      >
-                        <FolderOpen className="h-4 w-4 mr-2 text-slate-400" />
-                        {collection.name}
-                        <Badge
-                          variant="outline"
-                          className="ml-2 text-[10px] px-1 bg-transparent border-slate-700 text-slate-400"
-                        >
-                          {collection.requests?.length || 0}
-                        </Badge>
-                      </Button>
-                    ))}
-                  </div>
-
+                  <label className="text-xs font-medium text-slate-400">
+                    Import from file
+                  </label>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setIsCreating(true)}
-                    className="w-full justify-start text-left h-8 px-3 text-emerald-400 hover:text-emerald-300 hover:bg-slate-900/25"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-8 bg-slate-900/25 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create New Collection
+                    Choose File
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-400">
+                    Import from clipboard
+                  </label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handlePaste}
+                    className="w-full h-8 bg-slate-900/25 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700"
+                  >
+                    Paste from Clipboard
                   </Button>
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {props.collections.length === 0 && !isCreating ? (
-            <div className="flex flex-col items-center justify-center h-[calc(75vh)] space-y-4 p-4">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-3 rounded-lg bg-gradient-to-b from-slate-800 to-slate-900/50 ring-1 ring-slate-700/50">
-                  <FolderOpen className="h-6 w-6 text-slate-400" />
-                </div>
-                <h3 className="text-sm font-medium text-slate-300">
-                  No Collections
-                </h3>
-                <p className="text-xs text-slate-500 max-w-[15rem] leading-relaxed">
-                  Create a collection to organize and save your API requests
-                </p>
+        {isCreating && (
+          <div className="p-4 bg-slate-900/50 border-b border-slate-700">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-medium text-slate-300">
+                  Create Collection
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsCreating(false);
+                    setNewCollection({
+                      name: "",
+                      description: "",
+                      apiVersion: "",
+                    });
+                  }}
+                  className="h-7 w-7 p-0 hover:bg-slate-900/25"
+                >
+                  <X className="h-4 w-4 text-slate-400" />
+                </Button>
               </div>
 
-              <div className="flex flex-col gap-2 w-48">
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-400">
+                    Collection Name
+                  </label>
+                  <Input
+                    placeholder="Enter collection name"
+                    value={newCollection.name}
+                    maxLength={15}
+                    onChange={(e) =>
+                      setNewCollection((prev) => ({
+                        ...prev,
+                        name: e.target.value.slice(0, 15),
+                      }))
+                    }
+                    className="h-8 bg-slate-900/25 border-slate-700 text-sm"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-400">
+                    API Version
+                  </label>
+                  <Input
+                    placeholder="e.g., 1.0.0"
+                    value={newCollection.apiVersion}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (
+                        /^[0-9.]*$/.test(value) &&
+                        (value.match(/\./g) || []).length <= 3
+                      ) {
+                        const groups = value.split(".");
+                        const isValid = groups.every(
+                          (group) =>
+                            !group ||
+                            (parseInt(group) <= 999 && group.length <= 3)
+                        );
+                        if (isValid) {
+                          setNewCollection((prev) => ({
+                            ...prev,
+                            apiVersion: value,
+                          }));
+                        }
+                      }
+                    }}
+                    className="h-8 bg-slate-900/25 border-slate-700 text-sm"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-400">
+                    Description (Optional)
+                  </label>
+                  <Textarea
+                    placeholder="Enter collection description"
+                    value={newCollection.description}
+                    onChange={(e) =>
+                      setNewCollection((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    className="bg-slate-900/25 border-slate-700 min-h-[80px] text-sm"
+                  />
+                </div>
+
                 <Button
-                  onClick={() => setIsCreating(true)}
-                  className="w-full h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs gap-2"
+                  onClick={() => handleCreateCollection()}
+                  disabled={
+                    !newCollection.name.trim() ||
+                    !newCollection.apiVersion.trim()
+                  }
+                  className={cn(
+                    "w-full h-8 bg-slate-900/25 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700",
+                    "disabled:opacity-50"
+                  )}
                 >
-                  <Plus className="h-3.5 w-3.5" />
-                  New Collection
+                  Create Collection
                 </Button>
               </div>
             </div>
-          ) : (
-            <div suppressHydrationWarning>
-              <DynamicAccordion type="multiple">
-                {filteredCollections.map((collection) => (
-                  <div
-                    key={`collection-wrapper-${collection.id}`}
-                    suppressHydrationWarning
-                  >
-                    {renderCollectionItem(collection)}
-                  </div>
-                ))}
-              </DynamicAccordion>
+          </div>
+        )}
+
+        {showSaveForm && pendingSaveRequest && (
+          <div className="border-b border-slate-700 bg-slate-900/50">
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <h2 className="text-sm font-medium text-slate-300">
+                    Save Request
+                  </h2>
+                  <span className="text-xs text-slate-500">
+                    Press Ctrl+S or ⌘+S to quickly save requests
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setPendingSaveRequest(null);
+                    setRequestName("");
+                    setShowSaveForm(false);
+                  }}
+                  className="h-7 w-7 p-0"
+                >
+                  <X className="h-4 w-4 text-slate-400" />
+                </Button>
+              </div>
+
+              <Input
+                autoFocus
+                placeholder="Request name"
+                value={requestName}
+                onChange={(e) => setRequestName(e.target.value)}
+                className="h-8 bg-slate-950 border-slate-700"
+                maxLength={15}
+              />
+
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-slate-400 mb-2">
+                  Select Collection
+                </div>
+                <div className="space-y-1">
+                  {props.collections.map((collection) => (
+                    <Button
+                      key={collection.id}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (!requestName) {
+                          toast.error("Please enter a request name");
+                          return;
+                        }
+                        handleSaveToCollection(collection.id, {
+                          ...pendingSaveRequest,
+                          name: requestName,
+                        });
+                      }}
+                      className="w-full justify-start text-left h-8 px-3 text-slate-300 hover:text-slate-200 hover:bg-slate-900/25"
+                    >
+                      <FolderOpen className="h-4 w-4 mr-2 text-slate-400" />
+                      {collection.name}
+                      <Badge
+                        variant="outline"
+                        className="ml-2 text-[10px] px-1 bg-transparent border-slate-700 text-slate-400"
+                      >
+                        {collection.requests?.length || 0}
+                      </Badge>
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCreating(true)}
+                  className="w-full justify-start text-left h-8 px-3 text-emerald-400 hover:text-emerald-300 hover:bg-slate-900/25"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Collection
+                </Button>
+              </div>
             </div>
-          )}
-        </ScrollArea>
-      </div>
+          </div>
+        )}
+
+        {props.collections.length === 0 && !isCreating ? (
+          <div className="flex flex-col items-center justify-center h-[calc(75vh)] space-y-4 p-4">
+            <div className="flex flex-col items-center text-center space-y-2">
+              <div className="p-3 rounded-lg bg-gradient-to-b from-slate-800 to-slate-900/50 ring-1 ring-slate-700/50">
+                <FolderOpen className="h-6 w-6 text-slate-400" />
+              </div>
+              <h3 className="text-sm font-medium text-slate-300">
+                No Collections
+              </h3>
+              <p className="text-xs text-slate-500 max-w-[15rem] leading-relaxed">
+                Create a collection to organize and save your API requests
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 w-48">
+              <Button
+                onClick={() => setIsCreating(true)}
+                className="w-full h-8 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs gap-2"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Collection
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div suppressHydrationWarning>
+            <DynamicAccordion type="multiple">
+              {filteredCollections.map((collection) => (
+                <div
+                  key={`collection-wrapper-${collection.id}`}
+                  suppressHydrationWarning
+                >
+                  {renderCollectionItem(collection)}
+                </div>
+              ))}
+            </DynamicAccordion>
+          </div>
+        )}
+      </ScrollArea>
     </div>
   );
 }

@@ -204,7 +204,7 @@ body {
     --glow-size: 2px;
     --glow-blur: 8px;
     --glow-color: rgb(59 130 246 / 0.2); /* Blue-500 with opacity */
-    
+
     box-shadow: 0 0 var(--glow-blur) var(--glow-size) var(--glow-color);
   }
 }
@@ -264,8 +264,24 @@ body {
 }
 
 @keyframes neonPulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .animate-ping {
@@ -294,4 +310,30 @@ body {
 .connection-lost .connection-lost-backdrop {
   opacity: 1;
   pointer-events: all;
+}
+
+.response-panel-overlay {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Remove the hover styles since we now have a permanent header */
+.response-panel-overlay:hover .panel-handle {
+  opacity: 1;
+}
+
+.response-panel-overlay .header {
+  animation: slideDown 0.3s ease-out;
+}
+.response-panel-overlay button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.response-panel-overlay[data-state="fullscreen"] .resize-handle {
+  display: none;
+}
+
+.response-panel-overlay:hover .panel-handle {
+  opacity: 1;
+  transform: translateY(0);
 }

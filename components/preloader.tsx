@@ -48,7 +48,7 @@ export function Preloader() {
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-8 bg-slate-900/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-8 bg-slate-900/30 backdrop-blur-sm">
       <AnimatedLogo
         animate={true}
         showSubtitle={true}

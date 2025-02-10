@@ -1,8 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { CollectionsPanel } from "@/components/collections-panel";
 import { HistoryPanel } from "@/components/history-panel";
-import type { SidePanelProps } from "@/types";
-import { BoxesIcon, BoxIcon, Layers, RewindIcon, X } from "lucide-react";
+import type { SidePanelProps, Tab } from "@/types";
+import {
+  BoxesIcon,
+  BoxIcon,
+  Layers,
+  RewindIcon,
+  X,
+  Plus,
+  Copy,
+  LayoutGrid,
+  GripVertical,
+  Search,
+} from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnvironmentPanel } from "@/components/environment-panel";
 import {
@@ -13,6 +24,53 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTabManager } from "@/components/tab-manager";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { VerticalTabList } from "@/components/tab-manager";
+
+const formatDomain = (url: string): string => {
+  try {
+    const urlObj = new URL(url.replace(/^ws(s)?:\/\//i, "http$1://"));
+    const parts = urlObj.hostname.split(".");
+    return parts.length > 2 ? parts[parts.length - 2] : parts[0];
+  } catch {
+    return url.split("/")[0];
+  }
+};
+
+const getMethodColorClass = (method: string) => {
+  switch (method?.toUpperCase()) {
+    case "GET":
+      return "text-emerald-400 border-emerald-500/20";
+    case "POST":
+      return "text-blue-400 border-blue-500/20";
+    case "PUT":
+      return "text-yellow-400 border-yellow-500/20";
+    case "DELETE":
+      return "text-red-400 border-red-500/20";
+    case "PATCH":
+      return "text-purple-400 border-purple-500/20";
+    default:
+      return "text-slate-400 border-slate-500/20";
+  }
+};
 
 export const SidePanel: React.FC<SidePanelProps> = ({
   collections,
@@ -42,8 +100,8 @@ export const SidePanel: React.FC<SidePanelProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [shouldShowLabels, setShouldShowLabels] = useState(true);
   const [activePanel, setActivePanel] = useState<
-    "collections" | "history" | "environments"
-  >("collections");
+    "tabs" | "collections" | "history" | "environments"
+  >("tabs");
 
   useEffect(() => {
     const checkWidth = () => {
@@ -155,6 +213,12 @@ export const SidePanel: React.FC<SidePanelProps> = ({
   }, [isMobile]);
 
   const tabs = [
+    {
+      id: "tabs" as const,
+      label: "Tabs",
+      icon: <LayoutGrid className="h-4 w-4" strokeWidth={2} />,
+      content: <VerticalTabList />,
+    },
     {
       id: "collections" as const,
       label: "Collections",

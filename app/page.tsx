@@ -42,6 +42,7 @@ import { useAPIInterceptor } from "@/components/APIInterceptor";
 import { TabProvider, TabBar, useTabManager } from "@/components/tab-manager";
 import { TabWebSocketProvider } from "@/components/websocket/tab-websocket-provider";
 import TabWebSocketManager from "@/components/websocket/tab-websocket-manager";
+import { getEmptyTabState } from "@/lib/tab-utils";
 
 // Properly type the dynamic imports
 const RequestPanel = dynamic<RequestPanelProps>(
@@ -106,8 +107,10 @@ const safeSetItem = (key: string, value: string) => {
 export default function Page() {
   return (
     <TabProvider>
-      <main className="flex flex-col h-screen overflow-hidden bg-slate-900">
-        <TabContent />
+      <main className="flex flex-col h-full overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col bg-slate-900">
+          <TabContent />
+        </div>
       </main>
     </TabProvider>
   );
@@ -129,12 +132,10 @@ function TabContent() {
   );
 }
 
-// Create a wrapper component that returns JSX
 function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
   const { tabs, activeTab, updateTab } = useTabManager();
   const currentTab = tabs.find((t) => t.id === activeTab);
 
-  // Add default tab state first, before any function declarations
   const defaultTabState = {
     method: "GET",
     url: "",
@@ -1069,10 +1070,103 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     isMobile: false,
   };
 
+  useEffect(() => {
+    const handleResetRequest = (e: CustomEvent) => {
+      // Reset to completely empty state first
+      const defaultState = getEmptyTabState();
+
+      handleStateUpdate({
+        ...defaultState,
+        // Ensure arrays are fresh copies
+        headers: [...defaultState.headers],
+        params: [...defaultState.params],
+        testResults: [],
+        scriptLogs: [],
+      });
+
+      // Clear global state
+      (window as any).__ACTIVE_REQUEST__ = null;
+    };
+
+    const handleLoadHistoryItem = (e: CustomEvent) => {
+      const { detail } = e;
+
+      if (detail.clearBeforeLoad) {
+        // Reset state first
+        handleStateUpdate(getEmptyTabState());
+      }
+
+      // Small delay to ensure reset is complete
+      setTimeout(() => {
+        // Update with new data using fresh copies
+        handleStateUpdate({
+          method: detail.item.method || "GET",
+          url: detail.item.url || "",
+          headers: Array.isArray(detail.item.request.headers)
+            ? [...detail.item.request.headers]
+            : [
+                {
+                  key: "",
+                  value: "",
+                  enabled: true,
+                  showSecrets: false,
+                  type: "",
+                },
+              ],
+          params: Array.isArray(detail.item.request.params)
+            ? [...detail.item.request.params]
+            : [
+                {
+                  key: "",
+                  value: "",
+                  enabled: true,
+                  showSecrets: false,
+                  type: "",
+                },
+              ],
+          body: detail.item.request.body
+            ? { ...detail.item.request.body }
+            : { type: "none", content: "" },
+          auth: detail.item.request.auth
+            ? { ...detail.item.request.auth }
+            : { type: "none" },
+          response: detail.item.response ? { ...detail.item.response } : null,
+          preRequestScript: detail.item.request.preRequestScript || "",
+          testScript: detail.item.request.testScript || "",
+          testResults: Array.isArray(detail.item.request.testResults)
+            ? [...detail.item.request.testResults]
+            : [],
+          scriptLogs: Array.isArray(detail.item.request.scriptLogs)
+            ? [...detail.item.request.scriptLogs]
+            : [],
+        });
+      }, 0);
+    };
+
+    window.addEventListener(
+      "resetRequest",
+      handleResetRequest as EventListener
+    );
+    window.addEventListener(
+      "loadHistoryItem",
+      handleLoadHistoryItem as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resetRequest",
+        handleResetRequest as EventListener
+      );
+      window.removeEventListener(
+        "loadHistoryItem",
+        handleLoadHistoryItem as EventListener
+      );
+    };
+  }, [handleStateUpdate]);
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <header className="flex flex-col border-b border-slate-800 bg-slate-950 shrink-0">
-        <TabBar />
+      <header className="flex flex-col border-b border-slate-800 bg-slate-950/25 shrink-0">
         <div className="w-full flex flex-col 3xl:flex-row items-stretch gap-2 px-4 py-2">
           <div className="flex gap-2 3xl:w-[280px] shrink-0">
             <div className="flex items-center gap-2 w-full">
@@ -1138,24 +1232,29 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
               className="bg-slate-950"
               response={null}
             >
-              <ResizablePanelGroup direction="vertical">
-                <Suspense
-                  fallback={<div className="w-full h-full bg-slate-900/50" />}
-                >
-                  <RequestPanel {...requestPanelProps} />
-                </Suspense>
+              <div className="h-full relative">
+                <div className="absolute inset-0">
+                  <Suspense
+                    fallback={<div className="w-full h-full bg-slate-900/50" />}
+                  >
+                    <RequestPanel {...requestPanelProps} />
+                  </Suspense>
+                </div>
                 {(tabState.response || tabState.isWebSocketMode) && (
-                  <>
-                    <Suspense
-                      fallback={
-                        <div className="w-full h-full bg-slate-900/50" />
-                      }
+                  <Suspense
+                    fallback={<div className="w-full h-full bg-slate-900/50" />}
+                  >
+                    <ResizablePanel
+                      response={
+                        tabState.isWebSocketMode ? {} : tabState.response
+                      } // Pass empty object for WebSocket mode to trigger overlay
+                      className="bg-slate-900 shadow-lg"
                     >
                       <ResponsePanel {...responsePanelProps} />
-                    </Suspense>
-                  </>
+                    </ResizablePanel>
+                  </Suspense>
                 )}
-              </ResizablePanelGroup>
+              </div>
             </ResizablePanel>
           </ResizablePanelGroup>
         ) : (
@@ -1164,6 +1263,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 }

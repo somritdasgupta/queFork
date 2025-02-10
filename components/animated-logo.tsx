@@ -1,7 +1,7 @@
 interface AnimatedLogoProps {
   animate?: boolean;
   showSubtitle?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'base' | 'sm' | 'md' | 'lg';
   primaryColor?: string;  // Color for 'que'
   secondaryColor?: string;  // Color for 'Fork'
   subtitleColor?: string;
@@ -34,6 +34,7 @@ export function AnimatedLogo({
       };
 
   const sizeClasses = {
+    base: 'text-base',
     sm: 'text-lg',
     md: 'text-2xl',
     lg: 'text-4xl'
@@ -61,7 +62,7 @@ const containerClasses = subtitlePosition === 'right'
         <div className={`flex items-center gap-3 ${animationClasses.subtitle}`}>
           {subtitlePosition === 'bottom' && <div className="h-[1px] w-12 bg-slate-700/50" />}
           <span
-            className={`text-sm ${subtitleColor} ${animationClasses.text} tracking-wider font-medium text-slate-100`}
+            className={`text-sm ${subtitleColor} ${animationClasses.text} text-xs font-medium text-slate-100`}
           >
             by Somrit Dasgupta
           </span>

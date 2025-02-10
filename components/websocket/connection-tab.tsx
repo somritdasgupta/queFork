@@ -41,183 +41,167 @@ export function ConnectionTab() {
 
   const statsCards = [
     {
+      id: "sent",
       title: "Sent",
-      icon: <PlugZap2 className="h-4 w-4 md:h-5 md:w-5 text-emerald-500" />,
+      icon: <PlugZap2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-emerald-500" />,
       value: stats.messagesSent.toLocaleString(),
       badge: (
         <Badge
           variant="secondary"
-          className="text-[10px] md:text-xs bg-slate-800 text-emerald-500 border-slate-700"
+          className="text-[9px] md:text-[10px] h-4 bg-slate-800 text-emerald-500 border-slate-700"
         >
           ↑ Out
         </Badge>
       ),
-      lastMessageTime: stats.lastMessageTime,
-      valueClass:
-        "text-3xl md:text-6xl font-bold text-emerald-500 tracking-tight",
+      rate: `${rates.sentRate}/min`,
+      color: "text-emerald-500",
+      bgGradient: "from-emerald-500/10 to-transparent",
     },
     {
+      id: "received",
       title: "Received",
-      icon: <Unplug className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />,
+      icon: <Unplug className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-500" />,
       value: stats.messagesReceived.toLocaleString(),
       badge: (
         <Badge
           variant="secondary"
-          className="text-[10px] md:text-xs bg-slate-800 text-blue-500 border-slate-700"
+          className="text-[9px] md:text-[10px] h-4 bg-slate-800 text-blue-500 border-slate-700"
         >
           ↓ In
         </Badge>
       ),
-      lastMessageTime: stats.lastMessageTime,
-      valueClass: "text-3xl md:text-6xl font-bold text-blue-500 tracking-tight",
-    },
-    {
-      title: "Connection",
-      icon: <Network className="h-4 w-4 md:h-5 md:w-5 text-purple-500" />,
-      value: isConnected
-        ? `${Math.floor(connectionTime! / 60)}m ${connectionTime! % 60}s`
-        : "Waiting for connection...",
-      badge: (
-        <Badge
-          variant="secondary"
-          className={cn(
-            "px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs",
-            connectionStatus === "connected"
-              ? "bg-slate-800 text-emerald-500 border-slate-700"
-              : connectionStatus === "connecting"
-                ? "bg-slate-800 text-amber-500 border-slate-700"
-                : "bg-slate-800 text-red-500 border-slate-700"
-          )}
-        >
-          {connectionStatus.toUpperCase()}
-        </Badge>
-      ),
-      valueClass: "text-xl md:text-2xl font-bold text-slate-300 mb-2",
-      url: url,
-      additionalInfo: (
-        <div className="space-y-2">
-          <div className="text-[10px] md:text-xs text-slate-400 mb-6 truncate">
-            {url}
-          </div>
-          <div className="flex justify-between font-bold text-[10px] md:text-xs pt-2 border-t border-slate-700">
-            <span className="text-slate-400">Total Messages:</span>
-            <span className="text-slate-300 font-medium">
-              {(stats.messagesSent + stats.messagesReceived).toLocaleString()}
-            </span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Message Rate",
-      icon: <Activity className="h-4 w-4 md:h-5 md:w-5 text-indigo-500" />,
-      value: !isConnected ? "0" : rates.messagesPerMinute,
-      badge: isConnected && (
-        <Badge
-          variant="secondary"
-          className="text-[10px] md:text-xs bg-slate-800 text-indigo-500 border-slate-700"
-        >
-          Active
-        </Badge>
-      ),
-      valueClass: cn(
-        "text-xl md:text-2xl font-bold tracking-tight mb-2",
-        !isConnected ? "text-slate-500" : "text-indigo-500"
-      ),
-      suffix: (
-        <span className="text-sm md:text-base text-slate-400 ml-1">
-          msg/min
-        </span>
-      ),
-      additionalInfo: (
-        <div className="space-y-2">
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between text-[10px] md:text-xs">
-              <span className="text-slate-400">Out Rate:</span>
-              <span className="text-emerald-500 font-medium">
-                {rates.sentRate}/min
-              </span>
-            </div>
-            <div className="flex justify-between text-[10px] md:text-xs">
-              <span className="text-slate-400">In Rate:</span>
-              <span className="text-blue-500 font-medium">
-                {rates.receivedRate}/min
-              </span>
-            </div>
-          </div>
-          <div className="flex justify-between text-[10px] md:text-xs pt-2 border-t border-slate-700">
-            <span className="text-slate-400">Last Minute:</span>
-            <span className="text-slate-300 font-medium">
-              {rates.messagesPerMinute} msgs
-            </span>
-          </div>
-        </div>
-      ),
+      rate: `${rates.receivedRate}/min`,
+      color: "text-blue-500",
+      bgGradient: "from-blue-500/10 to-transparent",
     },
   ];
 
   return (
     <motion.div
-      className="h-full overflow-y-auto" // Add overflow handling
+      className="h-full overflow-y-auto p-2 md:p-4 space-y-2 md:space-y-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
     >
-      <div
-        className={cn(
-          "grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4 p-2",
-          !isConnected && "opacity-80"
-        )}
-      >
-        {statsCards.map((card, index) => (
-          <motion.div
-            key={card.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1, duration: 0.3 }}
-          >
-            <Card
+      {/* Connection Status Card */}
+      <Card className="border-slate-700/50 bg-slate-900/50 overflow-hidden">
+        <CardContent className="p-3 md:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Network className="h-3.5 w-3.5 md:h-4 md:w-4 text-purple-500" />
+              <span className="text-xs text-slate-400">Connection</span>
+            </div>
+            <Badge
+              variant="secondary"
               className={cn(
-                "border-slate-700/50 bg-slate-900/50 overflow-hidden shadow-lg relative",
-                !isConnected && "bg-slate-900/30" // Subtle background change when disconnected
+                "text-[9px] md:text-[10px] px-2 h-4",
+                "duration-1000",
+                connectionStatus === "connected"
+                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                  : connectionStatus === "connecting"
+                    ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                    : "bg-red-500/20 text-red-400 border-red-500/30"
               )}
             >
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-br from-slate-800/50 via-transparent to-transparent"
-                animate={{
-                  opacity: [0.5, 0.3, 0.5],
-                  scale: [1, 1.02, 1],
-                }}
-                transition={{ duration: 3, repeat: Infinity }}
-              />
-              {/* Card content with animation overlays */}
-              <CardContent className="p-3 md:p-6 relative z-10">
-                <div className="flex flex-col h-full">
-                  <div className="flex items-center justify-between mb-2 md:mb-4">
-                    <div className="flex items-center gap-2">
-                      {card.icon}
-                      <span className="text-xs md:text-sm font-medium text-slate-600">
-                        {card.title}
-                      </span>
-                    </div>
-                    {card.badge}
-                  </div>
-                  <div className="flex items-baseline">
-                    <div className={card.valueClass}>{card.value}</div>
-                    {card.suffix}
-                  </div>
-                  {card.additionalInfo}
+              {connectionStatus.toUpperCase()}
+            </Badge>
+          </div>
+          <div className="space-y-2">
+            <div className="text-sm md:text-base font-semibold text-slate-200">
+              {isConnected
+                ? `${Math.floor(connectionTime! / 60)}m ${connectionTime! % 60}s`
+                : "Disconnected"}
+            </div>
+            <div className="text-[10px] md:text-xs text-slate-500 truncate">
+              {url}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-2 md:gap-4">
+        {statsCards.map((card) => (
+          <Card
+            key={card.id}
+            className="border-slate-700/50 bg-slate-900/50 overflow-hidden"
+          >
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {card.icon}
+                  <span className="text-xs text-slate-400">{card.title}</span>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                {card.badge}
+              </div>
+              <motion.div
+                className={cn(
+                  "text-2xl md:text-3xl font-bold tracking-tight",
+                  card.color
+                )}
+                initial={{ scale: 0.95 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {card.value}
+              </motion.div>
+              <div className="mt-2 flex items-center justify-between text-[10px] md:text-xs">
+                <span className="text-slate-400">Rate</span>
+                <span className={card.color}>{card.rate}</span>
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
+
+      {/* Message Rate Card */}
+      <Card className="border-slate-700/50 bg-slate-900/50 overflow-hidden">
+        <CardContent className="p-3 md:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Activity className="h-3.5 w-3.5 md:h-4 md:w-4 text-indigo-500" />
+              <span className="text-xs text-slate-400">Message Rate</span>
+            </div>
+            {isConnected && (
+              <Badge
+                variant="secondary"
+                className="text-[9px] md:text-[10px] h-4 bg-slate-800 text-indigo-500 border-slate-700"
+              >
+                Active
+              </Badge>
+            )}
+          </div>
+          <div className="space-y-3">
+            <div
+              className={cn(
+                "text-2xl md:text-3xl font-bold tracking-tight",
+                !isConnected ? "text-slate-500" : "text-indigo-500"
+              )}
+            >
+              {rates.messagesPerMinute}
+              <span className="text-sm md:text-base text-slate-400 ml-1">
+                msg/min
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-[10px] md:text-xs pt-2 border-t border-slate-700/50">
+              <span className="text-slate-400">Total Messages</span>
+              <span className="text-slate-300 font-medium">
+                {(stats.messagesSent + stats.messagesReceived).toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {!isConnected && stats.messagesSent + stats.messagesReceived > 0 && (
-        <div className="mt-4 p-2 bg-slate-800/50 rounded-lg text-sm text-slate-400 text-center border border-slate-700/50">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-2 p-2 bg-slate-800/50 rounded-lg text-xs text-slate-400 text-center border border-slate-700/50"
+        >
           Session ended • {stats.messagesSent + stats.messagesReceived} messages
           exchanged
-        </div>
+        </motion.div>
       )}
     </motion.div>
   );

@@ -20,6 +20,7 @@ import {
   X,
   BoxIcon,
   Check,
+  Search,
 } from "lucide-react";
 import { KeyValueEditor } from "./key-value-editor";
 import { Environment, EnvironmentVariable, KeyValuePair } from "@/types";
@@ -33,6 +34,7 @@ import {
 } from "@/components/ui/accordion";
 import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
 import dynamic from "next/dynamic";
+import { cn } from "@/lib/utils";
 
 const DynamicAccordion = dynamic(
   () => import("@/components/ui/accordion").then((mod) => mod.Accordion),
@@ -591,89 +593,60 @@ export const EnvironmentPanel = forwardRef<
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-950" suppressHydrationWarning>
-      {showSaveForm && pendingVariable && (
-        <div className="bg-slate-900/70">
-          <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-slate-300">
-                Save to Environment
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setPendingVariable(null);
-                  setShowSaveForm(false);
-                }}
-                className="h-7 w-7 p-0"
-              >
-                <X className="h-4 w-4 text-slate-400" />
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-slate-400 mb-2">
-                Select Environment
-              </div>
-              <div className="space-y-1">
-                {environments.map((env) => (
-                  <Button
-                    key={env.id}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSaveToEnvironment(env.id)}
-                    className="w-full justify-start text-left h-8 px-3 text-slate-300 hover:text-slate-200 hover:bg-slate-800"
-                  >
-                    <BoxIcon className="h-4 w-4 mr-2 text-slate-400" />
-                    {env.name}
-                    {env.global && (
-                      <Badge variant="secondary" className="ml-2 text-[10px]">
-                        Global
-                      </Badge>
-                    )}
-                  </Button>
-                ))}
-              </div>
-            </div>
+    <div
+      className="h-full flex flex-col bg-slate-900/50"
+      suppressHydrationWarning
+    >
+      {/* Search bar and Add Environment section */}
+      <div className="p-2 space-y-2 border-b border-slate-800">
+        {/* Search input */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <input
+              placeholder="Search environments"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-slate-900 text-sm rounded-md pl-8 pr-4 py-1.5
+                border border-slate-800 focus:border-slate-700
+                text-slate-300 placeholder:text-slate-500
+                focus:outline-none focus:ring-1 focus:ring-slate-700"
+            />
           </div>
         </div>
-      )}
-      <div className="sticky top-0 z-10 bg-slate-900">
-        <Input
-          placeholder="Search environments"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-8 rounded-none bg-slate-900 border-1 border-t border-slate-700 focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
-        />
-        <div className="flex w-full">
-          <Input
+
+        {/* Add Environment row */}
+        <div className="flex items-center gap-2">
+          <input
             placeholder="Add new environment"
             value={newEnvironmentName}
             onChange={(e) => setNewEnvironmentName(e.target.value)}
-            className="h-12 w-full rounded-none bg-slate-900/50 border-2 border-slate-700 focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 text-slate-300 placeholder:text-slate-500 sm:text-base text-xs"
+            className="flex-1 bg-slate-900 text-sm rounded-md px-3 py-1.5
+              border border-slate-800 focus:border-slate-700
+              text-slate-300 placeholder:text-slate-500
+              focus:outline-none focus:ring-1 focus:ring-slate-700"
           />
-          <div className="flex">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCreateEnvironment}
-              disabled={!newEnvironmentName.trim()}
-              className="h-12 w-12 rounded-none border-2 border-slate-700/50 bg-slate-900 hover:bg-slate-900/50 text-blue-400 hover:text-blue-300 disabled:border-slate-600 disabled:text-slate-500"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleImportEnvironment}
-              className="h-12 w-12 rounded-none border-2 border-slate-700 bg-slate-900/50 hover:bg-slate-900/50 text-emerald-400 hover:text-emerald-300"
-            >
-              <Upload className="h-4 w-4" />
-            </Button>
-          </div>
+          <button
+            onClick={handleCreateEnvironment}
+            disabled={!newEnvironmentName.trim()}
+            className={cn(
+              "p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800",
+              !newEnvironmentName.trim() && "opacity-50 cursor-not-allowed"
+            )}
+            title="Create environment"
+          >
+            <Plus className="h-4 w-4 text-emerald-400" />
+          </button>
+          <button
+            onClick={handleImportEnvironment}
+            className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
+            title="Import environment"
+          >
+            <Upload className="h-4 w-4 text-yellow-400" />
+          </button>
         </div>
       </div>
+      {/* Rest of the component remains unchanged */}
       <ScrollArea
         direction="vertical"
         className="flex-1 overflow-hidden bg-slate-900/75"
