@@ -6,6 +6,10 @@ export interface KeyValuePair {
   description?: string;
   enabled?: boolean;
   showSecrets: boolean;
+  source?: {
+    tab: "auth" | "body";
+    type?: string;
+  };
 }
 
 // Add new interface for environment save event
@@ -49,7 +53,15 @@ export type ContentType =
 
 export interface RequestBody {
   type: ContentType;
-  content: string | KeyValuePair[] | File;
+  content: string | KeyValuePair[] | File | BinaryFileData;
+}
+
+export interface BinaryFileData {
+  name: string;
+  size: number;
+  type: string;
+  lastModified: number;
+  content: string; // Base64 encoded content
 }
 
 export interface CollectionVersion {
@@ -315,6 +327,7 @@ export interface RequestPanelProps {
     username?: string;
     password?: string;
     key?: string;
+    headerName?: string; // Add this line for API Key auth
   };
   isWebSocketMode: boolean;
   environments: Environment[];

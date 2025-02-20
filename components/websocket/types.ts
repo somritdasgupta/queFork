@@ -28,11 +28,12 @@ export interface WebSocketContextType {
     minLatency: number;
     maxLatency: number;
     averageLatency: number;
+    bytesTransferred: number;
     latencyHistory: Array<{ timestamp: number; value: number }>;
   };
   currentLatency: number | null;
   connectionTime: number | null;
-  connectionStartTime: number | null;  // Add this field
+  connectionStartTime: number | null; // Add this field
   messages: Array<{
     type: "sent" | "received";
     content: string;
@@ -40,17 +41,22 @@ export interface WebSocketContextType {
   }>;
   sendMessage: (content: string) => void;
   clearMessages: () => void;
-  setMessagesBulk: (messages: Array<{
-    type: "sent" | "received";
-    content: string;
-    timestamp: string;
-  }>) => void;
+  setMessagesBulk: (
+    messages: Array<{
+      type: "sent" | "received";
+      content: string;
+      timestamp: string;
+    }>
+  ) => void;
   activeProtocols: string[];
   setActiveProtocols: (protocols: string[]) => void;
-  protocolHandlers: Record<string, {
-    init: () => void;
-    handleMessage: (data: any) => void;
-  }>;
+  protocolHandlers: Record<
+    string,
+    {
+      init: () => void;
+      handleMessage: (data: any) => void;
+    }
+  >;
   protocolConfig: ProtocolConfig;
   updateProtocolConfig: (config: Partial<ProtocolConfig>) => void;
   subscribeToTopic: (topic: string) => void;
@@ -63,6 +69,7 @@ export interface WebSocketStats {
   messagesReceived: number;
   avgLatency: number | null;
   connectionDuration: number;
+  bytesTransferred: number;
   messages: Array<{
     type: "sent" | "received";
     content: string;
@@ -70,4 +77,3 @@ export interface WebSocketStats {
   }>;
   lastConnected: string;
 }
-

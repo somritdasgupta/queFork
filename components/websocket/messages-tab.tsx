@@ -25,52 +25,80 @@ import {
   XCircle,
   ArrowUpCircle,
   ArrowDownCircle,
+  Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SelectDropdown } from "./select-dropdown";
+import { formatDistance } from "date-fns";
+import { CodeEditor } from "@/components/shared/code-editor";
 
+// Update the Message interface to make size optional since we'll calculate it
 interface Message {
   type: "sent" | "received";
   content: string;
   timestamp: string;
+  size?: number; // Make size optional
+  protocol?: string;
+  encoding?: string;
+  messageType?: string;
+  statusCode?: number;
+  compressed?: boolean;
+  retryCount?: number;
+  sequenceId?: number;
 }
 
 const MESSAGE_STYLES = {
   sent: {
-    bg: "hover:bg-zinc-900/50",
-    activeBg: "bg-zinc-900",
-    icon: "text-blue-500",
-    text: "text-zinc-300",
-    border: "border-zinc-800",
+    bg: "hover:bg-emerald-900/20",
+    activeBg: "bg-emerald-900/30",
+    icon: "text-emerald-500",
+    text: "text-emerald-400",
+    border: "border-emerald-800/30",
   },
   received: {
-    bg: "hover:bg-zinc-900/50",
-    activeBg: "bg-zinc-900",
-    icon: "text-emerald-500",
-    text: "text-zinc-300",
-    border: "border-zinc-800",
+    bg: "hover:bg-blue-900/20",
+    activeBg: "bg-blue-900/30",
+    icon: "text-blue-500",
+    text: "text-blue-400",
+    border: "border-blue-800/30",
   },
   connected: {
-    bg: "hover:bg-zinc-900/50",
-    activeBg: "bg-zinc-900",
+    bg: "hover:bg-yellow-900/20",
+    activeBg: "bg-yellow-900/30",
     icon: "text-yellow-500",
     text: "text-yellow-500",
-    border: "border-zinc-800",
+    border: "border-yellow-800/30",
   },
   disconnected: {
-    bg: "hover:bg-zinc-900/50",
-    activeBg: "bg-zinc-900",
+    bg: "hover:bg-orange-900/20",
+    activeBg: "bg-orange-900/30",
     icon: "text-orange-500",
     text: "text-orange-500",
-    border: "border-zinc-800",
+    border: "border-orange-800/30",
   },
   error: {
-    bg: "hover:bg-zinc-900/50",
-    activeBg: "bg-zinc-900",
+    bg: "hover:bg-red-900/20",
+    activeBg: "bg-red-900/30",
     icon: "text-red-500",
     text: "text-red-500",
-    border: "border-zinc-800",
+    border: "border-red-800/30",
   },
+};
+
+// Update getMessageSize to be more robust
+const getMessageSize = (content: string | undefined) => {
+  if (!content) return 0;
+  return new Blob([content]).size;
+};
+
+const detectMessageType = (content: string) => {
+  try {
+    JSON.parse(content);
+    return "JSON";
+  } catch {
+    return "Plain Text";
+  }
 };
 
 export function MessagesTab() {
@@ -88,6 +116,7 @@ export function MessagesTab() {
   const [expandedMessage, setExpandedMessage] = useState<number | null>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isEditingJson, setIsEditingJson] = useState(false);
 
   useEffect(() => {
     if (messagesEndRef.current && shouldAutoScroll) {
@@ -108,55 +137,32 @@ export function MessagesTab() {
     }
   };
 
-  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newMessage = e.target.value;
-    setMessage(newMessage);
-    if (newMessage.trim()) {
-      setMessageFormat(detectMessageFormat(newMessage));
-    }
+  const handleMessageChange = (newValue: string | undefined) => {
+    setMessage(newValue || "");
   };
 
-  // Update handleSend to accept any valid JSON
   const handleSend = () => {
     if (!isConnected || !message.trim()) return;
 
     try {
       let formattedMessage = message.trim();
 
+      // If in JSON mode, validate the JSON
       if (messageFormat === "json") {
-        try {
-          // Just validate that it's valid JSON, but keep the original structure
-          JSON.parse(formattedMessage);
-        } catch (e) {
-          toast.error("Invalid JSON format", {
-            description: (
-              <div className="mt-2 space-y-2">
-                <div className="font-medium text-xs">Example JSON formats:</div>
-                <code className="bg-slate-900 px-2 py-1 rounded text-xs block">
-                  {'{ "key": "value" }'}
-                </code>
-                <code className="bg-slate-900 px-2 py-1 rounded text-xs block">
-                  {'{ "array": [1, 2, 3] }'}
-                </code>
-                <code className="bg-slate-900 px-2 py-1 rounded text-xs block">
-                  {'{ "nested": { "key": "value" }'}
-                </code>
-              </div>
-            ),
-            duration: 5000,
-          });
-          return;
-        }
+        JSON.parse(formattedMessage); // This will throw if invalid
       }
 
       sendMessage(formattedMessage);
       setMessage("");
+      setIsEditingJson(false); // Reset to normal input after sending
+      setMessageFormat("text"); // Reset format to text
     } catch (error) {
-      toast.error("Failed to send message");
+      toast.error(
+        messageFormat === "json" ? "Invalid JSON" : "Failed to send message"
+      );
     }
   };
 
-  // Update message format placeholder
   const getMessagePlaceholder = () => {
     if (!isConnected) return "Connect to start...";
 
@@ -202,11 +208,21 @@ export function MessagesTab() {
         if (
           Array.isArray(importedMessages) &&
           importedMessages.every(
-            (msg) => msg.type && msg.content && msg.timestamp
+            (msg) =>
+              msg.type &&
+              msg.content &&
+              msg.timestamp &&
+              // Add size check
+              (msg.size || typeof msg.content === "string")
           )
         ) {
-          setMessagesBulk(importedMessages);
-          toast.success(`Imported ${importedMessages.length} messages`);
+          // Ensure size property exists for each message
+          const messagesWithSize = importedMessages.map((msg) => ({
+            ...msg,
+            size: msg.size || getMessageSize(msg.content),
+          }));
+          setMessagesBulk(messagesWithSize);
+          toast.success(`Imported ${messagesWithSize.length} messages`);
         } else {
           toast.error("Invalid message format in file");
         }
@@ -218,19 +234,15 @@ export function MessagesTab() {
     event.target.value = "";
   };
 
-  // Add helper function to safely parse and format JSON
   const formatJsonMessage = (content: string) => {
     try {
-      // First check if the content is already a string representation of JSON
       const parsed = JSON.parse(content);
       return JSON.stringify(parsed, null, 2);
     } catch (e) {
-      // If parsing fails, return the original content
       return content;
     }
   };
 
-  // Add helper function to check if content is valid JSON
   const isJsonString = (content: string) => {
     try {
       JSON.parse(content);
@@ -240,7 +252,6 @@ export function MessagesTab() {
     }
   };
 
-  // Add helper to determine message type and styles
   const getMessageStyle = (msg: Message) => {
     if (msg.content.startsWith("Connected to")) {
       return MESSAGE_STYLES.connected;
@@ -258,103 +269,148 @@ export function MessagesTab() {
     setExpandedMessage(expandedMessage === index ? null : index);
   };
 
-  return (
-    <div className="relative w-full h-full bg-slate-900/50 overflow-hidden">
-      {/* Header - Match REST header style */}
-      <div className="absolute top-0 left-0 right-0 z-0 border-b border-zinc-800 bg-zinc-900/50">
-        <div className="h-14 px-3 flex items-center gap-2 overflow-x-auto">
-          <Select
-            value={messageFormat}
-            onValueChange={(value: "text" | "json") => setMessageFormat(value)}
-          >
-            <SelectTrigger className="w-24 h-8 bg-slate-900/50 border-zinc-800 text-zinc-400 font-medium">
-              <SelectValue placeholder="Format" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
-              <SelectItem value="text" className="text-zinc-400">
-                Text
-              </SelectItem>
-              <SelectItem value="json" className="text-zinc-400">
-                JSON
-              </SelectItem>
-            </SelectContent>
-          </Select>
+  // Update renderExpandedMessage for better mobile responsiveness
+  const renderExpandedMessage = (msg: Message, index: number) => {
+    const style = getMessageStyle(msg);
+    const msgSize = getMessageSize(msg.content);
 
-          <Badge
-            variant="outline"
-            className="h-8 border-zinc-800 bg-slate-900/50 text-zinc-400 font-medium"
-          >
-            {messages.length}
-          </Badge>
+    return (
+      <div
+        className={cn(
+          "px-2 py-2 text-[11px] space-y-2",
+          style.activeBg,
+          style.border,
+          "border-t"
+        )}
+      >
+        {/* Message Details Grid - Updated for mobile */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
+          {/* Left Column - Basic Info */}
+          <div className="space-y-2 bg-slate-900/30 rounded-lg p-2 border border-slate-800/50">
+            <div className="font-medium text-slate-400">Message Details</div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Type</span>
+                <span className={style.text}>{msg.type}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Size</span>
+                <span className={style.text}>
+                  {msgSize > 1024
+                    ? `${(msgSize / 1024).toFixed(1)} KB`
+                    : `${msgSize} B`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Format</span>
+                <span className={style.text}>
+                  {detectMessageType(msg.content)}
+                </span>
+              </div>
+            </div>
+          </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1 ml-auto">
-            <input
-              type="file"
-              id="import-messages"
-              className="hidden"
-              accept=".json"
-              onChange={importMessages}
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                document.getElementById("import-messages")?.click()
-              }
-              className="h-8 px-2 hover:bg-slate-800 text-slate-400"
-            >
-              <Upload className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearMessages}
-              className="h-8 px-2 hover:bg-slate-800 text-slate-400"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={exportMessages}
-              className="h-8 px-2 hover:bg-slate-800 text-slate-400"
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            {isConnected && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={disconnect}
-                className="h-8 px-2 bg-red-500/20 hover:bg-red-500/30 text-red-400"
-              >
-                <Unplug className="h-4 w-4" />
-              </Button>
-            )}
+          {/* Middle and Right columns remain the same but with improved responsive classes */}
+          <div className="space-y-2 bg-slate-900/30 rounded-lg p-2 border border-slate-800/50">
+            <div className="font-medium text-slate-400">Protocol Info</div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Protocol</span>
+                <span className={style.text}>WebSocket</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Encoding</span>
+                <span className={style.text}>UTF-8</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Message ID</span>
+                <span className={style.text}>#{index + 1}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Timing */}
+          <div className="space-y-2 bg-slate-900/30 rounded-lg p-2 border border-slate-800/50">
+            <div className="font-medium text-slate-400">Timing</div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Time</span>
+                <span className={style.text}>
+                  {new Date(msg.timestamp).toLocaleTimeString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Date</span>
+                <span className={style.text}>
+                  {new Date(msg.timestamp).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Age</span>
+                <span className={style.text}>
+                  {formatDistance(new Date(msg.timestamp), new Date(), {
+                    addSuffix: true,
+                  })}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Messages Area - Match REST content style */}
-      <div
-        className="absolute top-14 bottom-16 left-0 right-0 overflow-y-auto w-full bg-slate-900/50/90 text-zinc-300
-        [&::-webkit-scrollbar]:w-2 
-        [&::-webkit-scrollbar-thumb]:bg-zinc-800 
-        [&::-webkit-scrollbar-track]:bg-zinc-900/50"
-      >
-        <div className="divide-y divide-slate-700/50">
+        {/* Content Preview for JSON - Updated for mobile */}
+        {isJsonString(msg.content) && (
+          <div className="mt-2 space-y-2 bg-slate-900/30 rounded-lg p-2 border border-slate-800/50">
+            <div className="font-medium text-slate-400">Content Preview</div>
+            <div className="bg-slate-900/50 rounded p-2 overflow-x-auto max-h-[200px] md:max-h-[400px]">
+              <pre
+                className={cn(
+                  "text-xs font-mono whitespace-pre-wrap break-words",
+                  style.text
+                )}
+              >
+                {formatJsonMessage(msg.content)}
+              </pre>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const handleFormatToggle = () => {
+    const newFormat = messageFormat === "json" ? "text" : "json";
+    setMessageFormat(newFormat);
+    setIsEditingJson(newFormat === "json");
+  };
+
+  return (
+    <div className="relative w-full h-full bg-slate-900/50 overflow-hidden">
+      <div className="absolute top-0 bottom-14 left-0 right-0 overflow-y-auto w-full bg-slate-900/50/90">
+        <div className="divide-y divide-slate-800/50">
           {messages.length === 0 ? (
-            <div className="h-full min-h-[400px] flex items-center justify-center text-slate-500">
-              <div className="flex flex-col items-center gap-2">
-                <MessageSquare className="h-6 w-6 md:h-8 md:w-8" />
-                <p className="text-xs md:text-sm font-medium">No Messages</p>
+            <div className="h-full flex items-center justify-center p-20">
+              <div className="w-full max-w-sm p-8 rounded-lg border border-slate-800/50 bg-slate-900/50 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="p-4 rounded-full bg-slate-800/50 ring-1 ring-slate-700/50">
+                    <MessageSquare className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <div className="space-y-2 text-center">
+                    <h3 className="text-sm font-medium text-slate-200">
+                      No Messages Yet
+                    </h3>
+                    <p className="text-xs leading-relaxed text-slate-400 max-w-[200px]">
+                      Connect to a WebSocket endpoint to see the messages
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="divide-y divide-slate-700/50">
+            <div className="divide-y divide-slate-800/50">
               {messages.map((msg, index) => {
                 const style = getMessageStyle(msg);
+                const msgSize = getMessageSize(msg.content);
+
                 return (
                   <div
                     key={index}
@@ -365,24 +421,23 @@ export function MessagesTab() {
                   >
                     <div
                       onClick={() => handleMessageClick(index)}
-                      className="flex items-center gap-3 px-3 md:px-4 py-2 transition-colors cursor-pointer"
+                      className="flex items-center gap-3 px-3 py-2 transition-colors cursor-pointer"
                     >
                       <div className={cn("shrink-0", style.icon)}>
                         {msg.content.startsWith("Connected") ? (
-                          <PlugZap2 className="h-4 w-4 -rotate-12" />
+                          <PlugZap2 className="h-4 w-4" />
                         ) : msg.content.startsWith("Disconnected") ? (
-                          <Unplug className="h-4 w-4 rotate-12" />
-                        ) : msg.content.startsWith("Connection error") ||
-                          msg.content.startsWith("Failed") ? (
-                          <XCircle className="h-4 w-4 -rotate-12" />
+                          <Unplug className="h-4 w-4" />
+                        ) : msg.content.startsWith("Connection error") ? (
+                          <XCircle className="h-4 w-4" />
                         ) : msg.type === "sent" ? (
-                          <ArrowUpCircle className="h-4 w-4 rotate-[315deg]" />
+                          <ArrowUpCircle className="h-4 w-4" />
                         ) : (
-                          <ArrowDownCircle className="h-4 w-4 -rotate-45" />
+                          <ArrowDownCircle className="h-4 w-4" />
                         )}
                       </div>
 
-                      <div className="hidden md:block text-[11px] md:text-xs text-slate-500 min-w-[90px] font-normal">
+                      <div className="text-xs text-slate-500 min-w-[75px] font-medium tracking-tight">
                         {new Date(msg.timestamp).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -390,52 +445,27 @@ export function MessagesTab() {
                         })}
                       </div>
 
-                      <Clock className="md:hidden h-3.5 w-3.5 text-slate-500" />
-
-                      <div className="flex-1 text-xs md:text-sm font-normal">
-                        <div className={cn("px-1", style.text)}>
+                      <div className="flex-1">
+                        <div className={cn("text-xs font-medium font-mono tracking-tight", style.text)}>
                           {msg.content}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyMessage(msg.content);
-                          }}
-                          className="h-6 w-6 md:h-7 md:w-7 p-0 hover:bg-slate-700 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Copy className="h-3.5 w-3.5 md:h-4 md:w-4 text-slate-400" />
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyMessage(msg.content);
+                        }}
+                        className="h-7 w-7 p-0 hover:bg-slate-800/50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Copy className="h-3.5 w-3.5 text-slate-400" />
+                      </Button>
                     </div>
 
-                    {expandedMessage === index && (
-                      <div
-                        className={cn(
-                          "px-3 md:px-4 py-2 text-[11px] md:text-xs space-y-2",
-                          style.activeBg,
-                          style.border
-                        )}
-                      >
-                        <div className="flex items-center justify-between text-slate-400">
-                          <div className="font-medium">Type: {msg.type}</div>
-                          <time className="text-slate-500 font-normal">
-                            {new Date(msg.timestamp).toLocaleString()}
-                          </time>
-                        </div>
-                        {isJsonString(msg.content) && (
-                          <div className="mt-2 bg-slate-900/50 rounded p-2 overflow-x-auto border border-slate-700/50">
-                            <pre className="text-sm text-blue-400 font-normal">
-                              {formatJsonMessage(msg.content)}
-                            </pre>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {expandedMessage === index &&
+                      renderExpandedMessage({ ...msg, size: msgSize }, index)}
                   </div>
                 );
               })}
@@ -446,48 +476,123 @@ export function MessagesTab() {
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
-        <div className="h-14 p-3 flex items-center gap-2">
+        <div
+          className={cn(
+            "p-2 flex items-center gap-2",
+            isEditingJson ? "h-48" : "h-14"
+          )}
+        >
           <div className="flex-1 relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs md:text-sm font-medium">
-              $
-            </span>
-            <Input
-              value={message}
-              onChange={handleMessageChange}
-              placeholder={getMessagePlaceholder()}
-              onKeyDown={(e) =>
-                e.key === "Enter" && !e.shiftKey && handleSend()
-              }
-              disabled={!isConnected}
-              className="pl-7 bg-slate-900/50 border-zinc-800 rounded-lg pr-12
-                text-xs md:text-sm text-zinc-300 font-normal placeholder:text-zinc-600 
-                focus-visible:ring-1 focus-visible:ring-zinc-700 
-                focus-visible:ring-offset-0 h-10"
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <span
+            {!isEditingJson ? (
+              <>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs md:text-sm font-medium">
+                  $
+                </span>
+                <Input
+                  value={message}
+                  onChange={(e) => handleMessageChange(e.target.value)}
+                  placeholder={getMessagePlaceholder()}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && !e.shiftKey && handleSend()
+                  }
+                  disabled={!isConnected}
+                  className={cn(
+                    "pl-7 rounded-lg pr-24 text-xs md:text-sm font-normal h-10",
+                    "focus-visible:ring-1 focus-visible:ring-zinc-700 focus-visible:ring-offset-0",
+                    "bg-slate-900/50 border-zinc-800 text-zinc-300 placeholder:text-zinc-600"
+                  )}
+                />
+              </>
+            ) : (
+              <div className="h-40 rounded-lg overflow-hidden border border-blue-800/30">
+                <CodeEditor
+                  value={message}
+                  onChange={handleMessageChange}
+                  language="json"
+                  height="100%"
+                  className="rounded-lg"
+                />
+              </div>
+            )}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleFormatToggle}
                 className={cn(
-                  "px-2 py-0.5 rounded-full text-[10px] md:text-[11px] font-medium",
+                  "h-7 px-2 rounded-full text-[11px] font-medium transition-colors",
                   messageFormat === "json"
-                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                    : "bg-zinc-900 text-zinc-400 border border-zinc-800"
+                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30"
+                    : "bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700"
                 )}
               >
                 {messageFormat.toUpperCase()}
-              </span>
+              </Button>
             </div>
           </div>
-          <Button
-            onClick={handleSend}
-            disabled={!isConnected || !message.trim()}
-            size="icon"
-            className="shrink-0 h-10 w-10 bg-slate-900/50 hover:bg-zinc-900 rounded-lg
-              text-zinc-400 disabled:bg-slate-900/50/50 disabled:text-zinc-600 border border-zinc-800"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleSend}
+              disabled={!isConnected || !message.trim()}
+              size="icon"
+              className="shrink-0 h-10 w-10 bg-slate-900/50 hover:bg-zinc-900 rounded-lg
+                text-zinc-400 disabled:bg-slate-900/50/50 disabled:text-zinc-600 border border-zinc-800"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+
+            <SelectDropdown
+              trigger={
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="shrink-0 h-10 w-10 bg-slate-900/50 hover:bg-zinc-900 rounded-lg
+                    text-zinc-400 border border-zinc-800"
+                >
+                  <Settings2 className="h-4 w-4" />
+                </Button>
+              }
+              items={[
+                {
+                  label: "Import Messages",
+                  icon: Upload,
+                  onClick: () =>
+                    document.getElementById("import-messages")?.click(),
+                },
+                {
+                  label: "Export Messages",
+                  icon: Download,
+                  onClick: exportMessages,
+                },
+                {
+                  label: "Clear Messages",
+                  icon: Trash2,
+                  onClick: clearMessages,
+                },
+                ...(isConnected
+                  ? [
+                      {
+                        label: "Disconnect",
+                        icon: Unplug,
+                        onClick: disconnect,
+                        className: "text-red-400",
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </div>
         </div>
       </div>
+
+      <input
+        type="file"
+        id="import-messages"
+        className="hidden"
+        accept=".json"
+        onChange={importMessages}
+      />
     </div>
   );
 }

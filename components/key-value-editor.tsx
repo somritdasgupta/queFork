@@ -26,6 +26,8 @@ import {
   EllipsisIcon,
   CheckCircle,
   XCircle,
+  ArrowUpRight,
+  Lock,
 } from "lucide-react";
 import { KeyValuePair, Environment } from "@/types";
 import { toast } from "sonner";
@@ -86,6 +88,7 @@ interface KeyValueEditorProps {
   expandedItemId?: string | null;
   onExpandedChange?: (id: string | null) => void;
   onSave?: (pairs: KeyValuePair[]) => void;
+  onSourceRedirect?: (source: { tab: string; type?: string }) => void;
 }
 
 interface KeyValueInputProps {
@@ -100,6 +103,7 @@ interface KeyValueInputProps {
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   navigableElements: React.RefObject<NavigableElement[]>;
   setFocus: (id: string) => void;
+  disabled?: boolean; // Add this prop
 }
 
 const useStableId = (prefix: string, id?: string) => {
@@ -132,7 +136,9 @@ const KeyValueInput = memo(function KeyValueInput({
   isValue,
   onKeyDown,
   navigableElements,
-}: KeyValueInputProps) {
+  disabled, // Add this prop
+}: KeyValueInputProps & { disabled?: boolean }) {
+  // Add disabled to props
   const [localValue, setLocalValue] = useState(value);
   const debouncedValue = useDebounced(localValue, 150);
   const [isFocused, setIsFocused] = useState(false);
@@ -170,6 +176,9 @@ const KeyValueInput = memo(function KeyValueInput({
   return (
     <div className="relative">
       <Icon className="absolute left-2.5 top-2 h-4 w-4 text-slate-500 hidden sm:block" />
+      {disabled && (
+        <Lock className="absolute right-2.5 top-2 h-3.5 w-3.5 text-slate-500" />
+      )}
       <Input
         ref={inputRef}
         value={localValue}
@@ -181,6 +190,7 @@ const KeyValueInput = memo(function KeyValueInput({
         }}
         onPaste={onPaste}
         placeholder={placeholder}
+        disabled={disabled}
         className={cn(
           "h-8 bg-transparent text-slate-300 select-none",
           "border border-slate-800/60 focus:border-slate-600",
@@ -191,6 +201,8 @@ const KeyValueInput = memo(function KeyValueInput({
           "select-none touch-none",
           "focus:ring-1 focus:ring-slate-600/50",
           "transition-all duration-150",
+          disabled &&
+            "opacity-60 cursor-not-allowed bg-slate-800/30 text-slate-500",
           className
         )}
         inputMode="text"
@@ -289,6 +301,7 @@ export function KeyValueEditor({
   isEnvironmentEditor = false,
   preventFirstItemDeletion = false,
   autoSave = false,
+  onSourceRedirect,
 }: KeyValueEditorProps) {
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkContent, setBulkContent] = useState("");
@@ -748,6 +761,20 @@ export function KeyValueEditor({
       },
     ];
 
+    // Replace the delete button with redirect for managed headers
+    if (pair.source) {
+      const redirectButton = {
+        icon: ArrowUpRight,
+        onClick: () => onSourceRedirect?.(pair.source!),
+        className: "h-7 w-7 p-0 text-blue-400 hover:text-blue-300",
+        title: `Go to ${pair.source.tab} tab`,
+        disabled: false, // Add this line
+      };
+
+      // Replace the last button (delete) with redirect
+      actionButtons[actionButtons.length - 1] = redirectButton;
+    }
+
     return (
       <div className="flex items-center gap-1 relative">
         {/* Desktop buttons */}
@@ -1005,7 +1032,14 @@ export function KeyValueEditor({
                       }}
                     >
                       <SortableItem pair={pair} index={virtualRow.index}>
-                        <div className="flex w-full hover:bg-slate-800/50 transition-colors group border border-slate-800/40 hover:border-slate-700/40">
+                        <div
+                          className={cn(
+                            "flex w-full transition-colors group border border-slate-800/40",
+                            pair.source
+                              ? "bg-slate-800/20"
+                              : "hover:bg-slate-800/50 hover:border-slate-700/40"
+                          )}
+                        >
                           <div
                             className={cn(
                               "grid gap-[1px] flex-1",
@@ -1033,6 +1067,7 @@ export function KeyValueEditor({
                               pairId={pair.id || `temp-${virtualRow.index}`}
                               navigableElements={navigableElements}
                               setFocus={setFocus}
+                              disabled={!!pair.source}
                             />
                             <KeyValueInput
                               key={`value-${pair.id}-${virtualRow.index}`}
@@ -1053,6 +1088,7 @@ export function KeyValueEditor({
                               isValue
                               navigableElements={navigableElements}
                               setFocus={setFocus}
+                              disabled={!!pair.source}
                             />
                             {showDescription && (
                               <KeyValueInput
@@ -1074,6 +1110,7 @@ export function KeyValueEditor({
                                 pairId={pair.id || `temp-${virtualRow.index}`}
                                 navigableElements={navigableElements}
                                 setFocus={setFocus}
+                                disabled={!!pair.source}
                               />
                             )}
                           </div>

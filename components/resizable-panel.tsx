@@ -3,21 +3,12 @@
 import * as React from "react";
 import * as ResizablePrimitive from "react-resizable-panels";
 import { cn } from "@/lib/utils";
-import { RequestResponse } from "@/types";
 import {
   ChevronDown,
   ChevronUp,
-  Minimize2,
-  Maximize2,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Database,
-  Badge,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PANEL_SIZING } from "@/lib/constants";
-
 
 interface CustomPanelProps {
   onPanelStateChange?: () => void;
@@ -36,11 +27,8 @@ interface ResizablePanelChildProps {
   isOverlay?: boolean;
   preserveStatusBar?: boolean;
 }
-
-// Add this type to check for components that can receive panel props
 type ComponentWithPanelProps = React.ComponentType<ResizablePanelChildProps>;
 
-// Add this new wrapper component
 const PanelContent = ({
   children,
   ...props
@@ -69,103 +57,100 @@ const PanelContent = ({
 const ResizablePanel = React.forwardRef<
   ResizablePrimitive.ImperativePanelHandle,
   React.ComponentProps<typeof ResizablePrimitive.Panel> & CustomPanelProps
->(
-  (
-    {
-      response,
-      className,
-      onPanelStateChange,
-      panelState: externalPanelState,
-      showContentOnly,
-      isOverlay,
-      preserveStatusBar,
-      children,
-      ...props
-    }  ) => {
-    const panelRef =
-      React.useRef<ResizablePrimitive.ImperativePanelHandle>(null);
-    const [isResizing, setIsResizing] = React.useState(false);
-    const [isMounted, setIsMounted] = React.useState(false);
-    const [internalPanelState, setInternalPanelState] = React.useState<
-      "expanded" | "collapsed" | "fullscreen"
-    >("expanded");
+>((props, ref) => {
+  const {
+    response,
+    className,
+    onPanelStateChange,
+    panelState: externalPanelState,
+    showContentOnly,
+    isOverlay,
+    preserveStatusBar,
+    children,
+    ...restProps
+  } = props;
 
-    // Use the external state if provided, otherwise use internal state
-    const currentPanelState = externalPanelState || internalPanelState;
+  const [] = React.useState(false);
+  const [] = React.useState(false);
+  const [internalPanelState, setInternalPanelState] = React.useState<
+    "expanded" | "collapsed" | "fullscreen"
+  >("expanded");
 
-    // Update overlay styles to preserve status bar height in collapsed state
-    const overlayStyles = response
-      ? cn(
-          "absolute left-0 right-0 z-50",
-          "transition-all duration-300 ease-out",
-          {
-            "top-0 h-full": currentPanelState === "fullscreen",
-            "bottom-0 h-[50vh]": currentPanelState === "expanded",
-            "bottom-0 h-[40px]": currentPanelState === "collapsed",
-          },
-          "response-panel-overlay"
-        )
-      : "";
+  // Use the external state if provided, otherwise use internal state
+  const currentPanelState = externalPanelState || internalPanelState;
 
-    const handlePanelStateChange = React.useCallback(
-      (e?: React.MouseEvent) => {
-        // If event exists, prevent default behavior
-        if (e) {
-          e.preventDefault();
-          e.stopPropagation();
+  // Update overlay styles to preserve status bar height in collapsed state
+  const overlayStyles = response
+    ? cn(
+        "absolute left-0 right-0 z-50",
+        "transition-all duration-300 ease-out",
+        {
+          "top-0 h-full": currentPanelState === "fullscreen",
+          "bottom-0 h-[50vh]": currentPanelState === "expanded",
+          "bottom-0 h-[40px]": currentPanelState === "collapsed",
+        },
+        "response-panel-overlay"
+      )
+    : "";
+
+  const handlePanelStateChange = React.useCallback(
+    (e?: React.MouseEvent) => {
+      // If event exists, prevent default behavior
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      const nextState = (() => {
+        switch (currentPanelState) {
+          case "expanded":
+            return "fullscreen";
+          case "fullscreen":
+            return "collapsed";
+          case "collapsed":
+            return "expanded";
+          default:
+            return "expanded";
         }
+      })();
 
-        const nextState = (() => {
-          switch (currentPanelState) {
-            case "expanded":
-              return "fullscreen";
-            case "fullscreen":
-              return "collapsed";
-            case "collapsed":
-              return "expanded";
-            default:
-              return "expanded";
-          }
-        })();
+      if (onPanelStateChange) {
+        // Wrap in requestAnimationFrame to avoid React event pool issues
+        requestAnimationFrame(() => {
+          onPanelStateChange();
+        });
+      } else {
+        setInternalPanelState(nextState);
+      }
+    },
+    [currentPanelState, onPanelStateChange]
+  );
 
-        if (onPanelStateChange) {
-          // Wrap in requestAnimationFrame to avoid React event pool issues
-          requestAnimationFrame(() => {
-            onPanelStateChange();
-          });
-        } else {
-          setInternalPanelState(nextState);
-        }
-      },
-      [currentPanelState, onPanelStateChange]
-    );
-
-    return (
-      <ResizablePrimitive.Panel
-        ref={panelRef}
-        className={cn(
-          "relative flex flex-col overflow-hidden select-none",
-          "bg-slate-900",
-          !response && "opacity-75",
-          overlayStyles,
-          className
-        )}
-        defaultSize={PANEL_SIZING.DEFAULT}
-        {...props} // Only pass valid DOM props
+  return (
+    <ResizablePrimitive.Panel
+      ref={ref} // Add ref here
+      className={cn(
+        "relative flex flex-col overflow-hidden select-none",
+        "bg-slate-900",
+        !response && "opacity-75",
+        overlayStyles,
+        className
+      )}
+      defaultSize={PANEL_SIZING.DEFAULT}
+      {...restProps}
+    >
+      <PanelContent
+        onPanelStateChange={handlePanelStateChange}
+        panelState={currentPanelState}
+        showContentOnly={showContentOnly}
+        isOverlay={isOverlay}
+        preserveStatusBar={preserveStatusBar}
       >
-        <PanelContent
-          onPanelStateChange={handlePanelStateChange}
-          panelState={currentPanelState}
-          showContentOnly={showContentOnly}
-          isOverlay={isOverlay}
-          preserveStatusBar={preserveStatusBar}
-        >
-          {children}
-        </PanelContent>
-      </ResizablePrimitive.Panel>
-    );
-  }
-);
+        {children}
+      </PanelContent>
+    </ResizablePrimitive.Panel>
+  );
+});
 
 ResizablePanel.displayName = "ResizablePanel";
 

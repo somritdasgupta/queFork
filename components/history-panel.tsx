@@ -468,7 +468,7 @@ export function HistoryPanel({
   return (
     <div className="h-full flex flex-col bg-slate-900/50">
       {/* Search input section - updated to match tab panel */}
-      <div className="p-2 space-y-2 border-b border-slate-800">
+      <div className="p-2 border-b border-slate-800">
         {/* Search input row */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">

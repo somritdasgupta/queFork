@@ -149,16 +149,17 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   };
 
   const handleWebSocketMessage = useCallback((event: MessageEvent) => {
-    // Only process messages if we have an active connection and message is from current socket
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       return;
     }
 
-    // Store the handler reference to help with cleanup
     messageHandlerRef.current = handleWebSocketMessage;
 
     try {
       if (typeof event.data === "string") {
+        // Calculate bytes for received message
+        const bytes = new Blob([event.data]).size;
+
         try {
           const data = JSON.parse(event.data);
           if (data.type === "pong") {
@@ -166,24 +167,24 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
             return;
           }
         } catch {}
-      }
 
-      // Handle regular messages
-      if (!isPingPongMessage(event.data)) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: "received",
-            content: event.data,
-            timestamp: new Date().toISOString(),
-          },
-        ]);
+        if (!isPingPongMessage(event.data)) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "received",
+              content: event.data,
+              timestamp: new Date().toISOString(),
+            },
+          ]);
 
-        setStats((prev) => ({
-          ...prev,
-          messagesReceived: prev.messagesReceived + 1,
-          lastMessageTime: Date.now(),
-        }));
+          setStats((prev) => ({
+            ...prev,
+            messagesReceived: prev.messagesReceived + 1,
+            lastMessageTime: Date.now(),
+            bytesTransferred: prev.bytesTransferred + bytes,
+          }));
+        }
       }
     } catch (error) {
       console.error("Error handling message:", error);
@@ -540,10 +541,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
 
     try {
-      // Send the message regardless of type
       wsRef.current.send(content);
+      const bytes = new Blob([content]).size;
 
-      // Only add to UI and stats if it's not a ping/pong message
       if (!isPingPongMessage(content)) {
         setMessages((prev) => [
           ...prev,
@@ -558,6 +558,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
           ...prev,
           messagesSent: prev.messagesSent + 1,
           lastMessageTime: Date.now(),
+          bytesTransferred: prev.bytesTransferred + bytes,
         }));
       }
     } catch (error) {

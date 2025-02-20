@@ -36,6 +36,7 @@ import { CodeLanguageSelector } from "./code-language-selector";
 import { useTheme } from "next-themes";
 import type { editor } from "monaco-editor";
 import { motion } from "framer-motion";
+import { CodeEditor } from "@/components/shared/code-editor";
 
 interface TabItem {
   id: string;
@@ -633,33 +634,15 @@ export function ResponsePanel({
         {isLoading ? (
           <LoadingDots />
         ) : (
-          <div className="h-full [&_.monaco-editor]:!bg-slate-900 [&_.monaco-editor_.monaco-scrollable-element_.monaco-editor-background]:!bg-slate-900">
-            <Editor
-              height="100%"
-              defaultLanguage={contentType === "json" ? "json" : "text"}
-              value={getFormattedContent(response?.body, contentType)}
-              theme="vs-dark"
-              options={editorOptions}
-              beforeMount={(monaco) => {
-                monaco.editor.defineTheme("customTheme", {
-                  base: "vs-dark",
-                  inherit: true,
-                  rules: [],
-                  colors: {
-                    "editor.background": "#0f172a",
-                    "editorLineNumber.foreground": "#475569", // Slate-500 for line numbers
-                    "editorLineNumber.activeForeground": "#94a3b8", // Slate-400 for active line
-                    "editorGutter.background": "#0f112a", // Match editor background
-                  },
-                });
-                monaco.editor.setTheme("customTheme");
-              }}
-              onMount={(editor) => {
-                editorRef.current = editor;
-                editorInstanceRef.current = editor;
-              }}
-            />
-          </div>
+          <CodeEditor
+            value={getFormattedContent(response?.body, contentType)}
+            language={contentType === "json" ? "json" : "text"}
+            readOnly={true}
+            onMount={(editor) => {
+              editorRef.current = editor;
+              editorInstanceRef.current = editor;
+            }}
+          />
         )}
       </div>
     </div>
@@ -787,29 +770,11 @@ export function ResponsePanel({
                 </TabsContent>
                 <TabsContent value="code" className="absolute inset-0 m-0">
                   <div className="h-full">
-                    <div className="h-full [&_.monaco-editor]:!bg-slate-900 [&_.monaco-editor_.monaco-scrollable-element_.monaco-editor-background]:!bg-slate-900">
-                      <Editor
-                        height="100%"
-                        language={languageConfigs[selectedLanguage].highlight}
-                        value={getGeneratedCode()}
-                        theme="vs-dark"
-                        options={editorOptions}
-                        beforeMount={(monaco) => {
-                          monaco.editor.defineTheme("customTheme", {
-                            base: "vs-dark",
-                            inherit: true,
-                            rules: [],
-                            colors: {
-                              "editor.background": "#0f172a",
-                              "editorLineNumber.foreground": "#475569", // Slate-500 for line numbers
-                              "editorLineNumber.activeForeground": "#94a3b8", // Slate-400 for active line
-                              "editorGutter.background": "#0f172a", // Match editor background
-                            },
-                          });
-                          monaco.editor.setTheme("customTheme");
-                        }}
-                      />
-                    </div>
+                    <CodeEditor
+                      value={getGeneratedCode()}
+                      language={languageConfigs[selectedLanguage].highlight}
+                      readOnly={true}
+                    />
                   </div>
                 </TabsContent>
                 <TabsContent value="messages" className="absolute inset-0 m-0">

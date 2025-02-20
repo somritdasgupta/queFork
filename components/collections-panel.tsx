@@ -910,7 +910,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
         </div>
       </div>
 
-      {/* Rest of the component remains unchanged */}
       <ScrollArea className="flex-1">
         {isImporting && (
           <div className="p-4 bg-slate-900/50 border-b border-slate-700">

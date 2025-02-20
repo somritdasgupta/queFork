@@ -1,9 +1,19 @@
 import { KeyValuePair, RequestBody, WebSocketMessage } from ".";
+import { ReactNode } from "react";
+
+// Add TabItem interface
+export interface TabItem {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  disabled?: boolean;
+  hidden?: boolean;
+}
 
 export interface Tab {
   id: string;
   title: string;
-  type: 'rest' | 'websocket' | 'grpc' | 'graphql';
+  type: "rest" | "websocket" | "grpc" | "graphql";
   active: boolean;
   unsaved?: boolean;
   lastAccessed?: number;
@@ -25,7 +35,7 @@ export interface Tab {
     isWebSocketMode?: boolean;
     wsState?: {
       isConnected: boolean;
-      connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
+      connectionStatus: "disconnected" | "connecting" | "connected" | "error";
       messages: WebSocketMessage[];
     };
     preRequestScript?: string;

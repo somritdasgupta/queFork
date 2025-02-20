@@ -1,11 +1,4 @@
 import React from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,21 +18,61 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { ScrollArea } from "../ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@radix-ui/react-dropdown-menu";
 
-interface AuthProps {
+const AUTH_TYPES = [
+  {
+    value: "none",
+    label: "No Auth",
+    icon: Lock,
+    color: "slate",
+    selectedBg: "bg-slate-800/80",
+  },
+  {
+    value: "bearer",
+    label: "Bearer Token",
+    icon: ShieldCheck,
+    color: "blue",
+    selectedBg: "bg-blue-500/10",
+  },
+  {
+    value: "basic",
+    label: "Basic Auth",
+    icon: KeyRound,
+    color: "green",
+    selectedBg: "bg-green-500/10",
+  },
+  {
+    value: "apiKey",
+    label: "API Key",
+    icon: Key,
+    color: "purple",
+    selectedBg: "bg-purple-500/10",
+  },
+] as const;
+
+interface AuthTabProps {
   auth: {
     type: "none" | "bearer" | "basic" | "apiKey";
     token?: string;
     username?: string;
     password?: string;
     key?: string;
+    headerName?: string; // Add this line
   };
-  onChange: (auth: any) => void;
+  onAuthChange: (auth: any) => void;
 }
 
-export function AuthSection({ auth, onChange }: AuthProps) {
+export function AuthTab({ auth, onAuthChange }: AuthTabProps) {
   const handleAuthTypeChange = (value: string) => {
-    onChange({ type: value });
+    // Remove default header name initialization
+    onAuthChange({ type: value });
   };
 
   const renderAuthInfo = (type: string) => {
@@ -112,7 +145,7 @@ export function AuthSection({ auth, onChange }: AuthProps) {
                     type="text"
                     value={auth.token || ""}
                     onChange={(e) =>
-                      onChange({ ...auth, token: e.target.value })
+                      onAuthChange({ ...auth, token: e.target.value })
                     }
                     placeholder="Enter bearer token"
                     className="h-10 pl-9 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 placeholder:text-slate-600 rounded-md transition-all duration-200"
@@ -165,7 +198,7 @@ export function AuthSection({ auth, onChange }: AuthProps) {
                       type="text"
                       value={auth.username || ""}
                       onChange={(e) =>
-                        onChange({ ...auth, username: e.target.value })
+                        onAuthChange({ ...auth, username: e.target.value })
                       }
                       placeholder="Enter username"
                       className="h-10 pl-9 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 placeholder:text-slate-600 rounded-md transition-all duration-200"
@@ -184,7 +217,7 @@ export function AuthSection({ auth, onChange }: AuthProps) {
                       type="password"
                       value={auth.password || ""}
                       onChange={(e) =>
-                        onChange({ ...auth, password: e.target.value })
+                        onAuthChange({ ...auth, password: e.target.value })
                       }
                       placeholder="Enter password"
                       className="h-10 pl-9 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 placeholder:text-slate-600 rounded-md transition-all duration-200"
@@ -229,27 +262,50 @@ export function AuthSection({ auth, onChange }: AuthProps) {
                   </span>
                 </div>
               </div>
-              <div className="relative group">
-                <Label className="text-xs font-medium text-slate-500 mb-2 block">
-                  API Key
-                </Label>
-                <div className="relative">
-                  <div className="absolute left-3 top-3 text-slate-400 group-hover:text-blue-400 transition-colors">
-                    <Key className="h-4 w-4" />
+              <div className="space-y-4">
+                <div className="relative group">
+                  <Label className="text-xs font-medium text-slate-500 mb-2 block">
+                    Header Name
+                  </Label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-3 text-slate-400 group-hover:text-blue-400 transition-colors">
+                      <Key className="h-4 w-4" />
+                    </div>
+                    <Input
+                      type="text"
+                      value={auth.headerName || ""}
+                      onChange={(e) =>
+                        onAuthChange({ ...auth, headerName: e.target.value })
+                      }
+                      placeholder="Enter header name"
+                      className="h-10 pl-9 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 placeholder:text-slate-600 rounded-md transition-all duration-200"
+                    />
                   </div>
-                  <Input
-                    type="text"
-                    value={auth.key || ""}
-                    onChange={(e) => onChange({ ...auth, key: e.target.value })}
-                    placeholder="Enter API key"
-                    className="h-10 pl-9 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 placeholder:text-slate-600 rounded-md transition-all duration-200"
-                  />
+                </div>
+                <div className="relative group">
+                  <Label className="text-xs font-medium text-slate-500 mb-2 block">
+                    API Key
+                  </Label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-3 text-slate-400 group-hover:text-blue-400 transition-colors">
+                      <Key className="h-4 w-4" />
+                    </div>
+                    <Input
+                      type="text"
+                      value={auth.key || ""}
+                      onChange={(e) =>
+                        onAuthChange({ ...auth, key: e.target.value })
+                      }
+                      placeholder="Enter API key"
+                      className="h-10 pl-9 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 placeholder:text-slate-600 rounded-md transition-all duration-200"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="mt-4 space-y-2">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <span className="inline-block px-2 py-1 bg-slate-800 rounded text-slate-400">
-                    X-API-Key
+                    {auth.headerName || "Header name required"}
                   </span>
                   <span>header will be set automatically</span>
                 </div>
@@ -313,38 +369,87 @@ export function AuthSection({ auth, onChange }: AuthProps) {
               </span>
             </motion.div>
           </div>
-          <Select value={auth.type} onValueChange={handleAuthTypeChange}>
-            <SelectTrigger className="w-full h-11 bg-slate-950 border-slate-800 hover:border-slate-700 focus:border-blue-600 text-slate-300 [&>span]:text-slate-400 transition-all duration-200">
-              <SelectValue placeholder="Select authentication type" />
-            </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-800">
-              <SelectItem
-                value="none"
-                className="text-slate-300 hover:text-slate-200 focus:text-slate-200"
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex w-full items-center h-9 sm:h-12 gap-2 px-3 
+                bg-slate-950 border border-slate-800 hover:border-slate-700
+                text-slate-300 hover:text-slate-200 rounded-md
+                transition-all duration-200 group"
               >
-                No Auth
-              </SelectItem>
-              <SelectItem
-                value="bearer"
-                className="text-slate-300 hover:text-slate-200 focus:text-slate-200"
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    {React.createElement(
+                      AUTH_TYPES.find((t) => t.value === auth.type)?.icon ||
+                        Lock,
+                      {
+                        className: "w-3.5 h-3.5",
+                      }
+                    )}
+                  </div>
+                  <span className="font-medium text-xs">
+                    {AUTH_TYPES.find((t) => t.value === auth.type)?.label ||
+                      "Select type"}
+                  </span>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="z-50 w-screen sm:w-[75vw] bg-slate-900 border border-slate-700/50 shadow-lg rounded-none border-2 border-slate-700 overflow-hidden"
+            >
+              <ScrollArea
+                direction="horizontal"
+                className="w-full [&::-webkit-scrollbar]:hidden [&_[data-radix-scroll-area-scrollbar]]:hidden no-scrollbar p-2"
+                style={{ scrollbarWidth: "none" }}
               >
-                Bearer Token
-              </SelectItem>
-              <SelectItem
-                value="basic"
-                className="text-slate-300 hover:text-slate-200 focus:text-slate-200"
-              >
-                Basic Auth
-              </SelectItem>
-              <SelectItem
-                value="apiKey"
-                className="text-slate-300 hover:text-slate-200 focus:text-slate-200"
-              >
-                API Key
-              </SelectItem>
-            </SelectContent>
-          </Select>
+                <div className="flex items-center gap-2">
+                  {AUTH_TYPES.map((type) => (
+                    <DropdownMenuItem
+                      key={type.value}
+                      onClick={() => handleAuthTypeChange(type.value)}
+                      className="flex-none transition-all duration-200 rounded-full"
+                    >
+                      <div
+                        className={cn(
+                          "flex items-center gap-1.5 py-1 px-2.5 rounded-full",
+                          type.value === auth.type
+                            ? type.selectedBg
+                            : "bg-slate-800"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "w-3.5 h-3.5 flex items-center justify-center",
+                            type.value === auth.type
+                              ? `text-${type.color}-400`
+                              : "text-slate-400"
+                          )}
+                        >
+                          {React.createElement(type.icon, {
+                            className: "w-3.5 h-3.5",
+                          })}
+                        </div>
+                        <span
+                          className={cn(
+                            "text-[11px] font-medium",
+                            type.value === auth.type
+                              ? `text-${type.color}-400`
+                              : "text-slate-300"
+                          )}
+                        >
+                          {type.label}
+                        </span>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+              </ScrollArea>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+
         {renderAuthFields()}
       </div>
     </AnimatePresence>
