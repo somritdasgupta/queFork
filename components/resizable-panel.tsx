@@ -3,10 +3,7 @@
 import * as React from "react";
 import * as ResizablePrimitive from "react-resizable-panels";
 import { cn } from "@/lib/utils";
-import {
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PANEL_SIZING } from "@/lib/constants";
 
@@ -85,8 +82,8 @@ const ResizablePanel = React.forwardRef<
         "absolute left-0 right-0 z-50",
         "transition-all duration-300 ease-out",
         {
-          "top-0 h-full": currentPanelState === "fullscreen",
-          "bottom-0 h-[50vh]": currentPanelState === "expanded",
+          "top-0 h-[100dvh] max-h-[100dvh]": currentPanelState === "fullscreen",
+          "bottom-0 h-[50dvh] max-h-[50dvh]": currentPanelState === "expanded",
           "bottom-0 h-[40px]": currentPanelState === "collapsed",
         },
         "response-panel-overlay"
@@ -134,6 +131,7 @@ const ResizablePanel = React.forwardRef<
         "bg-slate-900",
         !response && "opacity-75",
         overlayStyles,
+        "touch-none", // Add touch-none to fix iOS touch handling
         className
       )}
       defaultSize={PANEL_SIZING.DEFAULT}
@@ -240,9 +238,10 @@ const ResizablePanelGroup = ({
   <ResizablePrimitive.PanelGroup
     className={cn(
       "resizable-panel-group relative",
-      "flex h-full w-full",
+      "flex h-[100dvh] w-full", // Update height to use dvh
       "data-[panel-group-direction=vertical]:flex-col",
       "bg-slate-900",
+      "touch-none", // Add touch-none
       className
     )}
     autoSaveId="panel-group-layout"

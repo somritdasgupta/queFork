@@ -64,15 +64,15 @@ export function ConnectionTab() {
       icon: <Network className="h-4 w-4" />,
       color:
         connectionStatus === "connected"
-          ? "emerald"
+          ? "yellow"
           : connectionStatus === "connecting"
-            ? "amber"
+            ? "emerald"
             : "red",
       subValue: url,
     },
     {
       id: "messages",
-      title: "Message Rate",
+      title: "Rate",
       value: `${rates.messagesPerMinute}/min`,
       icon: <Activity className="h-4 w-4" />,
       subValue: `${(stats.messagesSent + stats.messagesReceived).toLocaleString()} total`,
@@ -80,7 +80,7 @@ export function ConnectionTab() {
     },
     {
       id: "sent",
-      title: "Messages Sent",
+      title: "Sent",
       value: stats.messagesSent.toLocaleString(),
       icon: <ArrowUpCircle className="h-4 w-4" />,
       subValue: `${rates.sentRate}/min`,
@@ -88,7 +88,7 @@ export function ConnectionTab() {
     },
     {
       id: "received",
-      title: "Messages Received",
+      title: "Received",
       value: stats.messagesReceived.toLocaleString(),
       icon: <ArrowDownCircle className="h-4 w-4" />,
       subValue: `${rates.receivedRate}/min`,
