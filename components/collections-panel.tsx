@@ -27,6 +27,7 @@ import {
   Upload,
   Check,
   Search,
+  BoxesIcon,
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Collection, SavedRequest, ImportSource } from "@/types";
@@ -65,31 +66,29 @@ interface CollectionsPanelProps {
   onImportCollections: (source: ImportSource, data: string) => Promise<void>;
 }
 
-// Change the CollectionHeader to use div elements
 const CollectionHeader = ({
   collection,
 }: {
   collection: Collection;
   onAction: (action: string) => void;
 }) => (
-  <div className="flex items-center justify-between w-full">
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-slate-400 truncate">
-          {collection.name}
-        </span>
-        {collection.apiVersion && (
-          <Badge className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/20">
-            v{collection.apiVersion}
-          </Badge>
-        )}
-        <Badge
-          variant="outline"
-          className="text-[10px] px-1 bg-transparent border-slate-700 text-slate-400"
-        >
-          {collection.requests?.length || 0}
+  <div className="flex items-center w-full">
+    <div className="flex items-center gap-2 min-w-0">
+      <BoxesIcon className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
+      <span className="text-xs font-medium text-slate-400 truncate">
+        {collection.name}
+      </span>
+      {collection.apiVersion && (
+        <Badge className="text-[10px] h-4 px-1 bg-blue-500/10 text-blue-400 border-blue-500/20">
+          v{collection.apiVersion}
         </Badge>
-      </div>
+      )}
+      <Badge
+        variant="outline"
+        className="text-[10px] h-4 px-1 bg-slate-800/50 text-slate-400 border-slate-700"
+      >
+        {collection.requests?.length || 0}
+      </Badge>
     </div>
   </div>
 );
@@ -373,9 +372,9 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     id: string,
     parentId?: string
   ) => (
-    <div className="flex items-center justify-between px-4 py-2 bg-slate-900/50 border-t border-slate-700/50">
+    <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 border-t border-slate-700">
       <span className="text-xs text-slate-400">Delete {type}?</span>
-      <div className="flex items-center gap-1 ml-auto">
+      <div className="flex items-center gap-1">
         <Button
           variant="ghost"
           size="sm"
@@ -383,22 +382,24 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             e.stopPropagation();
             setDeleteConfirm(null);
           }}
-          className="h-6 w-6 p-0"
+          className="h-6 w-6 p-0 hover:bg-slate-700/50"
         >
-          <X className="h-4 w-4 text-slate-400" />
+          <X className="h-3.5 w-3.5 text-slate-400" />
         </Button>
         <Button
           variant="ghost"
           size="sm"
           onClick={(e) => {
             e.stopPropagation();
-            type === "collection"
-              ? handleDeleteCollection(id)
-              : handleDeleteRequest(parentId!, id);
+            if (type === "collection") {
+              handleDeleteCollection(id);
+            } else {
+              handleDeleteRequest(parentId!, id);
+            }
           }}
-          className="h-6 w-6 p-0"
+          className="h-6 w-6 p-0 hover:bg-slate-700/50"
         >
-          <Check className="h-4 w-4 text-emerald-400" />
+          <Check className="h-3.5 w-3.5 text-emerald-400" />
         </Button>
       </div>
     </div>
@@ -554,8 +555,11 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             </div>
           </div>
           {deleteConfirm?.id === request.id &&
-            deleteConfirm.type === "request" &&
-            renderDeleteConfirmation("request", request.id, collection.id)}
+            deleteConfirm.type === "request" && (
+              <div className="border-t border-slate-700/50">
+                {renderDeleteConfirmation("request", request.id, collection.id)}
+              </div>
+            )}
         </div>
       );
     },
@@ -682,41 +686,53 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     <DynamicAccordionItem
       key={`collection-${collection.id}`}
       value={collection.id}
-      className="px-0 border-y-2 border-slate-700/50"
+      className="border-b border-slate-800 last:border-b-0"
       suppressHydrationWarning
     >
-      <div className="flex items-center w-full">
-        <div className="flex-1">
-          <AccordionTrigger className="w-full p-4 text-slate-500 [&[data-state=open]]:bg-slate-900/25 transition-colors [&>svg]:hidden">
+      <div className="flex flex-col">
+        <div className="flex items-center justify-between">
+          <AccordionTrigger className="flex-1 px-2 py-1 text-slate-500 hover:no-underline">
             <CollectionHeader collection={collection} onAction={() => {}} />
           </AccordionTrigger>
-        </div>
-        <div className="pr-4">{renderCollectionActions(collection)}</div>
-      </div>
-      {deleteConfirm?.id === collection.id &&
-        deleteConfirm.type === "collection" && (
-          <div className="w-full">
-            {renderDeleteConfirmation("collection", collection.id)}
+          <div className="flex items-center gap-1 px-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDeleteConfirm({ id: collection.id, type: "collection" });
+              }}
+              className="h-7 w-7 p-0 hover:bg-slate-800"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-red-400" />
+            </Button>
           </div>
-        )}
-      <AccordionContent className="pt-0 pb-0">
-        <div
-          key={`collection-content-${collection.id}`}
-          className="bg-slate-900/75"
-        >
-          {collection.requests?.length > 0 ? (
-            collection.requests.map((request) => (
-              <div key={`request-wrapper-${request.id}`}>
-                {renderRequestItem(request, collection)}
-              </div>
-            ))
-          ) : (
-            <div className="py-3 text-sm text-slate-500 text-center border-t border-slate-700/50">
-              No requests in this collection
+        </div>
+
+        {deleteConfirm?.id === collection.id &&
+          deleteConfirm.type === "collection" && (
+            <div className="border-t border-slate-700">
+              {renderDeleteConfirmation("collection", collection.id)}
             </div>
           )}
-        </div>
-      </AccordionContent>
+
+        <AccordionContent className="border-t border-slate-700/50 bg-slate-900/50 p-0">
+          <div className="divide-y divide-slate-800">
+            {collection.requests?.length > 0 ? (
+              collection.requests.map((request) => (
+                <div key={request.id}>
+                  {renderRequestItem(request, collection)}
+                </div>
+              ))
+            ) : (
+              <div className="py-2 text-xs text-slate-500 text-center">
+                No requests in this collection
+              </div>
+            )}
+          </div>
+        </AccordionContent>
+      </div>
     </DynamicAccordionItem>
   );
 
@@ -829,66 +845,80 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
 
   return (
     <div className="h-full flex flex-col bg-slate-900/50">
-      <div className="p-2 space-y-2 border-b border-slate-800">
+      <div className="p-1.5 space-y-1.5 border-b border-slate-800">
         {/* Top row - Search and action buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <div className="relative flex-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search collections..."
-              className="w-full bg-slate-900 text-sm rounded-md pl-8 pr-4 py-1.5
+              className="w-full bg-slate-900 text-xs rounded-md pl-7 pr-2 py-1.5
                 border border-slate-800 focus:border-slate-700
                 text-slate-300 placeholder:text-slate-500
                 focus:outline-none focus:ring-1 focus:ring-slate-700"
             />
           </div>
-          <button
-            onClick={() => setIsCreating(true)}
-            className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
-            title="New collection"
-          >
-            <Plus className="h-4 w-4 text-emerald-400" />
-          </button>
-          <button
-            onClick={() => setIsImporting(true)}
-            className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
-            title="Import collection"
-          >
-            <Upload className="h-4 w-4 text-yellow-400" />
-          </button>
-          <button
-            onClick={props.onExportCollections}
-            className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
-            title="Export all collections"
-          >
-            <DownloadIcon className="h-4 w-4 text-emerald-400" />
-          </button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCreating(true)}
+              className="h-7 w-7 p-0 hover:bg-slate-800 rounded-md border border-slate-800"
+              title="New collection"
+            >
+              <Plus className="h-3.5 w-3.5 text-emerald-400" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsImporting(true)}
+              className="h-7 w-7 p-0 hover:bg-slate-800 rounded-md border border-slate-800"
+              title="Import collection"
+            >
+              <Upload className="h-3.5 w-3.5 text-yellow-400" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={props.onExportCollections}
+              className="h-7 w-7 p-0 hover:bg-slate-800 rounded-md border border-slate-800"
+              title="Export all collections"
+            >
+              <DownloadIcon className="h-3.5 w-3.5 text-emerald-400" />
+            </Button>
+          </div>
         </div>
 
         {/* Bottom row - Sort and Filter */}
-        <div className="flex items-center gap-2">
-          <button
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() =>
               setSortBy((prev) =>
                 prev === "name" ? "date" : prev === "date" ? "method" : "name"
               )
             }
-            className="flex items-center gap-2 p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800 flex-1"
+            className="flex-1 h-7 text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800"
             title={`Sort by ${sortBy}`}
           >
-            <SortAsc className="h-4 w-4 text-blue-400" />
-            <span className="text-xs capitalize">{sortBy}</span>
-          </button>
+            <SortAsc className="h-3.5 w-3.5 text-blue-400 mr-1.5" />
+            <span className="capitalize">{sortBy}</span>
+          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800 flex-1">
-                <Filter className="h-4 w-4 text-purple-400" />
-                <span className="text-xs">{filterBy || "All Methods"}</span>
-              </button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1 h-7 text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800"
+              >
+                <Filter className="h-3.5 w-3.5 text-purple-400 mr-1.5" />
+                <span>{filterBy || "All Methods"}</span>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
@@ -1205,15 +1235,104 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
             </div>
           </div>
         ) : (
-          <div suppressHydrationWarning>
-            <DynamicAccordion type="multiple">
+          <div className="py-1" suppressHydrationWarning>
+            <DynamicAccordion
+              type="multiple"
+              className="divide-y divide-slate-800"
+            >
               {filteredCollections.map((collection) => (
-                <div
-                  key={`collection-wrapper-${collection.id}`}
-                  suppressHydrationWarning
+                <DynamicAccordionItem
+                  key={collection.id}
+                  value={collection.id}
+                  className="border-0"
                 >
-                  {renderCollectionItem(collection)}
-                </div>
+                  <div className="flex items-center justify-between py-0.5">
+                    <AccordionTrigger className="flex-1 px-2 py-1 text-slate-500 hover:no-underline">
+                      <CollectionHeader
+                        collection={collection}
+                        onAction={() => {}}
+                      />
+                    </AccordionTrigger>
+                    <div className="flex items-center gap-1 px-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleQuickSave(collection.id);
+                        }}
+                        disabled={!canQuickSave}
+                        className="h-7 w-7 p-0 hover:bg-slate-800"
+                        title={
+                          canQuickSave
+                            ? "Save current request"
+                            : "No active request"
+                        }
+                      >
+                        <Save
+                          className={cn(
+                            "h-3.5 w-3.5",
+                            canQuickSave ? "text-blue-400" : "text-slate-500"
+                          )}
+                        />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDuplicateCollection(collection);
+                        }}
+                        className="h-7 w-7 p-0 hover:bg-slate-800"
+                      >
+                        <Copy className="h-3.5 w-3.5 text-emerald-400" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          props.onExportCollection(collection.id);
+                        }}
+                        className="h-7 w-7 p-0 hover:bg-slate-800"
+                      >
+                        <Download className="h-3.5 w-3.5 text-purple-400" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirm({
+                            id: collection.id,
+                            type: "collection",
+                          });
+                        }}
+                        className="h-7 w-7 p-0 hover:bg-slate-800"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                      </Button>
+                    </div>
+                  </div>
+                  {deleteConfirm?.id === collection.id &&
+                    deleteConfirm.type === "collection" &&
+                    renderDeleteConfirmation("collection", collection.id)}
+                  <AccordionContent className="pt-0 pb-0">
+                    <div className="bg-slate-900/75 divide-y divide-slate-800">
+                      {collection.requests?.length > 0 ? (
+                        collection.requests.map((request) => (
+                          <div key={request.id}>
+                            {renderRequestItem(request, collection)}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="py-2 text-xs text-slate-500 text-center">
+                          No requests in this collection
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </DynamicAccordionItem>
               ))}
             </DynamicAccordion>
           </div>

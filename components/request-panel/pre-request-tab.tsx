@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { CodeEditor } from "@/components/shared/code-editor";
+import { CodeEditor } from "@/components/request-panel/shared/code-editor";
 import {
   SquareFunctionIcon,
   Eraser,

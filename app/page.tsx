@@ -11,7 +11,6 @@ import { PANEL_SIZING } from "@/lib/constants";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
-import { MobileNav } from "@/components/mobile-nav";
 import {
   ResizablePanel,
   ResizableHandle,
@@ -43,6 +42,9 @@ import { TabProvider, TabBar, useTabManager } from "@/components/tab-manager";
 import { TabWebSocketProvider } from "@/components/websocket/tab-websocket-provider";
 import TabWebSocketManager from "@/components/websocket/tab-websocket-manager";
 import { getEmptyTabState } from "@/lib/tab-utils";
+import { cn } from "@/lib/utils";
+import { DesktopHeader } from "@/components/desktop-header";
+import { MobileHeader } from "@/components/mobile-header";
 
 // Properly type the dynamic imports
 const RequestPanel = dynamic<RequestPanelProps>(
@@ -845,7 +847,6 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
       // Merge with existing collections
       const newCollections = [...collections, ...importedCollections];
 
-      // Update state and storage
       setCollections(newCollections);
       localStorage.setItem("apiCollections", JSON.stringify(newCollections));
 
@@ -858,7 +859,6 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     }
   };
 
-  // Define panel props
   const sidebarProps: SidePanelProps = {
     collections,
     history,
@@ -909,7 +909,6 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     handleStateUpdate({ url });
   };
 
-  // Update the props to use tabState with default values
   const requestPanelProps = {
     headers: tabState.headers || [],
     params: tabState.params || [],
@@ -919,7 +918,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     onParamsChange,
     onBodyChange,
     onAuthChange,
-    isWebSocketMode: tabState.isWebSocketMode ?? false, // Add default false
+    isWebSocketMode: tabState.isWebSocketMode ?? false, 
     environments,
     currentEnvironment,
     onEnvironmentChange: handleEnvironmentChange,
@@ -927,14 +926,35 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     onAddToEnvironment: handleAddToEnvironment,
   };
 
+  const [panelState, setPanelState] = useState<
+    "expanded" | "collapsed" | "fullscreen"
+  >("expanded");
+
+  const handlePanelStateChange = () => {
+    setPanelState((current) => {
+      switch (current) {
+        case "expanded":
+          return "fullscreen"; // Goes to fullscreen first
+        case "fullscreen":
+          return "collapsed"; // Then collapses
+        case "collapsed":
+          return "expanded"; // Finally back to expanded
+        default:
+          return "expanded";
+      }
+    });
+  };
+
   const responsePanelProps = {
     response: tabState.response || null,
-    isLoading: tabState.isLoading ?? false, // Add default false
+    isLoading: tabState.isLoading ?? false,
     collections,
     onSaveToCollection: handleSaveRequest,
     method: tabState.method || "GET",
     url: tabState.url || "",
-    isWebSocketMode: tabState.isWebSocketMode ?? false, // Add default false
+    isWebSocketMode: tabState.isWebSocketMode ?? false,
+    panelState, 
+    onPanelStateChange: handlePanelStateChange, 
   };
 
   // Define mobile nav props
@@ -958,7 +978,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     currentEnvironment,
     onEnvironmentChange: handleEnvironmentChange,
     onEnvironmentsUpdate: handleEnvironmentsUpdate,
-    onUpdateCollections: handleUpdateCollections, // Add this line
+    onUpdateCollections: handleUpdateCollections,
     onImportCollections: handleImportCollections,
     isMobile: true,
     hasExtension,
@@ -969,14 +989,10 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     const computeMergedVariables = () => {
       let merged: { key: string; value: string; type?: "text" | "secret" }[] =
         [];
-
-      // Add global environment variables first
       const globalEnv = environments.find((env) => env.global);
       if (globalEnv) {
         merged.push(...globalEnv.variables.filter((v) => v.enabled));
       }
-
-      // Add current environment variables, overwriting any duplicates
       if (currentEnvironment && !currentEnvironment.global) {
         currentEnvironment.variables
           .filter((v) => v.enabled)
@@ -990,7 +1006,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
           });
       }
 
-      // Filter out any empty keys
+      // Filtering out any empty keys
       merged = merged.filter((v) => v.key.trim() !== "");
 
       setMergedEnvVariables(merged);
@@ -1072,19 +1088,15 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
 
   useEffect(() => {
     const handleResetRequest = (e: CustomEvent) => {
-      // Reset to completely empty state first
       const defaultState = getEmptyTabState();
 
       handleStateUpdate({
         ...defaultState,
-        // Ensure arrays are fresh copies
         headers: [...defaultState.headers],
         params: [...defaultState.params],
         testResults: [],
         scriptLogs: [],
       });
-
-      // Clear global state
       (window as any).__ACTIVE_REQUEST__ = null;
     };
 
@@ -1092,13 +1104,12 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
       const { detail } = e;
 
       if (detail.clearBeforeLoad) {
-        // Reset state first
+        // Resetting state first
         handleStateUpdate(getEmptyTabState());
       }
 
       // Small delay to ensure reset is complete
       setTimeout(() => {
-        // Update with new data using fresh copies
         handleStateUpdate({
           method: detail.item.method || "GET",
           url: detail.item.url || "",
@@ -1165,55 +1176,35 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
   }, [handleStateUpdate]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden">
       <header className="flex flex-col border-b border-slate-800 bg-slate-950/25 shrink-0">
-        <div className="w-full flex flex-col 3xl:flex-row items-stretch gap-2 px-4 py-2">
-          <div className="flex gap-2 3xl:w-[280px] shrink-0">
-            <div className="flex items-center gap-2 w-full">
-              {hasExtension && (
-                <button
-                  onClick={toggleInterceptor}
-                  className={`hidden md:flex h-8 w-8 items-center justify-center rounded-lg transition-colors border ${
-                    interceptorEnabled
-                      ? "bg-slate-900 hover:border-blue-900 border-slate-800 border-2 text-slate-300"
-                      : "bg-slate-900 hover:border-blue-900 border-slate-800 border-2 text-slate-500"
-                  }`}
-                  title={`Interceptor ${interceptorEnabled ? "enabled" : "disabled"}`}
-                >
-                  <img
-                    src="/icons/icon192.png"
-                    alt="queFork"
-                    className={`w-6 h-6 transition-all ${
-                      interceptorEnabled
-                        ? "opacity-100 animate-pulse duration-1200 easeIn"
-                        : "opacity-100 grayscale"
-                    }`}
-                  />
-                </button>
-              )}
-              <div className="flex-1">
-                <EnvironmentSelector
-                  environments={environments}
-                  currentEnvironment={currentEnvironment}
-                  onEnvironmentChange={handleEnvironmentChange}
-                  hasExtension={hasExtension}
-                  interceptorEnabled={interceptorEnabled}
-                  className="h-8 w-full bg-slate-900 hover:bg-slate-800 border-2 border-slate-800
-            text-slate-300 rounded-lg transition-colors"
-                />
-              </div>
-              <div className="block 3xl:hidden">
-                <MobileNav {...mobileNavProps} />
-              </div>
-            </div>
-          </div>
-          <div className="w-full flex flex-1 gap-2">
-            <UrlBar {...urlBarProps} />
-          </div>
+        <div className="hidden 3xl:block">
+          <DesktopHeader
+            hasExtension={hasExtension}
+            interceptorEnabled={interceptorEnabled}
+            toggleInterceptor={toggleInterceptor}
+            environments={environments}
+            currentEnvironment={currentEnvironment}
+            onEnvironmentChange={handleEnvironmentChange}
+            urlBarProps={urlBarProps}
+          />
+        </div>
+        <div className="block 3xl:hidden">
+          <MobileHeader
+            hasExtension={hasExtension}
+            interceptorEnabled={interceptorEnabled}
+            toggleInterceptor={toggleInterceptor}
+            environments={environments}
+            currentEnvironment={currentEnvironment}
+            onEnvironmentChange={handleEnvironmentChange}
+            urlBarProps={urlBarProps}
+            mobileNavProps={mobileNavProps}
+          />
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 bg-slate-900">
+      {/* Main content - Update height calc to account for header and footer */}
+      <div className="h-[calc(100dvh-theme(spacing.14)-theme(spacing.8))] min-h-0 bg-slate-900">
         {currentTab ? (
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel
@@ -1232,27 +1223,48 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
               className="bg-slate-900"
               response={null}
             >
-              <div className="h-full relative">
-                <div className="absolute inset-0">
+              <div className="h-full flex flex-col">
+                {/* Request Panel */}
+                <div
+                  className={cn(
+                    "min-h-0", 
+                    panelState === "collapsed"
+                      ? "flex-grow"
+                      : panelState === "fullscreen"
+                        ? "h-0"
+                        : "flex-1" 
+                  )}
+                >
                   <Suspense
                     fallback={<div className="w-full h-full bg-slate-900/50" />}
                   >
                     <RequestPanel {...requestPanelProps} />
                   </Suspense>
                 </div>
+                {/* Response Panel */}
                 {(tabState.response || tabState.isWebSocketMode) && (
-                  <Suspense
-                    fallback={<div className="w-full h-full bg-slate-900/50" />}
+                  <div
+                    className={cn(
+                      "border-t border-slate-800 min-h-0", 
+                      panelState === "collapsed"
+                        ? "h-10"
+                        : panelState === "fullscreen"
+                          ? "flex-grow"
+                          : "flex-1"
+                    )}
                   >
-                    <ResizablePanel
-                      response={
-                        tabState.isWebSocketMode ? {} : tabState.response
-                      } // Pass empty object for WebSocket mode to trigger overlay
-                      className="bg-slate-900 shadow-lg"
+                    <Suspense
+                      fallback={
+                        <div className="w-full h-full bg-slate-900/50" />
+                      }
                     >
-                      <ResponsePanel {...responsePanelProps} />
-                    </ResizablePanel>
-                  </Suspense>
+                      <ResponsePanel
+                        {...responsePanelProps}
+                        panelState={panelState}
+                        onPanelStateChange={handlePanelStateChange}
+                      />
+                    </Suspense>
+                  </div>
                 )}
               </div>
             </ResizablePanel>
@@ -1263,7 +1275,10 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
           </div>
         )}
       </div>
-      <Footer />
+
+      <div className="h-8 shrink-0 border-t border-slate-800">
+        <Footer />
+      </div>
     </div>
   );
 }

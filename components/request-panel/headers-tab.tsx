@@ -1,6 +1,6 @@
-import { KeyValueEditor } from "@/components/key-value-editor";
 import { KeyValuePair, Environment, RequestBody } from "@/types";
 import { useEffect, useCallback, useMemo } from "react";
+import { KeyValueEditor } from "../key-value-editor";
 
 const commonHeaders = [
   "Accept",

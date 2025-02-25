@@ -2,38 +2,25 @@ import { FileJson, FileCode, FormInput, FileText } from "lucide-react";
 import { ContentType } from "@/types";
 import React, { JSX } from "react";
 
+export type EditorType = "none" | "text" | "json" | "form" | "binary";
+
+export type ContentTypeOption = {
+  value: ContentType;
+  label: string;
+  editor: EditorType;
+  description?: string;
+};
+
 export const contentTypeOptions = {
-  None: [{ value: "none", label: "None", category: "None", editor: "none" }],
-  Text: [
-    { value: "json", label: "JSON", category: "Text", editor: "json" },
-    {
-      value: "application/json",
-      label: "JSON (application/json)",
-      category: "Text",
-      editor: "json",
-    },
-  ],
-  Structured: [
-    {
-      value: "application/x-www-form-urlencoded",
-      label: "URL Encoded",
-      category: "Structured",
-      editor: "form",
-    },
-    {
-      value: "multipart/form-data",
-      label: "Form Data",
-      category: "Structured",
-      editor: "form",
-    },
-  ],
-  Binary: [
-    {
-      value: "application/octet-stream",
-      label: "Binary",
-      category: "Binary",
-      editor: "binary",
-    },
+  data: [
+    { value: "application/json", label: "JSON", editor: "json" },
+    { value: "multipart/form-data", label: "Form", editor: "form" },
+    { value: "text/plain", label: "Text", editor: "text" },
+    { value: "application/octet-stream", label: "Binary", editor: "binary" },
+    { value: "application/xml", label: "XML", editor: "text" },
+    { value: "text/csv", label: "CSV", editor: "text" },
+    { value: "text/yaml", label: "YAML", editor: "text" },
+    { value: "none", label: "None", editor: "none" },
   ],
 } as const;
 

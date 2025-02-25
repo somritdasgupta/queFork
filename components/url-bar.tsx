@@ -15,7 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Send, Loader2, Unplug, PlugZap2 } from "lucide-react";
+import { Loader2, Unplug, PlugZap2, SendHorizonal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useWebSocket } from "./websocket/websocket-context";
@@ -717,14 +717,9 @@ export function UrlBar({
                   <PlugZap2 className="h-5 w-5" />
                 )
               ) : (
-                <Send
-                  className="h-5 w-5 transition-transform duration-200"
-                  strokeWidth={1}
-                  style={{
-                    stroke: "white",
-                    fill: "yellow",
-                    fillOpacity: 0.25,
-                  }}
+                <SendHorizonal
+                  className="h-5 w-5 transition-transform duration-200 text-blue-400"
+                  strokeWidth={2}
                 />
               )}
             </Button>
@@ -900,23 +895,23 @@ export function UrlBar({
       className="flex items-center justify-center bg-slate-900 border border-slate-800 rounded-lg px-2 h-8"
     >
       <motion.div
-      variants={methodBadgeVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="flex items-center"
+        variants={methodBadgeVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="flex items-center"
       >
-      <Badge
-        variant="outline"
-        className={cn(
-        "font-mono text-xs border-none flex items-center",
-        protocol === "io"
-          ? "bg-blue-500/10 text-blue-400"
-          : "bg-purple-500/10 text-purple-400"
-        )}
-      >
-        {protocol.toUpperCase()}
-      </Badge>
+        <Badge
+          variant="outline"
+          className={cn(
+            "font-mono text-xs border-none flex items-center",
+            protocol === "io"
+              ? "bg-blue-500/10 text-blue-400"
+              : "bg-purple-500/10 text-purple-400"
+          )}
+        >
+          {protocol.toUpperCase()}
+        </Badge>
       </motion.div>
     </motion.div>
   );

@@ -16,7 +16,10 @@ interface WebSocketProviderProps {
   children: React.ReactNode;
 }
 
-const WebSocketContext = createContext<WebSocketContextType | null>(null);
+// Change from const to export const
+export const WebSocketContext = createContext<WebSocketContextType | null>(
+  null
+);
 
 // Update initial state with required properties
 const initialProtocolConfig: ProtocolConfig = {
@@ -381,6 +384,17 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         setConnectionStatus("connected");
         toast.success("Connected successfully");
 
+        // Add connection message to the message list
+        const formattedUrl = url.replace(/^wss?:\/\//, "");
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "received",
+            content: `Connected to ${formattedUrl}`,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+
         // Start ping monitoring
         if (pingIntervalRef.current) {
           clearInterval(pingIntervalRef.current);
@@ -401,6 +415,17 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         toast.info(
           `Connection closed${event.reason ? `: ${event.reason}` : ""}`
         );
+
+        // Add disconnection message to the message list
+        const formattedUrl = url.replace(/^wss?:\/\//, "");
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "received",
+            content: `Disconnected from ${formattedUrl}${event.reason ? `: ${event.reason}` : ""}`,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
       };
 
       wsRef.current.onerror = () => {

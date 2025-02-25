@@ -34,22 +34,14 @@ export interface EnvironmentSaveActionEvent extends CustomEvent {
 }
 
 export type ContentType =
-  | "none"
-  | "json"
-  | "form-data"
-  | "x-www-form-urlencoded"
-  | "raw"
   | "application/json"
-  | "application/ld+json"
-  | "application/hal+json"
-  | "application/vnd.api+json"
-  | "application/xml"
-  | "text/xml"
-  | "application/x-www-form-urlencoded"
   | "multipart/form-data"
+  | "text/plain"
   | "application/octet-stream"
-  | "text/html"
-  | "text/plain";
+  | "application/xml"
+  | "text/csv"
+  | "text/yaml"
+  | "none";
 
 export interface RequestBody {
   type: ContentType;
@@ -342,7 +334,7 @@ export interface RequestPanelProps {
 }
 
 export interface ResponsePanelProps {
-  response: any;
+  response: RequestResponse | null;
   isLoading: boolean;
   collections: Collection[];
   onSaveToCollection: (
@@ -352,9 +344,15 @@ export interface ResponsePanelProps {
   method: string;
   url: string;
   isWebSocketMode: boolean;
+  panelState?: "expanded" | "collapsed" | "fullscreen";
+  onPanelStateChange?: () => void;
+  showContentOnly?: boolean;
+  isOverlay?: boolean;
+  preserveStatusBar?: boolean;
 }
 
-// Add new interfaces for tab management
+export type PanelState = "expanded" | "collapsed" | "fullscreen";
+
 export interface Tab {
   lastAccessed: number;
   id: string;

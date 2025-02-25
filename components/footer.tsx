@@ -1,9 +1,9 @@
 import { FaGithub, FaLinkedin } from "react-icons/fa";
 import { AnimatedLogo } from "./animated-logo";
 
-const Footer = () => {
+export default function Footer() {
   return (
-    <footer className="w-full bg-slate-900 border-t border-slate-800">
+    <footer className="h-8 flex items-center justify-between px-2 bg-slate-900/50 backdrop-blur-sm">
       <div className="container mx-auto">
         <div className="flex items-center justify-between px-4">
           {/* Left section - Logo */}
@@ -20,7 +20,7 @@ const Footer = () => {
           </div>
 
           {/* Right section - Social links */}
-          <div className="flex items-center gap-2 py-1">
+          <div className="flex items-center gap-2">
             <a
               href="https://github.com/somritdasgupta/queFork/releases/download/pilot/queFork_Interceptor.zip"
               target="_blank"
@@ -62,6 +62,4 @@ const Footer = () => {
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}

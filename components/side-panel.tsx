@@ -22,7 +22,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { VerticalTabList } from "@/components/tab-manager";
 
-export const SidePanel: React.FC<SidePanelProps> = ({
+export const SidePanel: React.FC<
+  SidePanelProps & {
+    isOpen?: boolean;
+    onClose?: () => void;
+    defaultPanel?: "tabs" | "collections" | "history" | "environments";
+  }
+> = ({
   collections,
   history,
   onSelectRequest,
@@ -46,12 +52,14 @@ export const SidePanel: React.FC<SidePanelProps> = ({
   onImportCollections,
   isMobile,
   className,
+  isOpen,
+  onClose,
+  defaultPanel,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [shouldShowLabels, setShouldShowLabels] = useState(true);
   const [activePanel, setActivePanel] = useState<
     "tabs" | "collections" | "history" | "environments"
-  >("tabs");
+  >(defaultPanel || "tabs");
 
   useEffect(() => {
     const checkWidth = () => {
@@ -67,14 +75,10 @@ export const SidePanel: React.FC<SidePanelProps> = ({
 
   useEffect(() => {
     const handleSaveRequestAction = (e: CustomEvent) => {
-      // Switch to collections panel
       setActivePanel("collections");
-
-      // Only open sheet if we're in mobile mode and the event indicates mobile
-      if (isMobile && e.detail.isMobile) {
-        setIsOpen(true);
+      if (isMobile && e.detail.isMobile && onClose) {
+        onClose();
       }
-
       // Forward the request data to CollectionsPanel
       window.dispatchEvent(
         new CustomEvent("saveRequest", {
@@ -94,23 +98,20 @@ export const SidePanel: React.FC<SidePanelProps> = ({
         handleSaveRequestAction as EventListener
       );
     };
-  }, [isMobile]);
+  }, [isMobile, onClose]);
 
   useEffect(() => {
     const handleSaveAndShow = (e: CustomEvent) => {
-      const { request, isMobile } = e.detail;
-
-      // Set panel and open sheet if mobile
       setActivePanel("collections");
-      if (isMobile && isMobile) {
-        setIsOpen(true);
-      }
 
       // Small delay to ensure panel switch is complete
       setTimeout(() => {
         window.dispatchEvent(
           new CustomEvent("showCollectionSaveForm", {
-            detail: request,
+            detail: {
+              ...e.detail.request,
+              isMobile: e.detail.isMobile,
+            },
           })
         );
       }, 50);
@@ -126,14 +127,13 @@ export const SidePanel: React.FC<SidePanelProps> = ({
         handleSaveAndShow as EventListener
       );
     };
-  }, [isMobile]);
+  }, []);
 
   useEffect(() => {
     const handleEnvironmentAction = (e: CustomEvent) => {
-      // First, switch the panel and open sheet if needed
       setActivePanel("environments");
-      if (isMobile && e.detail.isMobile) {
-        setIsOpen(true);
+      if (isMobile && e.detail.isMobile && onClose) {
+        onClose();
       }
 
       // Use a minimal timeout to ensure panel switch is complete
@@ -160,7 +160,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({
         handleEnvironmentAction as EventListener
       );
     };
-  }, [isMobile]);
+  }, [isMobile, onClose]);
 
   const tabs = [
     {
@@ -232,7 +232,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({
           onToggleHistorySaving={onToggleHistorySaving}
           onSelectItem={(item) => {
             onSelectHistoryItem(item);
-            if (isMobile) setIsOpen(false);
+            if (isMobile && onClose) onClose();
           }}
           onDeleteItem={onDeleteHistoryItem}
           onExportHistory={onExportHistory}
@@ -300,60 +300,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({
   );
 
   if (isMobile) {
-    return (
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
-          <div className="flex flex-col gap-2 w-full rounded-lg">
-            <Button
-              variant="default"
-              size="icon"
-              className="w-full h-8 px-4 border-2 border-slate-800 bg-slate-900 hover:bg-slate-800 transition-colors rounded-lg flex items-center justify-center"
-            >
-              <Layers
-                className="h-4 w-4 transition-transform duration-200"
-                strokeWidth={1}
-                style={{
-                  stroke: "white",
-                  fill: "yellow",
-                  fillOpacity: 0.25,
-                }}
-              />
-            </Button>
-          </div>
-        </SheetTrigger>
-        <SheetContent
-          position="bottom"
-          className="w-[100vw] p-0 h-[88vh] rounded-t-2xl bg-slate-950
-            backdrop-blur-xl
-            border-t-2 border-slate-800/60
-            shadow-[0_-15px_50px_-15px_rgba(0,0,0,0.45)]
-            animate-in slide-in-from-bottom duration-300
-            overflow-hidden flex flex-col"
-        >
-          <SheetTitle className="sr-only">Side Panel</SheetTitle>
-          <div className="flex flex-col h-full overflow-hidden">
-            <div className="rounded-t-2xl flex-1 overflow-hidden">
-              <PanelContent />
-            </div>
-            <div className="mt-auto flex justify-center relative">
-              <Button
-                variant="ghost"
-                onClick={() => setIsOpen(false)}
-                className="absolute -top-16 rounded-full w-4 
-                  bg-slate-800/90 hover:bg-slate-700/90 
-                  text-slate-400 hover:text-slate-300 
-                  border border-slate-600/50 backdrop-blur-sm
-                  transform hover:-translate-y-1 active:translate-y-0
-                  transition-all duration-300 shadow-lg
-                  group"
-              >
-                <X className="h-5 w-5 transition-transform group-hover:scale-90" />
-              </Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
-    );
+    return <PanelContent />;
   }
 
   return (

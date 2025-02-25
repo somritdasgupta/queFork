@@ -84,6 +84,10 @@ export const metadata: Metadata = {
       "en-US": "https://quefork.somrit.in",
     },
   },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
@@ -98,6 +102,8 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   colorScheme: "dark",
+  interactiveWidget: "resizes-visual",
+  height: "device-height",
 };
 
 export default function RootLayout({
@@ -106,7 +112,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html
+      lang="en"
+      dir="ltr"
+      suppressHydrationWarning
+      className="prevent-elastic"
+    >
       <head>
         <link rel="canonical" href="https://quefork.somrit.in" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -115,15 +126,22 @@ export default function RootLayout({
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
         <meta name="robots" content="index, follow" />
         <meta name="googlebot" content="index, follow" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="application-name" content="queFork" />
         <meta name="apple-mobile-web-app-title" content="queFork" />
-        <meta name="msapplication-TileColor" content="#1e293b" />
+        <meta name="msapplication-TileColor" content="#0f172a" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
         <meta name="format-detection" content="telephone=no" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -141,10 +159,10 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} antialiased`}
+        className={`${inter.className} antialiased prevent-elastic`}
         suppressHydrationWarning
       >
-        <div id="root" suppressHydrationWarning>
+        <div id="root" className="prevent-elastic" suppressHydrationWarning>
           <ServiceWorkerRegistration />
           <Preloader />
           <div className="contents animate-unblur">

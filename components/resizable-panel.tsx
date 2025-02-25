@@ -238,10 +238,10 @@ const ResizablePanelGroup = ({
   <ResizablePrimitive.PanelGroup
     className={cn(
       "resizable-panel-group relative",
-      "flex h-[100dvh] w-full", // Update height to use dvh
+      "flex h-full w-full",
       "data-[panel-group-direction=vertical]:flex-col",
       "bg-slate-900",
-      "touch-none", // Add touch-none
+      "touch-none",
       className
     )}
     autoSaveId="panel-group-layout"

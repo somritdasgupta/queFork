@@ -93,15 +93,17 @@ export function HistoryPanel({
 
   const { isConnected } = useWebSocket();
 
-  const filteredHistory = history.filter((item) =>
-    item.url.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredHistory = useMemo(() => {
+    return history.filter((item: HistoryItem) =>
+      item.url.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [history, search]);
 
   const groupedHistory = useMemo(() => {
     if (groupBy === "none") return filteredHistory;
 
     return filteredHistory.reduce<Record<string, HistoryItem[]>>(
-      (groups, item: HistoryItem) => {
+      (groups, item) => {
         let groupKey = "";
 
         if (groupBy === "domain") {
@@ -238,35 +240,32 @@ export function HistoryPanel({
       return (
         <div
           key={item.id}
-          className="group flex flex-wrap items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
+          className="group flex flex-wrap items-center gap-2 px-3 py-1.5 hover:bg-slate-800 transition-colors cursor-pointer"
           onClick={() => !isConnected && handleHistoryClick(item)}
         >
           <Badge
             variant="outline"
             className={cn(
-              "shrink-0 text-xs font-mono border",
-              isSocketIO
+              "shrink-0 text-[10px] font-mono border px-1 h-4",
+              item.url.includes("socket.io")
                 ? "text-blue-400 border-blue-500/20"
                 : "text-purple-400 border-purple-500/20"
             )}
           >
-            {isSocketIO ? "SIO" : "WSS"}
+            {item.url.includes("socket.io") ? "SIO" : "WSS"}
           </Badge>
-          <div
-            ref={urlContainerRef}
-            className="flex-1 min-w-0 w-full sm:w-auto"
-          >
-            <div className="text-xs font-medium text-slate-400 tracking-tighter truncate">
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium text-slate-400 tracking-tight truncate">
               {truncateUrl(item.url, containerWidth)}
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
               <span>
                 {formatDistanceToNow(new Date(item.timestamp), {
                   addSuffix: true,
                 })}
               </span>
               {item.wsStats && (
-                <div className="flex items-center gap-2">
+                <>
                   <span>•</span>
                   <span className="text-emerald-500">
                     {item.wsStats.messagesSent}↑
@@ -275,76 +274,6 @@ export function HistoryPanel({
                   <span className="text-blue-500">
                     {item.wsStats.messagesReceived}↓
                   </span>
-                </div>
-              )}
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 shrink-0 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteItem(item.id);
-              toast.success("History item deleted");
-            }}
-          >
-            <X className="h-4 w-4 text-red-400" />
-          </Button>
-        </div>
-      );
-    } else {
-      return (
-        <div
-          key={item.id}
-          className="group flex flex-wrap items-center gap-2 px-4 py-2 hover:bg-slate-800 transition-colors cursor-pointer border-y border-slate-700/50"
-          onClick={() => handleHistoryItemClick(item)}
-        >
-          <Badge
-            variant="outline"
-            className={cn(
-              "shrink-0 text-xs font-mono border",
-              item.method === "GET" && "text-emerald-400 border-emerald-500/20",
-              item.method === "POST" && "text-blue-400 border-blue-500/20",
-              item.method === "PUT" && "text-yellow-400 border-yellow-500/20",
-              item.method === "DELETE" && "text-red-400 border-red-500/20",
-              item.method === "PATCH" && "text-purple-400 border-purple-500/20"
-            )}
-          >
-            {item.method}
-          </Badge>
-          <div
-            ref={urlContainerRef}
-            className="flex-1 min-w-0 w-full sm:w-auto"
-          >
-            <div className="text-xs font-medium text-slate-400 tracking-tight truncate">
-              {truncateUrl(item.url, containerWidth)}
-            </div>
-            <div className="flex flex-wrap items-center gap-1 text-xs text-slate-500">
-              <span>
-                {formatDistanceToNow(new Date(item.timestamp), {
-                  addSuffix: true,
-                })}
-              </span>
-              {item.response && (
-                <>
-                  <span>•</span>
-                  <span
-                    className={cn(
-                      "font-medium",
-                      item.response.status >= 200 && item.response.status < 300
-                        ? "text-emerald-500"
-                        : "text-red-500"
-                    )}
-                  >
-                    {item.response.status}
-                  </span>
-                  {item.response.time && (
-                    <>
-                      <span>•</span>
-                      <span>{item.response.time}</span>
-                    </>
-                  )}
                 </>
               )}
             </div>
@@ -352,18 +281,83 @@ export function HistoryPanel({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 shrink-0 text-slate-400 hover:text-slate-300 hover:bg-transparent opacity-30 group-hover:opacity-100 transition-all"
+            className="h-7 w-7 p-0 opacity-30 group-hover:opacity-100 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
               onDeleteItem(item.id);
-              toast.success("History item deleted");
             }}
           >
-            <X className="h-4 w-4 text-red-400" />
+            <X className="h-3.5 w-3.5 text-red-400" />
           </Button>
         </div>
       );
     }
+
+    return (
+      <div
+        key={item.id}
+        className="group flex flex-wrap items-center gap-2 px-3 py-1.5 hover:bg-slate-800 transition-colors cursor-pointer"
+        onClick={() => handleHistoryItemClick(item)}
+      >
+        <Badge
+          variant="outline"
+          className={cn(
+            "shrink-0 text-[10px] font-mono border px-1 h-4",
+            item.method === "GET" && "text-emerald-400 border-emerald-500/20",
+            item.method === "POST" && "text-blue-400 border-blue-500/20",
+            item.method === "PUT" && "text-yellow-400 border-yellow-500/20",
+            item.method === "DELETE" && "text-red-400 border-red-500/20",
+            item.method === "PATCH" && "text-purple-400 border-purple-500/20"
+          )}
+        >
+          {item.method}
+        </Badge>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-medium text-slate-400 tracking-tight truncate">
+            {truncateUrl(item.url, containerWidth)}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+            <span>
+              {formatDistanceToNow(new Date(item.timestamp), {
+                addSuffix: true,
+              })}
+            </span>
+            {item.response && (
+              <>
+                <span>•</span>
+                <span
+                  className={cn(
+                    "font-medium",
+                    item.response.status >= 200 && item.response.status < 300
+                      ? "text-emerald-500"
+                      : "text-red-500"
+                  )}
+                >
+                  {item.response.status}
+                </span>
+                {item.response.time && (
+                  <>
+                    <span>•</span>
+                    <span>{item.response.time}</span>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 opacity-30 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteItem(item.id);
+          }}
+        >
+          <X className="h-3.5 w-3.5 text-red-400" />
+        </Button>
+      </div>
+    );
   };
 
   const handleClearHistory = () => {
@@ -467,29 +461,32 @@ export function HistoryPanel({
 
   return (
     <div className="h-full flex flex-col bg-slate-900/50">
-      {/* Search input section - updated to match tab panel */}
-      <div className="p-2 border-b border-slate-800">
-        {/* Search input row */}
-        <div className="flex items-center gap-2">
+      <div className="p-1.5 space-y-1.5 border-b border-slate-800">
+        {/* Search and Actions Row */}
+        <div className="flex items-center gap-1.5">
           <div className="relative flex-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search history..."
-              className="w-full bg-slate-900 text-sm rounded-md pl-8 pr-4 py-1.5
+              className="w-full bg-slate-900 text-xs rounded-md pl-7 pr-2 py-1.5
                 border border-slate-800 focus:border-slate-700
                 text-slate-300 placeholder:text-slate-500
                 focus:outline-none focus:ring-1 focus:ring-slate-700"
             />
           </div>
           <div className="flex gap-1">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
               className={cn(
-                "p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800",
-                isHistorySavingEnabled && "text-emerald-400"
+                "h-7 w-7 p-0 hover:bg-slate-800 rounded-md border border-slate-800",
+                isHistorySavingEnabled
+                  ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
+                  : "text-slate-400"
               )}
               title={
                 isHistorySavingEnabled
@@ -497,9 +494,11 @@ export function HistoryPanel({
                   : "History saving disabled"
               }
             >
-              <History className="h-4 w-4" />
-            </button>
-            <button
+              <History className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() =>
                 setGroupBy((prev) =>
                   prev === "none"
@@ -509,51 +508,64 @@ export function HistoryPanel({
                       : "none"
                 )
               }
-              className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
+              className={cn(
+                "h-7 w-7 p-0 hover:bg-slate-800 rounded-md border border-emerald-500/20",
+                groupBy === "none" && "bg-slate-500/20",
+                groupBy === "domain" && "bg-blue-500/20",
+                groupBy === "date" && "bg-yellow-500/10"
+              )}
               title={`Group by ${groupBy === "none" ? "domain" : groupBy === "domain" ? "date" : "none"}`}
             >
-              <GroupIcon className="h-4 w-4 text-blue-400" />
-            </button>
-            <button
+              <GroupIcon className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onExportHistory}
-              className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
+              className="h-7 w-7 p-0 hover:bg-slate-800 rounded-md border border-slate-800"
               title="Export history"
             >
-              <DownloadIcon className="h-4 w-4" />
-            </button>
-            <button
+              <DownloadIcon className="h-3.5 w-3.5 text-emerald-400" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleClearHistory}
-              className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
+              className="h-7 w-7 p-0 hover:bg-slate-800 rounded-md border border-slate-800"
               title="Clear history"
             >
-              <Trash2 className="h-4 w-4" />
-            </button>
+              <Trash2 className="h-3.5 w-3.5 text-red-400" />
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Delete confirmation - updated styling */}
+      {/* Delete confirmation */}
       {deleteConfirm && (
-        <div className="flex items-center justify-between p-2 bg-slate-800/50 border-b border-slate-700">
+        <div className="flex items-center justify-between px-4 py-1.5 bg-slate-800/50 border-b border-slate-700">
           <span className="text-xs text-slate-400">Clear all history?</span>
           <div className="flex items-center gap-1">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setDeleteConfirm(false)}
-              className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400"
+              className="h-6 w-6 p-0 hover:bg-slate-700/50"
             >
-              <X className="h-4 w-4" />
-            </button>
-            <button
+              <X className="h-3.5 w-3.5 text-slate-400" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClearHistory}
-              className="p-1.5 hover:bg-slate-700/50 rounded text-emerald-400"
+              className="h-6 w-6 p-0 hover:bg-slate-700/50"
             >
-              <Check className="h-4 w-4" />
-            </button>
+              <Check className="h-3.5 w-3.5 text-emerald-400" />
+            </Button>
           </div>
         </div>
       )}
 
-      <ScrollArea direction="vertical" className="h-full">
+      <ScrollArea className="flex-1">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[calc(75vh)] space-y-4 p-4">
             <div className="flex flex-col items-center text-center space-y-2">
@@ -565,36 +577,37 @@ export function HistoryPanel({
                 Your request history and activities will appear here
               </p>
             </div>
-
-            <div className="flex flex-col gap-2 w-48">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
-                className={cn(
-                  "w-full h-8 hover:bg-slate-800 border border-slate-800 text-xs gap-2",
-                  isHistorySavingEnabled ? "text-emerald-400" : "text-slate-400"
-                )}
-              >
-                <History className="h-3.5 w-3.5" />
-                {isHistorySavingEnabled
-                  ? "History Saving On"
-                  : "History Saving Off"}
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onToggleHistorySaving(!isHistorySavingEnabled)}
+              className={cn(
+                "w-48 h-7 hover:bg-slate-800 border border-slate-800 text-xs gap-2",
+                isHistorySavingEnabled ? "text-emerald-400" : "text-slate-400"
+              )}
+            >
+              <History className="h-3.5 w-3.5" />
+              {isHistorySavingEnabled
+                ? "History Saving On"
+                : "History Saving Off"}
+            </Button>
           </div>
         ) : groupBy === "none" ? (
-          renderVirtualizedHistory()
+          <div className="divide-y divide-slate-800">
+            {filteredHistory.map((item) => renderHistoryItem(item))}
+          </div>
         ) : (
-          // Render grouped history
-          <div className="divide-y divide-slate-700/50">
-            {Object.entries(groupedHistory).map(([group, items]) => (
+          // Grouped history view
+          <div className="divide-y divide-slate-800">
+            {Object.entries(
+              groupedHistory as Record<string, HistoryItem[]>
+            ).map(([group, items]) => (
               <div key={group} className="bg-slate-900/75">
-                <div className="px-4 py-2 text-xs font-medium text-slate-400 bg-slate-800/50">
+                <div className="px-3 py-1.5 text-xs font-medium text-slate-400 bg-slate-800/50">
                   {group}
                   <span className="ml-2 text-slate-500">({items.length})</span>
                 </div>
-                <div className="divide-y divide-slate-700/50">
+                <div className="divide-y divide-slate-800">
                   {items.map((item: HistoryItem) => renderHistoryItem(item))}
                 </div>
               </div>

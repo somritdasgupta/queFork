@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { WifiIcon, WifiOff } from "lucide-react";
+import { SiNginxproxymanager } from "react-icons/si";
 
 export function NetworkStatusIndicator({ className }: { className?: string }) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -55,7 +56,7 @@ export function NetworkStatusIndicator({ className }: { className?: string }) {
         title={isOnline ? "Connected" : "Connection Lost"}
       >
         {isOnline ? (
-          <WifiIcon className="h-3 w-3 text-green-400 animate-pulse" />
+          <SiNginxproxymanager className="h-3 w-3 text-green-400 animate-pulse" />
         ) : (
           <>
             <WifiOff className="h-3 w-3 text-red-400 animate-pulse" />

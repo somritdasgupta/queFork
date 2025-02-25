@@ -130,7 +130,7 @@ export function RequestPanel({
             initial="initial"
             animate="animate"
             exit="exit"
-            className="flex-1 overflow-hidden"
+            className="flex-1 overflow-hidden flex flex-col"
           >
             <Tabs
               value={activeTab}
@@ -138,8 +138,9 @@ export function RequestPanel({
               defaultValue="params"
               className="flex-1 flex flex-col h-full overflow-hidden"
             >
-              <div className="bg-slate-950">
-                <TabsList className="flex overflow-x-auto h-8 w-full justify-start bg-slate-900/70 rounded-none border-b border-slate-700 p-0">
+              {/* Tab Headers - Now sticky */}
+              <div className="sticky top-0 z-10 bg-slate-950 border-b border-slate-700">
+                <TabsList className="flex overflow-x-auto h-8 w-full justify-start bg-slate-900/70 rounded-none p-0">
                   {tabs.map(
                     (tab) =>
                       !tab.hidden && (
@@ -172,89 +173,96 @@ export function RequestPanel({
                 </TabsList>
               </div>
 
-              <ScrollArea className="flex-1 overflow-auto">
-                <div className="h-full">
-                  <TabsContent value="params" className="m-0 min-h-0">
-                    <QueryTab
-                      params={params}
-                      onParamsChange={onParamsChange}
-                      environments={environments}
-                      currentEnvironment={currentEnvironment}
-                      onEnvironmentChange={onEnvironmentChange}
-                      onEnvironmentsUpdate={onEnvironmentsUpdate}
-                      onAddToEnvironment={onAddToEnvironment}
-                    />
-                  </TabsContent>
+              {/* Scrollable Content Area */}
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="h-full">
+                    <TabsContent value="params" className="m-0 min-h-0 p-0">
+                      <QueryTab
+                        params={params}
+                        onParamsChange={onParamsChange}
+                        environments={environments}
+                        currentEnvironment={currentEnvironment}
+                        onEnvironmentChange={onEnvironmentChange}
+                        onEnvironmentsUpdate={onEnvironmentsUpdate}
+                        onAddToEnvironment={onAddToEnvironment}
+                      />
+                    </TabsContent>
 
-                  <TabsContent value="headers" className="m-0 min-h-0">
-                    <HeadersTab
-                      headers={headers}
-                      onHeadersChange={onHeadersChange}
-                      environments={environments}
-                      currentEnvironment={currentEnvironment}
-                      onEnvironmentChange={onEnvironmentChange}
-                      onEnvironmentsUpdate={onEnvironmentsUpdate}
-                      onAddToEnvironment={onAddToEnvironment}
-                      auth={auth}
-                      body={body}
-                      onSourceRedirect={handleHeaderSourceRedirect}
-                    />
-                  </TabsContent>
+                    <TabsContent value="headers" className="m-0 min-h-0 p-0">
+                      <HeadersTab
+                        headers={headers}
+                        onHeadersChange={onHeadersChange}
+                        environments={environments}
+                        currentEnvironment={currentEnvironment}
+                        onEnvironmentChange={onEnvironmentChange}
+                        onEnvironmentsUpdate={onEnvironmentsUpdate}
+                        onAddToEnvironment={onAddToEnvironment}
+                        auth={auth}
+                        body={body}
+                        onSourceRedirect={handleHeaderSourceRedirect}
+                      />
+                    </TabsContent>
 
-                  <TabsContent value="body" className="m-0 min-h-0">
-                    <BodyTab
-                      body={body}
-                      onChange={onBodyChange}
-                      headers={headers}
-                      onHeadersChange={onHeadersChange}
-                      environments={environments}
-                      currentEnvironment={currentEnvironment}
-                      onEnvironmentChange={onEnvironmentChange}
-                      onEnvironmentsUpdate={onEnvironmentsUpdate}
-                      onAddToEnvironment={onAddToEnvironment}
-                    />
-                  </TabsContent>
+                    <TabsContent value="body" className="m-0 min-h-0 p-0">
+                      <BodyTab
+                        body={body}
+                        onChange={onBodyChange}
+                        headers={headers}
+                        onHeadersChange={onHeadersChange}
+                        environments={environments}
+                        currentEnvironment={currentEnvironment}
+                        onEnvironmentChange={onEnvironmentChange}
+                        onEnvironmentsUpdate={onEnvironmentsUpdate}
+                        onAddToEnvironment={onAddToEnvironment}
+                      />
+                    </TabsContent>
 
-                  <TabsContent value="auth" className="m-0 min-h-0">
-                    <AuthTab auth={auth} onAuthChange={onAuthChange} />
-                  </TabsContent>
+                    <TabsContent value="auth" className="m-0 min-h-0 p-0">
+                      <AuthTab auth={auth} onAuthChange={onAuthChange} />
+                    </TabsContent>
 
-                  <TabsContent value="pre-request" className="m-0 min-h-0">
-                    <PreRequestTab
-                      script={
-                        (window as any).__ACTIVE_REQUEST__?.preRequestScript ||
-                        ""
-                      }
-                      logs={
-                        (window as any).__ACTIVE_REQUEST__?.scriptLogs || []
-                      }
-                      onChange={(script) => {
-                        if ((window as any).__ACTIVE_REQUEST__) {
-                          (window as any).__ACTIVE_REQUEST__.preRequestScript =
-                            script;
+                    <TabsContent
+                      value="pre-request"
+                      className="m-0 min-h-0 p-0"
+                    >
+                      <PreRequestTab
+                        script={
+                          (window as any).__ACTIVE_REQUEST__
+                            ?.preRequestScript || ""
                         }
-                      }}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="tests" className="m-0 min-h-0">
-                    <TestsTab
-                      script={
-                        (window as any).__ACTIVE_REQUEST__?.testScript || ""
-                      }
-                      results={
-                        (window as any).__ACTIVE_REQUEST__?.testResults || []
-                      }
-                      onChange={(script) => {
-                        if ((window as any).__ACTIVE_REQUEST__) {
-                          (window as any).__ACTIVE_REQUEST__.testScript =
-                            script;
+                        logs={
+                          (window as any).__ACTIVE_REQUEST__?.scriptLogs || []
                         }
-                      }}
-                    />
-                  </TabsContent>
-                </div>
-              </ScrollArea>
+                        onChange={(script) => {
+                          if ((window as any).__ACTIVE_REQUEST__) {
+                            (
+                              window as any
+                            ).__ACTIVE_REQUEST__.preRequestScript = script;
+                          }
+                        }}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="tests" className="m-0 min-h-0 p-0">
+                      <TestsTab
+                        script={
+                          (window as any).__ACTIVE_REQUEST__?.testScript || ""
+                        }
+                        results={
+                          (window as any).__ACTIVE_REQUEST__?.testResults || []
+                        }
+                        onChange={(script) => {
+                          if ((window as any).__ACTIVE_REQUEST__) {
+                            (window as any).__ACTIVE_REQUEST__.testScript =
+                              script;
+                          }
+                        }}
+                      />
+                    </TabsContent>
+                  </div>
+                </ScrollArea>
+              </div>
             </Tabs>
           </motion.div>
         ) : (

@@ -422,15 +422,15 @@ export const TabBar: React.FC = () => {
 
   return (
     <div
-      className="flex items-center bg-slate-950 border-b border-slate-800"
+      className="flex items-center bg-slate-900/75 border-b border-slate-800"
       suppressHydrationWarning
     >
       {canScrollLeft && (
         <button
           onClick={() => handleScroll("left")}
-          className="p-2 hover:bg-slate-800 text-slate-400"
+          className="p-1.5 hover:bg-slate-800 text-slate-400 border-r border-slate-800"
         >
-          <ChevronsLeft className="h-4 w-4" />
+          <ChevronsLeft className="h-3.5 w-3.5" />
         </button>
       )}
 
@@ -484,21 +484,21 @@ export const TabBar: React.FC = () => {
       {canScrollRight && (
         <button
           onClick={() => handleScroll("right")}
-          className="p-2 hover:bg-slate-800 text-slate-400"
+          className="p-1.5 hover:bg-slate-800 text-slate-400 border-l border-slate-800"
         >
-          <ChevronsRight className="h-4 w-4" />
+          <ChevronsRight className="h-3.5 w-3.5" />
         </button>
       )}
 
       <button
         onClick={() => addTab()}
         className={cn(
-          "p-2 hover:bg-slate-800 text-slate-400",
-          canScrollRight ? "border-l border-slate-800" : ""
+          "p-1.5 hover:bg-slate-800 text-slate-400 border-l border-slate-800",
+          "hover:text-slate-300 transition-colors"
         )}
         title="New tab"
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="h-3.5 w-3.5" />
       </button>
     </div>
   );
@@ -543,10 +543,10 @@ const SortableTab: React.FC<SortableTabProps> = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center min-w-[180px] max-w-[320px] h-8 px-2",
+        "flex items-center min-w-[160px] max-w-[280px] h-7 px-1.5",
         "border-r border-slate-800 select-none",
         tab.id === activeTab
-          ? "bg-slate-900 border-b-2 border-b-blue-500"
+          ? "bg-slate-800/75 border-b-2 border-b-blue-500"
           : "hover:bg-slate-800/50",
         isDragging && "opacity-50"
       )}
@@ -557,21 +557,24 @@ const SortableTab: React.FC<SortableTabProps> = ({
         data-grab-handle
         className="px-1 cursor-grab hover:bg-slate-700/50 rounded"
       >
-        <GripHorizontal className="h-4 w-4 text-slate-600" />
+        <GripHorizontal className="h-3.5 w-3.5 text-slate-600" />
       </div>
 
       <button
         onClick={() => onSelect(tab.id)}
-        className="flex-1 flex items-center min-w-0 h-full gap-2 px-2"
+        className="flex-1 flex items-center min-w-0 h-full gap-1.5 px-1.5"
       >
         <div
-          className={cn("w-2 h-2 rounded-full transition-colors", status.color)}
+          className={cn(
+            "w-1.5 h-1.5 rounded-full transition-colors",
+            status.color
+          )}
           title={status.tooltip}
         />
-        <div className="truncate text-sm flex items-center gap-2">
+        <div className="truncate text-sm flex items-center gap-1.5">
           <span
             className={cn(
-              "font-mono text-xs px-2 rounded-full border font-black",
+              "font-mono text-[10px] px-1.5 rounded-full border font-medium",
               tab.state.isWebSocketMode
                 ? "text-purple-400 border-purple-500/20"
                 : getMethodColorClass(tab.state.method)
@@ -580,7 +583,7 @@ const SortableTab: React.FC<SortableTabProps> = ({
             {tab.state.isWebSocketMode ? "WSS" : tab.state.method || "GET"}
           </span>
           {tab.state.url && (
-            <span className="text-slate-400 text-xs truncate">
+            <span className="text-[10px] text-slate-400 truncate">
               {formatDomain(tab.state.url)}
             </span>
           )}
@@ -590,18 +593,18 @@ const SortableTab: React.FC<SortableTabProps> = ({
       <div className="flex items-center gap-0.5">
         <button
           onClick={() => onDuplicate(tab.id)}
-          className="p-1.5 hover:bg-slate-700 rounded text-slate-400"
+          className="p-1 hover:bg-slate-700 rounded text-slate-400"
           title="Duplicate tab"
         >
-          <Copy className="h-3.5 w-3.5" />
+          <Copy className="h-3 w-3" />
         </button>
         {!isLastTab && ( // Only show close button if not the last tab
           <button
             onClick={() => onClose(tab.id)}
-            className="p-1.5 hover:bg-slate-700 rounded text-slate-400"
+            className="p-1 hover:bg-slate-700 rounded text-slate-400"
             title="Close tab"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3 w-3" />
           </button>
         )}
       </div>
@@ -765,16 +768,16 @@ export const VerticalTabList: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-slate-900/50">
-      <div className="p-2 border-b border-slate-800">
-        <div className="flex items-center gap-2">
+      <div className="p-1.5 space-y-1.5 border-b border-slate-800">
+        <div className="flex items-center gap-1.5">
           <div className="relative flex-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tabs..."
-              className="w-full bg-slate-900 text-sm rounded-md pl-8 pr-4 py-1.5
+              className="w-full bg-slate-900 text-xs rounded-md pl-7 pr-2 py-1.5
                 border border-slate-800 focus:border-slate-700
                 text-slate-300 placeholder:text-slate-500
                 focus:outline-none focus:ring-1 focus:ring-slate-700"
@@ -782,11 +785,11 @@ export const VerticalTabList: React.FC = () => {
           </div>
           <button
             onClick={() => addTab()}
-            className="p-2 hover:bg-slate-800 rounded-md text-slate-400
+            className="p-1.5 hover:bg-slate-800 rounded-md text-slate-400
               border border-slate-800"
             title="New tab"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
@@ -817,7 +820,7 @@ export const VerticalTabList: React.FC = () => {
 
         {filteredTabs.length === 0 && searchQuery && (
           <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-            <p className="text-sm text-slate-500">No tabs match your search</p>
+            <p className="text-xs text-slate-500">No tabs match your search</p>
           </div>
         )}
       </div>

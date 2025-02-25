@@ -1,5 +1,5 @@
-import { KeyValueEditor } from "@/components/key-value-editor";
 import { KeyValuePair, Environment } from "@/types";
+import { KeyValueEditor } from "../key-value-editor";
 
 interface QueryTabProps {
   params: KeyValuePair[];

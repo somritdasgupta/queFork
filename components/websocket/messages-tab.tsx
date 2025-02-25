@@ -26,12 +26,13 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   Settings2,
+  SendHorizonal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SelectDropdown } from "./select-dropdown";
 import { formatDistance } from "date-fns";
-import { CodeEditor } from "@/components/shared/code-editor";
+import { CodeEditor } from "@/components/request-panel/shared/code-editor";
 
 // Update the Message interface to make size optional since we'll calculate it
 interface Message {
@@ -109,7 +110,18 @@ export function MessagesTab() {
     clearMessages,
     setMessagesBulk,
     disconnect,
+    url,
   } = useWebSocket();
+
+  const getStatusMessage = () => {
+    if (!url) return null;
+
+    const formattedUrl = url.replace(/^wss?:\/\//, "");
+    if (isConnected) {
+      return `Connected to ${formattedUrl}`;
+    }
+    return `Disconnected from ${formattedUrl}`;
+  };
 
   const [message, setMessage] = useState("");
   const [messageFormat, setMessageFormat] = useState<"text" | "json">("text");
@@ -384,8 +396,15 @@ export function MessagesTab() {
   };
 
   return (
-    <div className="relative w-full h-full bg-slate-900/50 overflow-hidden">
-      <div className="absolute top-0 bottom-14 left-0 right-0 overflow-y-auto w-full bg-slate-900/50/90">
+    <div className="h-full flex flex-col min-h-0">
+      {" "}
+      {/* Simplify root element */}
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto min-h-0", // Add min-h-0 to allow flex-1 to work
+          "bg-slate-900/50"
+        )}
+      >
         <div className="divide-y divide-slate-800/50">
           {messages.length === 0 ? (
             <div className="h-full flex items-center justify-center p-20">
@@ -408,9 +427,11 @@ export function MessagesTab() {
           ) : (
             <div className="divide-y divide-slate-800/50">
               {messages.map((msg, index) => {
+                const isConnectionMessage =
+                  msg.content.startsWith("Connected to") ||
+                  msg.content.startsWith("Disconnected from");
                 const style = getMessageStyle(msg);
-                const msgSize = getMessageSize(msg.content);
-
+                const currentMsgSize = getMessageSize(msg.content);
                 return (
                   <div
                     key={index}
@@ -424,12 +445,12 @@ export function MessagesTab() {
                       className="flex items-center gap-3 px-3 py-2 transition-colors cursor-pointer"
                     >
                       <div className={cn("shrink-0", style.icon)}>
-                        {msg.content.startsWith("Connected") ? (
-                          <PlugZap2 className="h-4 w-4" />
-                        ) : msg.content.startsWith("Disconnected") ? (
-                          <Unplug className="h-4 w-4" />
-                        ) : msg.content.startsWith("Connection error") ? (
-                          <XCircle className="h-4 w-4" />
+                        {isConnectionMessage ? (
+                          msg.content.startsWith("Connected") ? (
+                            <PlugZap2 className="h-4 w-4" />
+                          ) : (
+                            <Unplug className="h-4 w-4" />
+                          )
                         ) : msg.type === "sent" ? (
                           <ArrowUpCircle className="h-4 w-4" />
                         ) : (
@@ -446,7 +467,12 @@ export function MessagesTab() {
                       </div>
 
                       <div className="flex-1">
-                        <div className={cn("text-xs font-medium font-mono tracking-tight", style.text)}>
+                        <div
+                          className={cn(
+                            "text-xs font-medium font-mono tracking-tight",
+                            style.text
+                          )}
+                        >
                           {msg.content}
                         </div>
                       </div>
@@ -465,7 +491,10 @@ export function MessagesTab() {
                     </div>
 
                     {expandedMessage === index &&
-                      renderExpandedMessage({ ...msg, size: msgSize }, index)}
+                      renderExpandedMessage(
+                        { ...msg, size: currentMsgSize },
+                        index
+                      )}
                   </div>
                 );
               })}
@@ -474,12 +503,11 @@ export function MessagesTab() {
           )}
         </div>
       </div>
-
-      <div className="absolute bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+      <div className="border-t border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
         <div
           className={cn(
             "p-2 flex items-center gap-2",
-            isEditingJson ? "h-48" : "h-14"
+            isEditingJson ? "h-48" : "h-10"
           )}
         >
           <div className="flex-1 relative">
@@ -497,7 +525,7 @@ export function MessagesTab() {
                   }
                   disabled={!isConnected}
                   className={cn(
-                    "pl-7 rounded-lg pr-24 text-xs md:text-sm font-normal h-10",
+                    "pl-7 rounded-lg pr-24 text-xs md:text-sm font-normal h-8",
                     "focus-visible:ring-1 focus-visible:ring-zinc-700 focus-visible:ring-offset-0",
                     "bg-slate-900/50 border-zinc-800 text-zinc-300 placeholder:text-zinc-600"
                   )}
@@ -520,7 +548,7 @@ export function MessagesTab() {
                 variant="ghost"
                 onClick={handleFormatToggle}
                 className={cn(
-                  "h-7 px-2 rounded-full text-[11px] font-medium transition-colors",
+                  "h-4 px-2 text-[10px] font-semibold transition-colors",
                   messageFormat === "json"
                     ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30"
                     : "bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700"
@@ -536,10 +564,10 @@ export function MessagesTab() {
               onClick={handleSend}
               disabled={!isConnected || !message.trim()}
               size="icon"
-              className="shrink-0 h-10 w-10 bg-slate-900/50 hover:bg-zinc-900 rounded-lg
+              className="shrink-0 h-8 w-10 bg-slate-900/50 hover:bg-zinc-900 rounded-lg
                 text-zinc-400 disabled:bg-slate-900/50/50 disabled:text-zinc-600 border border-zinc-800"
             >
-              <Send className="h-4 w-4" />
+              <SendHorizonal className="h-4 w-4" />
             </Button>
 
             <SelectDropdown
@@ -547,7 +575,7 @@ export function MessagesTab() {
                 <Button
                   size="icon"
                   variant="outline"
-                  className="shrink-0 h-10 w-10 bg-slate-900/50 hover:bg-zinc-900 rounded-lg
+                  className="shrink-0 h-8 w-10 bg-slate-900/50 hover:bg-zinc-900 rounded-lg
                     text-zinc-400 border border-zinc-800"
                 >
                   <Settings2 className="h-4 w-4" />
@@ -585,7 +613,6 @@ export function MessagesTab() {
           </div>
         </div>
       </div>
-
       <input
         type="file"
         id="import-messages"

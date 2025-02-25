@@ -15,19 +15,89 @@ import { useWebSocket } from "./websocket-context";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
+const StatCard = ({
+  title,
+  value,
+  subValue,
+  icon,
+  color,
+}: {
+  title: string;
+  value: string;
+  subValue?: string;
+  icon: React.ReactNode;
+  color: string;
+}) => (
+  <Card
+    className={cn(
+      "border-slate-800 bg-slate-900/50 backdrop-blur-sm",
+      "hover:bg-slate-900/70 transition-colors group"
+    )}
+  >
+    <CardContent className="p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <div className={`text-${color}-500`}>{icon}</div>
+        <span className="text-xs font-medium text-slate-400">{title}</span>
+      </div>
+      <div className="space-y-1">
+        <div
+          className={cn(
+            "text-base font-bold tracking-tight",
+            `text-${color}-500 group-hover:text-${color}-400 transition-colors`
+          )}
+        >
+          {value}
+        </div>
+        {subValue && (
+          <div className="text-[10px] text-slate-500 truncate">{subValue}</div>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const MiniStatCard = ({
+  icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  color: string;
+}) => (
+  <Card className="border-slate-800 bg-slate-900/50 group hover:bg-slate-900/70 transition-colors">
+    <CardContent className="p-2.5 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <div className={`text-${color}-500`}>{icon}</div>
+        <span className="text-xs text-slate-400">{label}</span>
+      </div>
+      <span
+        className={cn(
+          "text-xs font-medium",
+          `text-${color}-500 group-hover:text-${color}-400 transition-colors`
+        )}
+      >
+        {value}
+      </span>
+    </CardContent>
+  </Card>
+);
+
 export function ConnectionTab() {
   const { isConnected, connectionStatus, stats, connectionTime, url } =
     useWebSocket();
 
-  // Calculate rates and stats
   const calculateRates = () => {
-    if (!isConnected || !connectionTime)
+    if (!isConnected || !connectionTime) {
       return {
         messagesPerMinute: 0,
         sentRate: 0,
         receivedRate: 0,
         totalRate: 0,
       };
+    }
 
     const timeInMinutes = connectionTime / 60;
     return {
@@ -54,117 +124,76 @@ export function ConnectionTab() {
 
   const rates = calculateRates();
 
-  const statsCards = [
+  const mainStats = [
     {
-      id: "connection",
       title: "Status",
       value: isConnected
         ? `${Math.floor(connectionTime! / 60)}m ${connectionTime! % 60}s`
         : "Disconnected",
-      icon: <Network className="h-4 w-4" />,
+      subValue: url,
+      icon: <Network className="h-3.5 w-3.5" />,
       color:
         connectionStatus === "connected"
           ? "yellow"
           : connectionStatus === "connecting"
             ? "emerald"
             : "red",
-      subValue: url,
     },
     {
-      id: "messages",
-      title: "Rate",
+      title: "Messages",
       value: `${rates.messagesPerMinute}/min`,
-      icon: <Activity className="h-4 w-4" />,
       subValue: `${(stats.messagesSent + stats.messagesReceived).toLocaleString()} total`,
-      color: "cyan",
+      icon: <Activity className="h-3.5 w-3.5" />,
+      color: "blue",
     },
     {
-      id: "sent",
       title: "Sent",
       value: stats.messagesSent.toLocaleString(),
-      icon: <ArrowUpCircle className="h-4 w-4" />,
       subValue: `${rates.sentRate}/min`,
+      icon: <ArrowUpCircle className="h-3.5 w-3.5" />,
       color: "emerald",
     },
     {
-      id: "received",
       title: "Received",
       value: stats.messagesReceived.toLocaleString(),
-      icon: <ArrowDownCircle className="h-4 w-4" />,
       subValue: `${rates.receivedRate}/min`,
-      color: "blue",
+      icon: <ArrowDownCircle className="h-3.5 w-3.5" />,
+      color: "purple",
+    },
+  ];
+
+  const miniStats = [
+    {
+      label: "Uptime",
+      value: isConnected ? `${Math.floor(connectionTime! / 60)}m` : "---",
+      icon: <Clock className="h-3.5 w-3.5" />,
+      color: "yellow",
+    },
+    {
+      label: "Data",
+      value: formatBytes(stats.bytesTransferred),
+      icon: <Database className="h-3.5 w-3.5" />,
+      color: "cyan",
     },
   ];
 
   return (
     <motion.div
-      className="grid grid-cols-2 gap-3 p-3"
+      className="p-2 space-y-2"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
     >
-      {statsCards.map((card) => (
-        <Card
-          key={card.id}
-          className={cn(
-            "border-slate-800 bg-slate-900/50",
-            "hover:bg-slate-900/70 transition-colors",
-            "overflow-hidden"
-          )}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className={`text-${card.color}-500`}>{card.icon}</div>
-                <span className="text-xs font-medium text-slate-400">
-                  {card.title}
-                </span>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div
-                className={cn(
-                  "text-lg font-bold tracking-tight",
-                  `text-${card.color}-500`
-                )}
-              >
-                {card.value}
-              </div>
-              {card.subValue && (
-                <div className="text-[10px] text-slate-500 truncate">
-                  {card.subValue}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      <div className="grid grid-cols-2 gap-2">
+        {mainStats.map((stat) => (
+          <StatCard key={stat.title} {...stat} />
+        ))}
+      </div>
 
-      {/* Additional stats in smaller cards */}
-      <div className="col-span-2 grid grid-cols-2 gap-3">
-        <Card className="border-slate-800 bg-slate-900/50">
-          <CardContent className="p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 text-yellow-500" />
-              <span className="text-xs text-slate-400">Uptime</span>
-            </div>
-            <span className="text-xs font-medium text-purple-400">
-              {isConnected ? `${Math.floor(connectionTime! / 60)}m` : "---"}
-            </span>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-800 bg-slate-900/50">
-          <CardContent className="p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Database className="h-3.5 w-3.5 text-cyan-500" />
-              <span className="text-xs text-slate-400">Data</span>
-            </div>
-            <span className="text-xs font-bold text-cyan-400">
-              {formatBytes(stats.bytesTransferred)}
-            </span>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-2">
+        {miniStats.map((stat) => (
+          <MiniStatCard key={stat.label} {...stat} />
+        ))}
       </div>
     </motion.div>
   );

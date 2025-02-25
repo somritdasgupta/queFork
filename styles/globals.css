@@ -66,21 +66,18 @@
 /* Basic Layout */
 html,
 body {
-  /* Remove these restrictive properties */
-  /* position: fixed; */
   width: 100%;
   height: 100%;
-  /* overflow: hidden; */
-  /* overscroll-behavior: none; */
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: none;
+  overscroll-behavior: none;
 }
 
 #root {
   height: 100%;
-  /* Remove overflow: hidden */
+  overscroll-behavior: none;
 }
 
 /* Mobile Optimizations */
@@ -99,6 +96,25 @@ body {
   select {
     font-size: 16px !important;
     touch-action: manipulation;
+  }
+
+  /* Prevent elastic scroll on iOS */
+  body {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Allow scrolling within content areas */
+  .touch-scroll-y {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
 }
 
@@ -119,6 +135,18 @@ body {
   overflow: hidden;
   position: fixed;
   width: 100%;
+  height: 100%;
+}
+
+.prevent-elastic {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.content-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   height: 100%;
 }
 

@@ -30,15 +30,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { KeyValueEditor } from "@/components/key-value-editor";
+import { KeyValueEditor } from "../key-value-editor";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ContentType, KeyValuePair, Environment, RequestBody } from "@/types";
 import {
   contentTypeOptions,
   getIconForContentType,
+  type EditorType,
 } from "@/lib/content-type-utils";
-import { CodeEditor } from "@/components/shared/code-editor";
+import { CodeEditor } from "@/components/request-panel/shared/code-editor";
 import {
   readFileAsBase64,
   getAcceptedFileTypes,
@@ -47,14 +48,28 @@ import {
   type BinaryFileData,
 } from "@/lib/binary-utils";
 
-// Update EditorType to be more specific
-type EditorType = "none" | "text" | "json" | "form" | "binary";
+// Remove the local EditorType definition since we're importing it
+
+const getEditorType = (contentType: ContentType): EditorType => {
+  switch (contentType) {
+    case "application/json":
+      return "json";
+    case "multipart/form-data":
+      return "form";
+    case "application/octet-stream":
+      return "binary";
+    case "none":
+      return "none";
+    default:
+      return "text";
+  }
+};
 
 interface ContentTypeOption {
   value: ContentType;
   label: string;
   category: string;
-  editor: EditorType;
+  editor: "none" | "form" | "text" | "json" | "binary";
 }
 
 interface BodyTabProps {
@@ -79,191 +94,192 @@ const CONTENT_TYPE_TIPS: Record<
   EditorType,
   {
     title: string;
-    description: string;
-    concepts: { title: string; description: string }[];
-    integration: { title: string; description: string }[];
+    examples: { code: string; description: string }[];
+    bestPractices: string[];
+    common: { title: string; description: string }[];
   }
 > = {
   none: {
-    title: "Request without Body",
-    description:
-      "Some HTTP methods like GET and DELETE typically don't require a request body. The request parameters are instead passed through URL parameters or headers.",
-    concepts: [
+    title: "Working with URL Parameters",
+    examples: [
       {
-        title: "URL Parameters",
-        description:
-          "Use query parameters (?key=value) for filtering, pagination, and search operations",
+        code: "GET /api/users?role=admin&status=active",
+        description: "Filter users by role and status",
       },
       {
-        title: "Headers Only",
-        description:
-          "Authentication, caching directives, and other metadata are handled via headers",
-      },
-      {
-        title: "Idempotency",
-        description:
-          "GET requests are cacheable and can be repeated without side effects",
+        code: "GET /api/posts?page=1&limit=10&sort=date",
+        description: "Paginate and sort results",
       },
     ],
-    integration: [
-      {
-        title: "Cache Control",
-        description:
-          "Set appropriate cache headers to optimize subsequent requests",
-      },
+    bestPractices: [
+      "Use clear parameter names that reflect their purpose",
+      "Keep URLs under 2000 characters to ensure compatibility",
+      "URL encode parameter values to handle special characters",
+    ],
+    common: [
       {
         title: "Authentication",
-        description: "Use Authorization header or API keys for secure access",
+        description:
+          "Use Authorization header instead of URL parameters for tokens",
       },
       {
-        title: "Response Handling",
+        title: "Caching",
         description:
-          "Expect JSON responses with status codes indicating success/failure",
+          "Include cache-busting parameters when needed (e.g., timestamp)",
       },
     ],
   },
   json: {
-    title: "JSON Request Body",
-    description:
-      "JSON is the standard format for API requests, allowing structured data transmission with support for nested objects and arrays.",
-    concepts: [
+    title: "Working with JSON Payloads",
+    examples: [
       {
-        title: "Data Structure",
-        description:
-          "Organize data hierarchically using objects and arrays for complex relationships",
+        code: `{
+  "user": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "roles": ["admin"]
+  }
+}`,
+        description: "Create or update user data",
       },
       {
-        title: "Type Safety",
-        description:
-          "JSON supports strings, numbers, booleans, null, objects, and arrays",
-      },
-      {
-        title: "Content Negotiation",
-        description:
-          "Uses application/json Content-Type header for proper server handling",
+        code: `{
+  "filters": {
+    "status": ["active", "pending"],
+    "date": { "from": "2024-01-01" }
+  }
+}`,
+        description: "Complex query with nested filters",
       },
     ],
-    integration: [
+    bestPractices: [
+      "Use camelCase for property names",
+      "Include only necessary fields to reduce payload size",
+      "Validate JSON structure before sending",
+    ],
+    common: [
       {
-        title: "Request Processing",
+        title: "Nested Objects",
         description:
-          "Server automatically parses JSON into native data structures",
+          "Group related data into nested objects for better organization",
       },
       {
-        title: "Error Handling",
-        description: "Invalid JSON results in 400 Bad Request responses",
-      },
-      {
-        title: "Response Correlation",
+        title: "Arrays",
         description:
-          "Response typically mirrors request structure for CRUD operations",
+          "Use arrays for lists of similar items or batch operations",
       },
     ],
   },
   form: {
-    title: "Form Data Request",
-    description:
-      "Form data enables file uploads and mimics HTML form submissions. Supports both multipart/form-data and x-www-form-urlencoded formats.",
-    concepts: [
+    title: "Working with Form Data",
+    examples: [
       {
-        title: "Field Types",
-        description:
-          "Supports text fields, files, and complex data through structured naming",
+        code: "file: user_avatar.jpg\nname: John Doe\nrole: admin",
+        description: "Upload user profile with avatar",
       },
       {
-        title: "Encoding Types",
-        description:
-          "Choose between multipart/form-data for files and x-www-form-urlencoded for simple data",
-      },
-      {
-        title: "Browser Compatibility",
-        description:
-          "Natural integration with HTML forms and JavaScript FormData API",
+        code: "files[]: doc1.pdf\nfiles[]: doc2.pdf\ntype: report",
+        description: "Multiple file upload with metadata",
       },
     ],
-    integration: [
+    bestPractices: [
+      "Set appropriate enctype for file uploads",
+      "Use array notation [] for multiple files",
+      "Include Content-Disposition headers for files",
+    ],
+    common: [
       {
-        title: "File Handling",
+        title: "File Uploads",
         description:
-          "Server processes uploaded files and form fields separately",
+          "Use multipart/form-data for files, x-www-form-urlencoded for simple data",
       },
       {
-        title: "Size Limits",
+        title: "Field Names",
         description:
-          "Consider server upload limits and chunked transfer encoding",
-      },
-      {
-        title: "Field Validation",
-        description: "Server validates both field names and content types",
+          "Use clear, consistent naming for form fields to match backend expectations",
       },
     ],
   },
   text: {
-    title: "Plain Text Request",
-    description:
-      "Raw text requests are useful for custom formats, logs, or simple data transfer where parsing overhead isn't needed.",
-    concepts: [
+    title: "Working with Text-Based Formats",
+    examples: [
       {
-        title: "Content Format",
-        description:
-          "Sends unstructured text data without specific formatting requirements",
+        code: `<?xml version="1.0" encoding="UTF-8"?>
+<user>
+  <name>John Doe</name>
+  <roles>
+    <role>admin</role>
+  </roles>
+</user>`,
+        description: "XML: User data with nested elements",
       },
       {
-        title: "Encoding",
-        description:
-          "Uses UTF-8 encoding by default for universal compatibility",
+        code: `name,email,role
+john,john@example.com,admin
+jane,jane@example.com,user`,
+        description: "CSV: Simple tabular data format",
       },
       {
-        title: "Processing",
-        description:
-          "Server handles raw text directly without automatic parsing",
+        code: `user:
+  name: John Doe
+  roles:
+    - admin
+    - editor
+settings:
+  theme: dark`,
+        description: "YAML: Configuration data with nested structure",
       },
     ],
-    integration: [
+    bestPractices: [
+      "XML: Use proper entity encoding for special characters",
+      "CSV: Include headers row for self-documenting data",
+      "YAML: Maintain consistent indentation (2 spaces recommended)",
+      "Set correct Content-Type header for server processing",
+      "Validate document structure before sending",
+    ],
+    common: [
       {
-        title: "Content Handling",
-        description: "Server reads body as raw text stream",
+        title: "XML Documents",
+        description:
+          "Use namespaces to avoid element name conflicts, include XML declaration",
       },
       {
-        title: "Transformation",
-        description: "Text can be processed or parsed server-side as needed",
+        title: "CSV Data",
+        description:
+          "Quote fields containing commas, specify delimiter in Content-Type if not comma",
       },
       {
-        title: "Response Format",
-        description: "Response format may differ based on server processing",
+        title: "YAML Config",
+        description:
+          "Avoid tabs, use --- to separate documents, anchor refs with & and *",
       },
     ],
   },
   binary: {
-    title: "Binary Request",
-    description:
-      "Binary requests handle raw file uploads and streaming data. Useful for direct file transfers and media uploads.",
-    concepts: [
+    title: "Working with Binary Data",
+    examples: [
       {
-        title: "Content Format",
-        description: "Sends raw binary data without encoding or transformation",
+        code: "Content-Type: application/pdf\nContent-Length: 1048576",
+        description: "Upload PDF document",
       },
       {
-        title: "Transfer Mode",
-        description: "Supports both direct and chunked transfer encoding",
-      },
-      {
-        title: "Content Types",
-        description: "Uses specific MIME types to indicate file format",
+        code: "Content-Type: image/jpeg\nContent-Length: 524288",
+        description: "Upload JPEG image",
       },
     ],
-    integration: [
+    bestPractices: [
+      "Set accurate Content-Type header",
+      "Include Content-Length for better upload handling",
+      "Consider chunked transfer for large files",
+    ],
+    common: [
       {
-        title: "Stream Processing",
-        description: "Server handles data as binary stream for efficiency",
+        title: "File Types",
+        description: "Verify file type matches Content-Type header",
       },
       {
-        title: "File Operations",
-        description: "Server can directly save or process binary content",
-      },
-      {
-        title: "Size Handling",
-        description: "Consider content-length limits and timeout settings",
+        title: "Size Limits",
+        description: "Check server upload limits before sending large files",
       },
     ],
   },
@@ -291,9 +307,12 @@ export function BodyTab({
   const editorRef = useRef<any>(null);
   const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
 
-  const contentTypeOption = Object.values(contentTypeOptions)
-    .flat()
-    .find((opt) => opt.value === selectedContentType);
+  const contentTypeOption = useMemo(() => {
+    const option = contentTypeOptions.data.find(
+      (opt) => opt.value === selectedContentType
+    );
+    return option || null;
+  }, [selectedContentType]);
 
   const handleContentTypeChange = (newType: ContentType) => {
     setSelectedContentType(newType);
@@ -441,78 +460,55 @@ export function BodyTab({
     </div>
   );
 
+  const editorType = contentTypeOption?.editor || "none";
+
   return (
     <div className="h-full flex flex-col bg-slate-900">
       <div className="sticky top-0 z-10 bg-slate-950 border-b border-slate-800/60">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              className="flex w-full items-center h-9 sm:h-12 gap-2 px-3 
-              bg-slate-900 border border-slate-800 hover:border-slate-700
-              text-slate-300 hover:text-slate-200 rounded-none
-              transition-all duration-200 group"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 flex items-center justify-center">
-                  {getIconForContentType(selectedContentType)}
+            <button className="flex w-full items-center py-1.5 px-2 bg-slate-900 border-y border-slate-800 text-slate-300 hover:text-slate-200">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4">
+                    {getIconForContentType(selectedContentType)}
+                  </div>
+                  <span className="font-medium text-xs">
+                    {contentTypeOption?.label || "Select type"}
+                  </span>
                 </div>
-                <span className="font-medium text-xs">
-                  {contentTypeOption?.label || "Select type"}
-                </span>
+                <div className="flex items-center gap-1.5 rounded-md bg-slate-800 px-2 py-1">
+                  <span className="text-xs text-slate-400">
+                  {navigator.platform.toLowerCase().includes('mac') ? '⌘K' : 'Ctrl+K'}
+                  </span>
+                </div>
               </div>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="z-50 w-screen sm:w-[75vw] bg-slate-900 border border-slate-700/50 shadow-lg rounded-none border-2 border-slate-700/50 overflow-hidden"
+            side="bottom"
+            className="w-screen sm:w-[75vw] bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 shadow-lg rounded-none border-2 border-slate-700 overflow-hidden"
           >
-            <ScrollArea
-              direction="horizontal"
-              className="w-full [&::-webkit-scrollbar]:hidden [&_[data-radix-scroll-area-scrollbar]]:hidden no-scrollbar px-2"
-              style={{ scrollbarWidth: "none" }}
-            >
-              <div className="flex items-center gap-2">
-                {Object.values(contentTypeOptions)
-                  .flat()
-                  .map((option) => (
-                    <DropdownMenuItem
-                      key={option.value}
-                      onClick={() => handleContentTypeChange(option.value)}
-                      className="flex-none transition-all duration-200 rounded-full"
-                    >
-                      <div
-                        className={cn(
-                          "flex w-full items-center gap-1.5 py-1 px-2.5 rounded-full",
-                          option.value === selectedContentType
-                            ? CONTENT_TYPE_CONFIG.selectedBg
-                            : "bg-slate-800"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "w-3.5 h-3.5 flex items-center justify-center",
-                            option.value === selectedContentType
-                              ? `text-${CONTENT_TYPE_CONFIG.color}-400`
-                              : "text-slate-400"
-                          )}
-                        >
-                          {getIconForContentType(option.value)}
-                        </div>
-                        <span
-                          className={cn(
-                            "text-[11px] font-medium",
-                            option.value === selectedContentType
-                              ? `text-${CONTENT_TYPE_CONFIG.color}-400`
-                              : "text-slate-300"
-                          )}
-                        >
-                          {option.label}
-                        </span>
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-              </div>
-            </ScrollArea>
+            <div className="p-1 flex flex-wrap gap-1">
+              {contentTypeOptions.data.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => handleContentTypeChange(option.value)}
+                  className={cn(
+                  "flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs flex-1",
+                  option.value === selectedContentType
+                  ? "bg-blue-500/10 hover:bg-slate-800 text-blue-400"
+                  : "text-slate-300 hover:bg-slate-800"
+                  )}
+                >
+                  <div className="w-3.5 h-3.5">
+                    {getIconForContentType(option.value)}
+                  </div>
+                  <span className="font-medium">{option.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -520,7 +516,7 @@ export function BodyTab({
       {/* Edge-to-edge content area */}
       <div className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
-          {contentTypeOption?.editor === "none" ? (
+          {editorType === "none" ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -559,7 +555,9 @@ export function BodyTab({
                 >
                   <KeyValueEditor
                     pairs={Array.isArray(body.content) ? body.content : []}
-                    onChange={(pairs) => onChange({ ...body, content: pairs })}
+                    onChange={(pairs: KeyValuePair[]) =>
+                      onChange({ ...body, content: pairs })
+                    }
                     addButtonText={
                       selectedContentType === "multipart/form-data"
                         ? "Add Form Field"
@@ -694,7 +692,7 @@ export function BodyTab({
         </AnimatePresence>
       </div>
 
-      {contentTypeOption?.editor !== "none" && (
+      {editorType !== "none" && (
         <div
           className={cn(
             "border-t border-slate-800/60",
@@ -802,80 +800,68 @@ export function BodyTab({
           </div>
         </div>
       )}
-      {/* Modern Tips Section */}
+      {/* Compact Tips Section */}
       <div className="border-t border-slate-800">
-        <div className="p-4 space-y-4 ">
-          {/* Title & Description */}
-          <div className="space-y-2">
+        <div className="p-3">
+          <div className="flex flex-col space-y-3">
+            {/* Header */}
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-md bg-blue-500/10">
-                <Info className="w-4 h-4 text-blue-400" />
+              <div className="p-1.5 rounded bg-blue-500/10">
+                <Info className="w-3.5 h-3.5 text-blue-400" />
               </div>
-              <div className="space-y-0.5">
-                <h3 className="text-sm font-medium text-slate-200">
-                  {CONTENT_TYPE_TIPS[contentTypeOption?.editor || "none"].title}
-                </h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  {
-                    CONTENT_TYPE_TIPS[contentTypeOption?.editor || "none"]
-                      .description
-                  }
-                </p>
-              </div>
+              <h3 className="text-xs font-medium text-slate-200">
+                {CONTENT_TYPE_TIPS[contentTypeOption?.editor || "none"].title}
+              </h3>
             </div>
-          </div>
 
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Core Concepts Column */}
-            <div className="space-y-2">
-              <h4 className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                Core Concepts
-              </h4>
+            {/* Examples and Best Practices in Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Examples */}
               <div className="space-y-2">
                 {CONTENT_TYPE_TIPS[
                   contentTypeOption?.editor || "none"
-                ].concepts.map((concept, index) => (
+                ].examples.map((example, i) => (
                   <div
-                    key={index}
-                    className="p-2.5 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800/70 transition-colors"
+                    key={i}
+                    className="bg-slate-800/40 rounded border border-slate-700/40 text-xs"
                   >
-                    <div className="flex items-start gap-2">
-                      <div className="w-1 h-1 rounded-full bg-blue-500 mt-1.5" />
-                      <div>
-                        <h5 className="text-xs font-medium text-slate-300">
-                          {concept.title}
-                        </h5>
-                        <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
-                          {concept.description}
-                        </p>
-                      </div>
+                    <div className="p-2 font-mono text-slate-300 bg-slate-800/60">
+                      {example.code}
+                    </div>
+                    <div className="px-2 py-1.5 text-slate-400 text-[11px]">
+                      {example.description}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
 
-            {/* Integration Column */}
-            <div className="space-y-2">
-              <h4 className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                Integration Details
-              </h4>
+              {/* Best Practices and Common Scenarios */}
               <div className="space-y-2">
                 {CONTENT_TYPE_TIPS[
                   contentTypeOption?.editor || "none"
-                ].integration.map((item, index) => (
+                ].bestPractices.map((practice, i) => (
                   <div
-                    key={index}
-                    className="p-2.5 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800/70 transition-colors"
+                    key={i}
+                    className="flex items-center gap-2 text-[11px] text-slate-300 bg-slate-800/40 px-2 py-1.5 rounded"
                   >
-                    <div className="flex items-start gap-2">
-                      <div className="w-1 h-1 rounded-full bg-emerald-500 mt-1.5" />
+                    <div className="w-1 h-1 rounded-full bg-blue-400 flex-shrink-0" />
+                    {practice}
+                  </div>
+                ))}
+                {CONTENT_TYPE_TIPS[
+                  contentTypeOption?.editor || "none"
+                ].common.map((item, i) => (
+                  <div
+                    key={i}
+                    className="bg-slate-800/40 rounded border border-slate-700/40 p-2"
+                  >
+                    <div className="flex items-baseline gap-2">
+                      <div className="w-1 h-1 rounded-full bg-emerald-400 mt-1.5" />
                       <div>
-                        <h5 className="text-xs font-medium text-slate-300">
+                        <h5 className="text-[11px] font-medium text-slate-300">
                           {item.title}
                         </h5>
-                        <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                        <p className="text-[11px] text-slate-400 mt-0.5">
                           {item.description}
                         </p>
                       </div>

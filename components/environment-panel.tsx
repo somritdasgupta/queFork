@@ -11,14 +11,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Plus, 
-  Upload, 
+import {
+  Plus,
+  Upload,
   Search,
   Copy,
   Download,
   Trash2,
-  BoxIcon 
+  BoxIcon,
+  CheckCircle2,
+  BoxesIcon,
+  X,
+  Check,
 } from "lucide-react";
 import { KeyValueEditor } from "./key-value-editor";
 import { Environment, EnvironmentVariable } from "@/types";
@@ -50,20 +54,46 @@ export interface EnvironmentPanelRef {
   getMergedEnvironmentVariables: () => EnvironmentVariable[];
 }
 
-export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanelProps>(
-  ({ environments, currentEnvironment, onEnvironmentChange, onEnvironmentsUpdate }, ref) => {
+export const EnvironmentPanel = forwardRef<
+  EnvironmentPanelRef,
+  EnvironmentPanelProps
+>(
+  (
+    {
+      environments,
+      currentEnvironment,
+      onEnvironmentChange,
+      onEnvironmentsUpdate,
+    },
+    ref
+  ) => {
     const [newEnvironmentName, setNewEnvironmentName] = useState("");
-    const [editingEnvironment, setEditingEnvironment] = useState<Environment | null>(null);
-    const [localEditingVariables, setLocalEditingVariables] = useState<EnvironmentVariable[]>([]);
+    const [editingEnvironment, setEditingEnvironment] =
+      useState<Environment | null>(null);
+    const [localEditingVariables, setLocalEditingVariables] = useState<
+      EnvironmentVariable[]
+    >([]);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [search, setSearch] = useState("");
     const navigableElements = useRef<NavigableElement[]>([]);
-    const [expandedEnvironments, setExpandedEnvironments] = useState<Set<string>>(new Set());
+    const [expandedEnvironments, setExpandedEnvironments] = useState<
+      Set<string>
+    >(new Set());
 
     const [localVariables, setLocalVariables] = useState<{
       [envId: string]: EnvironmentVariable[];
     }>({});
-    const [unsavedChanges, setUnsavedChanges] = useState<Set<string>>(new Set());
+    const [unsavedChanges, setUnsavedChanges] = useState<Set<string>>(
+      new Set()
+    );
+
+    const [isCreateMode, setIsCreateMode] = useState(false);
+    const [inputValue, setInputValue] = useState("");
+    const inputRef = useRef<HTMLInputElement>(null);
+    const [copiedEnvironments, setCopiedEnvironments] = useState<Set<string>>(
+      new Set()
+    );
+    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
     useEffect(() => {
       if (editingEnvironment) {
@@ -82,12 +112,43 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
       setLocalVariables((prev) => ({ ...prev, ...newLocalVars }));
     }, [environments]);
 
+    useEffect(() => {
+      const handleEnvironmentSave = (event: CustomEvent) => {
+        const { key, value, type, environmentId } = event.detail;
+        const updatedEnvironments = environments.map((env) => {
+          if (env.id === environmentId) {
+            return {
+              ...env,
+              variables: [
+                ...env.variables,
+                { key, value, type: type || "text", enabled: true },
+              ],
+              lastModified: new Date().toISOString(),
+            };
+          }
+          return env;
+        });
+        onEnvironmentsUpdate(updatedEnvironments);
+      };
+
+      window.addEventListener(
+        "environmentSave",
+        handleEnvironmentSave as EventListener
+      );
+      return () => {
+        window.removeEventListener(
+          "environmentSave",
+          handleEnvironmentSave as EventListener
+        );
+      };
+    }, [environments, onEnvironmentsUpdate]);
+
     const handleCreateEnvironment = () => {
-      if (!newEnvironmentName.trim() || newEnvironmentName.toLowerCase() === "default") return;
+      if (!inputValue.trim() || inputValue.toLowerCase() === "default") return;
 
       const newEnvironment: Environment = {
         id: uuidv4(),
-        name: newEnvironmentName.trim(),
+        name: inputValue.trim(),
         variables: [],
         global: false,
         created: new Date().toISOString(),
@@ -95,9 +156,29 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
       };
 
       onEnvironmentsUpdate([...environments, newEnvironment]);
-      setNewEnvironmentName("");
+      setInputValue("");
+      setIsCreateMode(false);
       setEditingEnvironment(newEnvironment);
+      toast.success("Environment created");
     };
+
+    useEffect(() => {
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && isCreateMode) {
+          setIsCreateMode(false);
+          setInputValue("");
+        }
+      };
+
+      window.addEventListener("keydown", handleEscape);
+      return () => window.removeEventListener("keydown", handleEscape);
+    }, [isCreateMode]);
+
+    useEffect(() => {
+      if (isCreateMode && inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, [isCreateMode]);
 
     const handleImportEnvironment = async () => {
       try {
@@ -154,6 +235,22 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
     };
 
     const handleDuplicateEnvironment = (env: Environment) => {
+      // Check if environment is already copied
+      if (copiedEnvironments.has(env.id)) {
+        toast.error("Environment already has a copy");
+        return;
+      }
+
+      // Check if a copy already exists
+      const copyExists = environments.some(
+        (e) => e.name.toLowerCase() === `${env.name} (copy)`.toLowerCase()
+      );
+
+      if (copyExists) {
+        toast.error("Copy already exists for this environment");
+        return;
+      }
+
       const duplicate: Environment = {
         ...env,
         id: uuidv4(),
@@ -162,6 +259,8 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
         created: new Date().toISOString(),
         lastModified: new Date().toISOString(),
       };
+
+      setCopiedEnvironments((prev) => new Set(prev).add(env.id));
       onEnvironmentsUpdate([...environments, duplicate]);
       toast.success("Environment duplicated");
     };
@@ -177,6 +276,7 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
       const env = environments.find((e) => e.id === id);
       if (env && !env.global) {
         onEnvironmentsUpdate(environments.filter((e) => e.id !== id));
+        setDeleteConfirm(null);
         toast.success("Environment deleted");
       }
     };
@@ -201,7 +301,11 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
 
     const handleCloseEditor = () => {
       if (hasUnsavedChanges) {
-        if (window.confirm("You have unsaved changes. Are you sure you want to exit?")) {
+        if (
+          window.confirm(
+            "You have unsaved changes. Are you sure you want to exit?"
+          )
+        ) {
           setEditingEnvironment(null);
         }
       } else {
@@ -249,6 +353,36 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
       toast.success("Changes saved");
     };
 
+    const renderDeleteConfirmation = (envId: string) => (
+      <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 border-t border-slate-700">
+        <span className="text-xs text-slate-400">Delete environment?</span>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteConfirm(null);
+            }}
+            className="h-6 w-6 p-0 hover:bg-slate-700/50"
+          >
+            <X className="h-3.5 w-3.5 text-slate-400" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteEnvironment(envId);
+            }}
+            className="h-6 w-6 p-0 hover:bg-slate-700/50"
+          >
+            <Check className="h-3.5 w-3.5 text-emerald-400" />
+          </Button>
+        </div>
+      </div>
+    );
+
     if (editingEnvironment) {
       return (
         <div className="h-full flex flex-col bg-slate-800">
@@ -274,7 +408,10 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
               </div>
               <div className="flex items-center gap-2">
                 {hasUnsavedChanges && (
-                  <Badge variant="outline" className="text-yellow-400 border-yellow-400/20">
+                  <Badge
+                    variant="outline"
+                    className="text-yellow-400 border-yellow-400/20"
+                  >
                     Unsaved changes
                   </Badge>
                 )}
@@ -327,59 +464,87 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
     }
 
     return (
-      <div className="h-full flex flex-col bg-slate-900/50" suppressHydrationWarning>
-        <div className="p-2 space-y-2 border-b border-slate-800">
-          <div className="flex items-center gap-2">
+      <div
+        className="h-full flex flex-col bg-slate-900/50"
+        suppressHydrationWarning
+      >
+        <div className="p-1.5 border-b border-slate-800">
+          <div className="flex items-center gap-1.5">
             <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
               <input
-                placeholder="Search environments"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-900 text-sm rounded-md pl-8 pr-4 py-1.5
-                  border border-slate-800 focus:border-slate-700
-                  text-slate-300 placeholder:text-slate-500
-                  focus:outline-none focus:ring-1 focus:ring-slate-700"
+                ref={inputRef}
+                placeholder={
+                  isCreateMode
+                    ? "Enter environment name..."
+                    : "Search environments"
+                }
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && isCreateMode) {
+                    handleCreateEnvironment();
+                  }
+                }}
+                className={cn(
+                  "w-full bg-slate-900 text-xs rounded-md pl-7 pr-2 py-1.5",
+                  "border border-slate-800 focus:border-slate-700",
+                  "text-slate-300 placeholder:text-slate-500",
+                  "focus:outline-none focus:ring-1 focus:ring-slate-700",
+                  isCreateMode &&
+                    "border-emerald-500/30 focus:border-emerald-500/50"
+                )}
               />
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              placeholder="Add new environment"
-              value={newEnvironmentName}
-              onChange={(e) => setNewEnvironmentName(e.target.value)}
-              className="flex-1 bg-slate-900 text-sm rounded-md px-3 py-1.5
-                border border-slate-800 focus:border-slate-700
-                text-slate-300 placeholder:text-slate-500
-                focus:outline-none focus:ring-1 focus:ring-slate-700"
-            />
-            <button
-              onClick={handleCreateEnvironment}
-              disabled={!newEnvironmentName.trim()}
-              className={cn(
-                "p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800",
-                !newEnvironmentName.trim() && "opacity-50 cursor-not-allowed"
-              )}
-              title="Create environment"
-            >
-              <Plus className="h-4 w-4 text-emerald-400" />
-            </button>
-            <button
-              onClick={handleImportEnvironment}
-              className="p-2 hover:bg-slate-800 rounded-md text-slate-400 border border-slate-800"
-              title="Import environment"
-            >
-              <Upload className="h-4 w-4 text-yellow-400" />
-            </button>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (isCreateMode) {
+                    handleCreateEnvironment();
+                  } else {
+                    setIsCreateMode(true);
+                    setInputValue("");
+                  }
+                }}
+                className={cn(
+                  "h-7 w-7 p-0 hover:bg-slate-800 rounded-md border border-slate-800",
+                  isCreateMode ? "text-emerald-400" : "text-blue-400"
+                )}
+                title={isCreateMode ? "Create environment" : "New environment"}
+              >
+                {isCreateMode ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : (
+                  <Plus className="h-3.5 w-3.5" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleImportEnvironment}
+                className="h-7 w-7 p-0 hover:bg-slate-800 rounded-md border border-slate-800"
+                title="Import environment"
+              >
+                <Upload className="h-3.5 w-3.5 text-yellow-400" />
+              </Button>
+            </div>
           </div>
         </div>
 
-        <ScrollArea direction="vertical" className="flex-1 overflow-hidden bg-slate-900/75">
+        {/* Environments List */}
+        <ScrollArea
+          direction="vertical"
+          className="flex-1 overflow-hidden bg-slate-900/75"
+        >
           <DynamicAccordion
             type="multiple"
             value={Array.from(expandedEnvironments)}
             onValueChange={(value) => setExpandedEnvironments(new Set(value))}
+            className="divide-y divide-slate-800"
           >
             {filteredEnvironments.map((env) => (
               <AccordionItem
@@ -394,28 +559,31 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
                     });
                   }
                 }}
-                className="border-b border-slate-700"
+                className="border-0"
               >
-                <div className="flex items-center justify-between">
-                  <AccordionTrigger className="flex-1 px-4 text-slate-500 transition-colors">
+                <div className="flex items-center justify-between py-0.5">
+                  <AccordionTrigger className="flex-1 px-2 py-1 text-slate-500 hover:no-underline">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-400">
+                      <BoxIcon className="h-3.5 w-3.5 text-slate-500" />
+                      <span className="text-xs font-medium text-slate-400">
                         {env.name}
                       </span>
                       {env.global && (
                         <Badge
                           variant="outline"
-                          className="text-[10px] h-4 px-1 bg-slate-800 text-slate-400 border-slate-600"
+                          className="text-[10px] h-4 px-1 bg-slate-800/50 text-slate-400 border-slate-700"
                         >
                           Global
                         </Badge>
                       )}
-                      <span className="text-xs text-slate-500">
+                      <span className="text-[10px] text-slate-500">
                         ({countValidVariables(env.variables)})
                       </span>
                     </div>
                   </AccordionTrigger>
-                  <div className="flex items-center gap-1 px-4">
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1 px-2">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -423,9 +591,9 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
                         e.stopPropagation();
                         handleDuplicateEnvironment(env);
                       }}
-                      className="h-8 w-8 hover:bg-slate-800 text-blue-400 hover:text-blue-300"
+                      className="h-7 w-7 p-0 hover:bg-slate-800 text-blue-400 hover:text-blue-300"
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -434,27 +602,36 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
                         e.stopPropagation();
                         handleExportEnvironment(env);
                       }}
-                      className="h-8 w-8 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300"
+                      className="h-7 w-7 p-0 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300"
                     >
-                      <Download className="h-4 w-4" />
+                      <Download className="h-3.5 w-3.5" />
                     </Button>
                     {!env.global && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
-                          handleDeleteEnvironment(env.id);
+                          setDeleteConfirm(env.id);
                         }}
-                        className="h-8 w-8 hover:bg-slate-800 text-red-400 hover:text-red-300"
+                        className="h-7 w-7 p-0 hover:bg-slate-800 text-red-400 hover:text-red-300"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
                   </div>
                 </div>
-                <AccordionContent className="border-t border-slate-700 bg-slate-900/50 p-0">
-                  <div className="flex flex-col">
+
+                {deleteConfirm === env.id && (
+                  <div className="border-t border-slate-700">
+                    {renderDeleteConfirmation(env.id)}
+                  </div>
+                )}
+
+                {/* Content section */}
+                <AccordionContent className="border-t border-slate-800 bg-slate-900/50 p-0">
+                  <div className="flex flex-col divide-y divide-slate-800">
                     <KeyValueEditor
                       pairs={(localVariables[env.id] || []).map((v) => ({
                         ...v,
@@ -469,12 +646,12 @@ export const EnvironmentPanel = forwardRef<EnvironmentPanelRef, EnvironmentPanel
                       preventFirstItemDeletion={true}
                       autoSave={false}
                       isMobile={true}
-                      className="border-0 shadow-none h-full"
+                      className="border-0 shadow-none h-full divide-y divide-slate-800"
                     />
                     {unsavedChanges.has(env.id) && (
                       <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 border-t border-slate-700">
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className="text-xs h-5 text-yellow-400 border-yellow-400/20 bg-yellow-400/5"
                         >
                           Unsaved changes

@@ -25,6 +25,8 @@ import {
   ChevronUp,
   Maximize2,
   Minimize2,
+  PlugZap2,
+  Unplug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collection, SavedRequest } from "@/types";
@@ -36,7 +38,9 @@ import { CodeLanguageSelector } from "./code-language-selector";
 import { useTheme } from "next-themes";
 import type { editor } from "monaco-editor";
 import { motion } from "framer-motion";
-import { CodeEditor } from "@/components/shared/code-editor";
+import { CodeEditor } from "@/components/request-panel/shared/code-editor";
+import { useWebSocket } from "@/components/websocket/websocket-context"; // Change import path
+import { PanelState } from "@/types/panel"; // Add this import
 
 interface TabItem {
   id: string;
@@ -69,7 +73,7 @@ interface ResponsePanelProps {
   url: string;
   isWebSocketMode: boolean;
   onPanelStateChange?: () => void;
-  panelState?: "expanded" | "collapsed" | "fullscreen";
+  panelState?: PanelState; // Update type
   showContentOnly?: boolean;
   isOverlay?: boolean;
   preserveStatusBar?: boolean;
@@ -172,6 +176,11 @@ const editorDefaultOptions = (
   lineNumbersMinChars: 3,
   lineDecorationsWidth: 0,
 });
+
+// Update comparison logic to use type guards
+const isCollapsed = (state?: PanelState): boolean => state === "collapsed";
+const isFullscreen = (state?: PanelState): boolean => state === "fullscreen";
+const isExpanded = (state?: PanelState): boolean => state === "expanded";
 
 export function ResponsePanel({
   response,
@@ -490,9 +499,9 @@ export function ResponsePanel({
                 {panelState === "expanded" ? (
                   <Maximize2 className="h-3.5 w-3.5" />
                 ) : panelState === "fullscreen" ? (
-                  <Minimize2 className="h-3.5 w-3.5" />
-                ) : (
                   <ChevronUp className="h-3.5 w-3.5" />
+                ) : (
+                  <Maximize2 className="h-3.5 w-3.5" />
                 )}
               </motion.div>
             </motion.button>
@@ -502,17 +511,126 @@ export function ResponsePanel({
     ) : null;
 
   if (isWebSocketMode) {
+    const { isConnected, url } = useWebSocket();
+    const getStatusMessage = () => {
+      if (!url) return "Not connected";
+      const formattedUrl = url.replace(/^wss?:\/\//, "");
+      return isConnected
+        ? `Connected to ${formattedUrl}`
+        : `Disconnected from ${formattedUrl}`;
+    };
+
     return (
-      <div className="bg-slate-900 h-full flex flex-col">
-        {renderStatusBar()}
+      <div
+        className={cn(
+          "bg-slate-900 flex flex-col relative",
+          "transition-[height] duration-300 ease-in-out",
+          // Add these classes to ensure full height on mobile
+          "h-full min-h-0 flex-1"
+        )}
+      >
+        {/* Add status bar for WebSocket mode */}
+        {isCollapsed(panelState) && (
+          <div className="sticky top-0 w-full px-4 py-2 border-y border-slate-800 bg-slate-800/25 backdrop-blur-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge
+                className={cn(
+                  "px-2 py-1 rounded-lg",
+                  isConnected
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    : "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                )}
+              >
+                {isConnected ? (
+                  <PlugZap2 className="h-3.5 w-3.5 mr-1.5" />
+                ) : (
+                  <Unplug className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                <span className="text-xs font-medium">
+                  {getStatusMessage()}
+                </span>
+              </Badge>
+            </div>
+
+            {/* Keep the expand/collapse button */}
+            {onPanelStateChange && (
+              <motion.button
+                onClick={onPanelStateChange}
+                className={cn(
+                  "flex items-center gap-2 px-2 py-1",
+                  "bg-slate-700/50 hover:bg-slate-700",
+                  "border border-slate-600/50",
+                  "rounded-lg",
+                  "transition-all duration-200",
+                  "group"
+                )}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <motion.div
+                  animate={{
+                    rotate: panelState === "collapsed" ? 0 : 180,
+                    scale: panelState === "fullscreen" ? 1 : 1,
+                  }}
+                  className="text-slate-400 group-hover:text-slate-200"
+                >
+                  {panelState === "expanded" ? (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  ) : panelState === "fullscreen" ? (
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  )}
+                </motion.div>
+              </motion.button>
+            )}
+          </div>
+        )}
+
         <div
           className={cn(
-            "flex-1 relative",
-            !showContentOnly && "bg-slate-900/90"
+            "flex-1 min-h-0", // Add min-h-0 to allow flex-1 to work properly
+            !showContentOnly && "bg-slate-900/90",
+            panelState === "collapsed" && "hidden"
           )}
         >
           {!showContentOnly && <MessagesTab />}
         </div>
+
+        {/* Floating button when not collapsed */}
+        {onPanelStateChange && !isCollapsed(panelState) && (
+          <motion.button
+            onClick={onPanelStateChange}
+            className={cn(
+              "absolute top-2 right-2 z-50",
+              "flex items-center gap-2 px-2 py-1",
+              "bg-slate-800/90 hover:bg-slate-700",
+              "border border-slate-600/50",
+              "rounded-lg",
+              "transition-all duration-200",
+              "group",
+              "backdrop-blur-sm"
+            )}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <motion.div
+              animate={{
+                rotate: panelState === "collapsed" ? 0 : 180,
+                scale: panelState === "fullscreen" ? 1 : 1,
+              }}
+              className="text-slate-400 group-hover:text-slate-200"
+            >
+              {panelState === "expanded" ? (
+                <Maximize2 className="h-3.5 w-3.5" />
+              ) : panelState === "fullscreen" ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : (
+                <Maximize2 className="h-3.5 w-3.5" />
+              )}
+            </motion.div>
+          </motion.button>
+        )}
       </div>
     );
   }
@@ -582,45 +700,35 @@ export function ResponsePanel({
   const handleSaveRequest = () => {
     if (!response) return;
 
-    // Create event detail with scripts
-    const requestToSave = {
-      method: method,
-      url: url,
-      headers: response?.headers || [],
-      params: [], // Add URL params if available
-      body: { type: "none", content: "" }, // Add actual request body if available
-      auth: { type: "none" }, // Add actual auth if available
-      response: {
-        status: response?.status,
-        body: response?.body,
-        headers: response?.headers,
-        time: response?.time,
-        size: response?.size,
-      },
-      // Use state values for scripts and results
-      preRequestScript: preRequestScript,
-      testScript: testScript,
-      testResults: testResults,
-      scriptLogs: scriptLogs,
-      runConfig: {
-        iterations: 1,
-        delay: 0,
-        parallel: false,
-        environment: null,
-        timeout: 30000,
-        stopOnError: true,
-        retryCount: 0,
-        validateResponse: false,
-      },
-    };
+    const isMobileView = window.innerWidth < 768;
 
-    // Dispatch event with all the data
+    // Dispatch event with all needed data
     window.dispatchEvent(
       new CustomEvent("saveAndShowRequest", {
         detail: {
-          request: requestToSave,
+          request: {
+            method,
+            url,
+            headers: response?.headers || [],
+            params: [],
+            body: { type: "none", content: "" },
+            auth: { type: "none" },
+            response: {
+              status: response?.status,
+              body: response?.body,
+              headers: response?.headers,
+              time: response?.time,
+              size: response?.size,
+            },
+            preRequestScript,
+            testScript,
+            testResults,
+            scriptLogs,
+          },
           showForm: true,
-          isMobile: window.innerWidth < 768,
+          isMobile: isMobileView,
+          openSheet: isMobileView,
+          switchToCollections: true,
         },
       })
     );
@@ -648,48 +756,104 @@ export function ResponsePanel({
     </div>
   );
 
+  const panelSizeClass = useMemo(() => {
+    switch (panelState) {
+      case "collapsed":
+        return "h-10"; // Just show status bar
+      case "fullscreen":
+        return "h-full";
+      default:
+        return "h-full"; // Let parent control height
+    }
+  }, [panelState]);
+
   return (
-    <div className="bg-slate-900 h-full flex flex-col">
+    <div
+      className={cn(
+        "h-full flex flex-col bg-slate-900",
+        // Simplify height classes - let parent control the height
+        panelState === "collapsed" ? "h-10" : "h-full"
+      )}
+    >
       {shouldShowContent ? (
         <>
-          {/* Always show status bar regardless of showContentOnly */}
           {renderStatusBar()}
-          {/* Hide only the content area when collapsed */}
-          {!showContentOnly && (
-            <Tabs defaultValue="response" className="flex-1 flex flex-col">
-              <div className="bg-slate-900 border-b border-slate-700">
-                <div className="flex items-center justify-between">
-                  <TabsList className="h-10 w-auto justify-start rounded-none bg-slate-900 p-0">
-                    {tabs.map((tab) => (
-                      <TabsTrigger
-                        key={tab.id}
-                        value={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className="h-10 rounded-none border-b-4 border-transparent font-medium text-xs text-slate-400 transition-colors px-3 sm:px-4 py-2 data-[state=active]:bg-transparent data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 hover:text-slate-300"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="truncate max-w-[80px] sm:max-w-none">
-                            {tab.label}
-                          </span>
-                        </div>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-
-                  <div className="flex items-center gap-2 px-2 h-10">
-                    {contentType === "json" && activeTab === "response" && (
-                      <div className=" sm:flex items-center gap-2 pr-2 border-r border-slate-700">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setIsPrettyPrint(!isPrettyPrint)}
-                          className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
+          {panelState !== "collapsed" && (
+            <div className="flex-1 min-h-0 flex flex-col">
+              {" "}
+              {/* Add this wrapper */}
+              <Tabs
+                defaultValue="response"
+                className="flex-1 flex flex-col min-h-0"
+              >
+                <div className="bg-slate-900 border-b border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <TabsList className="h-10 w-auto justify-start rounded-none bg-slate-900 p-0">
+                      {tabs.map((tab) => (
+                        <TabsTrigger
+                          key={tab.id}
+                          value={tab.id}
+                          onClick={() => setActiveTab(tab.id)}
+                          className="h-10 rounded-none border-b-4 border-transparent font-medium text-xs text-slate-400 transition-colors px-3 sm:px-4 py-2 data-[state=active]:bg-transparent data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 hover:text-slate-300"
                         >
-                          <WrapTextIcon
-                            className={cn(
-                              "h-4 w-4",
-                              isPrettyPrint && "text-yellow-200"
-                            )}
+                          <div className="flex items-center gap-2">
+                            <span className="truncate max-w-[80px] sm:max-w-none">
+                              {tab.label}
+                            </span>
+                          </div>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+
+                    <div className="flex items-center gap-2 px-2 h-10">
+                      {contentType === "json" && activeTab === "response" && (
+                        <div className=" sm:flex items-center gap-2 pr-2 border-r border-slate-700">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsPrettyPrint(!isPrettyPrint)}
+                            className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
+                          >
+                            <WrapTextIcon
+                              className={cn(
+                                "h-4 w-4",
+                                isPrettyPrint && "text-yellow-200"
+                              )}
+                              strokeWidth={1}
+                              style={{
+                                stroke: "currentColor",
+                                fill: "yellow",
+                                fillOpacity: 0.2,
+                              }}
+                            />
+                          </Button>
+                        </div>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleSaveRequest}
+                        className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
+                      >
+                        <Save
+                          className="h-4 w-4"
+                          strokeWidth={1}
+                          style={{
+                            stroke: "currentColor",
+                            fill: "yellow",
+                            fillOpacity: 0.2,
+                          }}
+                        />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyToClipboard}
+                        className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
+                      >
+                        {copyStatus[activeTab] ? (
+                          <Check
+                            className="h-4 w-4"
                             strokeWidth={1}
                             style={{
                               stroke: "currentColor",
@@ -697,91 +861,85 @@ export function ResponsePanel({
                               fillOpacity: 0.2,
                             }}
                           />
-                        </Button>
-                      </div>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveRequest}
-                      className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
-                    >
-                      <Save
-                        className="h-4 w-4"
-                        strokeWidth={1}
-                        style={{
-                          stroke: "currentColor",
-                          fill: "yellow",
-                          fillOpacity: 0.2,
-                        }}
-                      />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={copyToClipboard}
-                      className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
-                    >
-                      {copyStatus[activeTab] ? (
-                        <Check
-                          className="h-4 w-4"
-                          strokeWidth={1}
-                          style={{
-                            stroke: "currentColor",
-                            fill: "yellow",
-                            fillOpacity: 0.2,
-                          }}
-                        />
-                      ) : (
-                        <Copy
-                          className="h-4 w-4"
-                          strokeWidth={1}
-                          style={{
-                            stroke: "currentColor",
-                            fill: "yellow",
-                            fillOpacity: 0.2,
-                          }}
-                        />
-                      )}
-                    </Button>
+                        ) : (
+                          <Copy
+                            className="h-4 w-4"
+                            strokeWidth={1}
+                            style={{
+                              stroke: "currentColor",
+                              fill: "yellow",
+                              fillOpacity: 0.2,
+                            }}
+                          />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex-1 relative bg-slate-900/50">
-                <TabsContent value="response" className="absolute inset-0 m-0">
-                  {isLoading ? <LoadingDots /> : renderResponseContent()}
-                </TabsContent>
-
-                <TabsContent value="headers" className="absolute inset-0 m-0">
-                  <ScrollArea className="h-full">
-                    <div className="bg-slate-900/50">
-                      {response?.headers &&
-                      Object.keys(response.headers).length > 0 ? (
-                        renderVirtualizedHeaders()
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-32 text-slate-400">
-                          <Database className="h-8 w-8 mb-2 opacity-50" />
-                          <p className="text-xs">No headers available</p>
-                        </div>
-                      )}
+                <div className="flex-1 relative bg-slate-900/50 min-h-0">
+                  {" "}
+                  {/* Add min-h-0 here */}
+                  <TabsContent
+                    value="response"
+                    className="absolute inset-0 m-0"
+                  >
+                    {isLoading ? (
+                      <LoadingDots />
+                    ) : (
+                      <div className="h-full">
+                        <CodeEditor
+                          value={getFormattedContent(
+                            response?.body,
+                            contentType
+                          )}
+                          language={contentType === "json" ? "json" : "text"}
+                          readOnly={true}
+                          onMount={(editor) => {
+                            editorRef.current = editor;
+                            editorInstanceRef.current = editor;
+                          }}
+                        />
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="headers" className="absolute inset-0 m-0">
+                    <ScrollArea className="h-full">
+                      <div className="bg-slate-900/50">
+                        {response?.headers &&
+                        Object.keys(response.headers).length > 0 ? (
+                          renderVirtualizedHeaders()
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-32 text-slate-400">
+                            <Database className="h-8 w-8 mb-2 opacity-50" />
+                            <p className="text-xs">No headers available</p>
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
+                  <TabsContent value="code" className="absolute inset-0 m-0">
+                    <div className="h-full">
+                      <CodeEditor
+                        value={getGeneratedCode()}
+                        language={languageConfigs[selectedLanguage].highlight}
+                        readOnly={true}
+                      />
                     </div>
-                  </ScrollArea>
-                </TabsContent>
-                <TabsContent value="code" className="absolute inset-0 m-0">
-                  <div className="h-full">
-                    <CodeEditor
-                      value={getGeneratedCode()}
-                      language={languageConfigs[selectedLanguage].highlight}
-                      readOnly={true}
-                    />
-                  </div>
-                </TabsContent>
-                <TabsContent value="messages" className="absolute inset-0 m-0">
-                  <MessagesTab />
-                </TabsContent>
-              </div>
-            </Tabs>
+                  </TabsContent>
+                  <TabsContent
+                    value="messages"
+                    className="absolute inset-0 m-0"
+                  >
+                    <div className="h-full">
+                      {" "}
+                      {/* Add wrapper with h-full */}
+                      <MessagesTab />
+                    </div>
+                  </TabsContent>
+                </div>
+              </Tabs>
+            </div>
           )}
         </>
       ) : (
@@ -798,17 +956,3 @@ export function ResponsePanel({
     </div>
   );
 }
-
-// Add to your global CSS or tailwind.config.js
-// @keyframes bounce {
-//   0%, 100% { transform: translateY(0); }
-//   50% { transform: translateY(-10px); }
-// }
-//
-// .animation-delay-150 {
-//   animation-delay: 150ms;
-// }
-//
-// .animation-delay-300 {
-//   animation-delay: 300ms;
-// }
