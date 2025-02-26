@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Info,
   HelpCircle,
+  FileCode,
 } from "lucide-react";
 import {
   Tooltip,
@@ -29,19 +30,19 @@ import {
 const AUTH_TYPES = [
   {
     value: "none",
-    label: "No Auth",
+    label: "None",
     icon: Lock,
     color: "slate",
   },
   {
     value: "bearer",
-    label: "Bearer Token",
+    label: "Bearer",
     icon: ShieldCheck,
     color: "blue",
   },
   {
     value: "basic",
-    label: "Basic Auth",
+    label: "Basic",
     icon: KeyRound,
     color: "green",
   },
@@ -52,6 +53,105 @@ const AUTH_TYPES = [
     color: "purple",
   },
 ] as const;
+
+const AUTH_DOCS: Record<
+  string,
+  {
+    title: string;
+    specs: string[];
+    security: string[];
+    headers: { name: string; value: string; description: string }[];
+  }
+> = {
+  none: {
+    title: "No Authentication",
+    specs: [
+      "RFC 7235: HTTP/1.1 Authentication",
+      "RFC 7231: HTTP Semantics - Section 6.3.1 (401 Unauthorized)",
+      "Best for public APIs and testing endpoints",
+    ],
+    security: [
+      "No security barrier - all requests are anonymous",
+      "Consider rate limiting by IP (RFC 6585 - 429 Too Many Requests)",
+      "Use CORS headers for browser security (RFC 6454)",
+    ],
+    headers: [
+      {
+        name: "WWW-Authenticate",
+        value: "None",
+        description: "Server can still challenge with 401 response",
+      },
+    ],
+  },
+  bearer: {
+    title: "Bearer Token Authentication",
+    specs: [
+      "RFC 6750: OAuth 2.0 Bearer Token Usage",
+      "RFC 8725: JSON Web Token Best Practices",
+      "JWT Profile for OAuth 2.0 Access Tokens",
+    ],
+    security: [
+      "Use HTTPS exclusively (RFC 6750 Section 5.3)",
+      "Validate JWT signature and expiration",
+      "Implement token revocation (RFC 7009)",
+      "Consider refresh token rotation",
+    ],
+    headers: [
+      {
+        name: "Authorization",
+        value: "Bearer <token>",
+        description: "JWT or OAuth2 Bearer token",
+      },
+    ],
+  },
+  basic: {
+    title: "Basic Authentication",
+    specs: [
+      "RFC 7617: The 'Basic' HTTP Authentication Scheme",
+      "RFC 7235: HTTP Authentication Framework",
+      "Base64 encoding (RFC 4648)",
+    ],
+    security: [
+      "MUST use HTTPS (TLS 1.2+)",
+      "Credentials in every request (stateless)",
+      "Base64 is encoding, not encryption",
+      "Consider digest auth for better security",
+    ],
+    headers: [
+      {
+        name: "Authorization",
+        value: "Basic <base64(username:password)>",
+        description: "Credentials encoded in Base64",
+      },
+    ],
+  },
+  apiKey: {
+    title: "API Key Authentication",
+    specs: [
+      "No formal RFC - de facto standard",
+      "OpenAPI 3.0 Security Scheme Object",
+      "RFC 7235 Authentication Framework",
+    ],
+    security: [
+      "Use strong key generation (min 32 bytes)",
+      "Implement key rotation mechanisms",
+      "Rate limiting per API key",
+      "Consider IP restrictions with keys",
+    ],
+    headers: [
+      {
+        name: "X-API-Key",
+        value: "<api-key>",
+        description: "Common header name, can be customized",
+      },
+      {
+        name: "Authorization",
+        value: "ApiKey <api-key>",
+        description: "Alternative Authorization header format",
+      },
+    ],
+  },
+};
 
 interface AuthTabProps {
   auth: {
@@ -102,28 +202,73 @@ const formatAuthPreview = (
 
 export function AuthTab({ auth, onAuthChange }: AuthTabProps) {
   const handleAuthTypeChange = (value: string) => {
-    // Remove default header name initialization
     onAuthChange({ type: value });
   };
 
   const renderAuthInfo = (type: string) => {
-    const infos = {
-      bearer: "Bearer tokens are typically used for OAuth 2.0 authentication",
-      basic: "Basic auth uses username and password encoded in base64",
-      apiKey: "API keys are unique identifiers used to authenticate requests",
-      none: "No authentication will be sent with requests",
-    };
+    const docs = AUTH_DOCS[type];
+    if (!docs) return null;
 
     return (
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-2.5 px-4 py-3 mt-4 bg-slate-900/40 rounded-lg border border-slate-800/60 shadow-sm"
+        className="space-y-3 px-4 py-3 mt-4"
       >
-        <Info className="h-4 w-4 text-blue-400/80" />
-        <span className="text-xs text-slate-400/90">
-          {infos[type as keyof typeof infos]}
-        </span>
+        {/* Specifications */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-300">
+            <Info className="h-3.5 w-3.5 text-blue-400" />
+            <span>Specifications</span>
+          </div>
+          {docs.specs.map((spec, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2 text-[11px] text-slate-300 bg-slate-800/40 px-2 py-1.5 rounded"
+            >
+              <div className="w-1 h-1 rounded-full bg-blue-400 flex-shrink-0" />
+              {spec}
+            </div>
+          ))}
+        </div>
+
+        {/* Security Considerations */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-300">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Security Considerations</span>
+          </div>
+          {docs.security.map((item, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2 text-[11px] text-slate-300 bg-slate-800/40 px-2 py-1.5 rounded"
+            >
+              <div className="w-1 h-1 rounded-full bg-emerald-400 flex-shrink-0" />
+              {item}
+            </div>
+          ))}
+        </div>
+
+        {/* Headers */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-300">
+            <FileCode className="h-3.5 w-3.5 text-purple-400" />
+            <span>Required Headers</span>
+          </div>
+          {docs.headers.map((header, i) => (
+            <div
+              key={i}
+              className="bg-slate-800/40 rounded border border-slate-700/40 text-xs"
+            >
+              <div className="p-2 font-mono text-slate-300 bg-slate-800/60">
+                {header.name}: {header.value}
+              </div>
+              <div className="px-2 py-1.5 text-slate-400 text-[11px]">
+                {header.description}
+              </div>
+            </div>
+          ))}
+        </div>
       </motion.div>
     );
   };
@@ -160,11 +305,7 @@ export function AuthTab({ auth, onAuthChange }: AuthTabProps) {
             className="space-y-3" // Reduced from space-y-5
           >
             <div className="relative bg-slate-900/20 p-4 rounded-lg border border-slate-800/60">
-              {" "}
-              {/* Reduced padding and border radius */}
               <div className="absolute -top-2.5 left-3 px-2 py-0.5 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded border border-blue-400/20">
-                {" "}
-                {/* Smaller label */}
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
                   <span className="text-[11px] font-medium text-blue-400">
@@ -173,8 +314,6 @@ export function AuthTab({ auth, onAuthChange }: AuthTabProps) {
                 </div>
               </div>
               <div className="mt-3">
-                {" "}
-                {/* Reduced top margin */}
                 <div className="relative">
                   <div className="absolute left-3 top-2.5 text-slate-400">
                     <KeyRound className="h-3.5 w-3.5" />
@@ -213,8 +352,6 @@ export function AuthTab({ auth, onAuthChange }: AuthTabProps) {
                 </div>
               </div>
               <div className="mt-3 space-y-2">
-                {" "}
-                {/* Reduced spacing */}
                 <div>
                   <div className="relative">
                     <div className="absolute left-3 top-2.5 text-slate-400">

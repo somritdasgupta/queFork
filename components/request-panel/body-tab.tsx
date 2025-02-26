@@ -57,6 +57,9 @@ const getEditorType = (contentType: ContentType): EditorType => {
     case "multipart/form-data":
       return "form";
     case "application/octet-stream":
+    case "application/xml":
+    case "text/csv":
+    case "text/yaml":
       return "binary";
     case "none":
       return "none";
@@ -100,186 +103,132 @@ const CONTENT_TYPE_TIPS: Record<
   }
 > = {
   none: {
-    title: "Working with URL Parameters",
+    title: "HTTP Methods Without Request Body",
     examples: [
       {
-        code: "GET /api/users?role=admin&status=active",
-        description: "Filter users by role and status",
-      },
-      {
-        code: "GET /api/posts?page=1&limit=10&sort=date",
-        description: "Paginate and sort results",
+        code: "HTTP/1.1 Specification (RFC 7231)",
+        description: "GET, HEAD, DELETE typically don't include request bodies",
       },
     ],
     bestPractices: [
-      "Use clear parameter names that reflect their purpose",
-      "Keep URLs under 2000 characters to ensure compatibility",
-      "URL encode parameter values to handle special characters",
+      "RFC 7231 Section 4.3: GET requests should not alter server state",
+      "Use Link header (RFC 5988) for pagination metadata",
+      "Implement conditional requests using If-Match/If-None-Match headers",
+      "Headers: Cache-Control, ETag, Last-Modified for caching strategies",
     ],
     common: [
       {
-        title: "Authentication",
+        title: "Header-Based Operations",
         description:
-          "Use Authorization header instead of URL parameters for tokens",
+          "Use headers for authentication, caching, and content negotiation",
       },
       {
-        title: "Caching",
-        description:
-          "Include cache-busting parameters when needed (e.g., timestamp)",
+        title: "RFC Specifications",
+        description: "Follow RFC 7231 for HTTP/1.1 semantics and content",
       },
     ],
   },
   json: {
-    title: "Working with JSON Payloads",
+    title: "application/json (RFC 8259)",
     examples: [
       {
-        code: `{
-  "user": {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "roles": ["admin"]
-  }
-}`,
-        description: "Create or update user data",
-      },
-      {
-        code: `{
-  "filters": {
-    "status": ["active", "pending"],
-    "date": { "from": "2024-01-01" }
-  }
-}`,
-        description: "Complex query with nested filters",
+        code: "Content-Type: application/json\nAccept: application/json\nCharset: UTF-8",
+        description: "Required HTTP headers for JSON communication",
       },
     ],
     bestPractices: [
-      "Use camelCase for property names",
-      "Include only necessary fields to reduce payload size",
-      "Validate JSON structure before sending",
+      "RFC 8259: UTF-8 encoding is mandatory for JSON text",
+      "Implement JSON Schema (draft-bhutton-json-schema-00) for validation",
+      "Use HTTP 422 for JSON schema validation failures",
+      "Follow JSON API spec for resource relationships",
+      "Use proper numeric precision (IEEE 754)",
     ],
     common: [
       {
-        title: "Nested Objects",
-        description:
-          "Group related data into nested objects for better organization",
+        title: "Media Type Parameters",
+        description: "application/problem+json for errors (RFC 7807)",
       },
       {
-        title: "Arrays",
-        description:
-          "Use arrays for lists of similar items or batch operations",
+        title: "Security Considerations",
+        description: "Validate JSON depth, avoid eval(), use strict parsing",
       },
     ],
   },
   form: {
-    title: "Working with Form Data",
+    title: "multipart/form-data (RFC 7578)",
     examples: [
       {
-        code: "file: user_avatar.jpg\nname: John Doe\nrole: admin",
-        description: "Upload user profile with avatar",
-      },
-      {
-        code: "files[]: doc1.pdf\nfiles[]: doc2.pdf\ntype: report",
-        description: "Multiple file upload with metadata",
+        code: "Content-Type: multipart/form-data; boundary=--boundary\nContent-Length: [bytes]",
+        description: "RFC 7578 compliant form-data specification",
       },
     ],
     bestPractices: [
-      "Set appropriate enctype for file uploads",
-      "Use array notation [] for multiple files",
-      "Include Content-Disposition headers for files",
+      "Define unique boundary string (RFC 2046)",
+      "Set Content-Disposition headers (RFC 6266)",
+      "Include filename* parameter for UTF-8 filenames",
+      "Handle transfer encoding (RFC 2045 Section 6.7)",
     ],
     common: [
       {
-        title: "File Uploads",
-        description:
-          "Use multipart/form-data for files, x-www-form-urlencoded for simple data",
+        title: "Binary Data Handling",
+        description: "Use base64 encoding for binary parts when needed",
       },
       {
-        title: "Field Names",
-        description:
-          "Use clear, consistent naming for form fields to match backend expectations",
+        title: "Charset Handling",
+        description: "Set explicit charset for text parts (default: US-ASCII)",
       },
     ],
   },
   text: {
-    title: "Working with Text-Based Formats",
+    title: "text/* Media Types (RFC 6838)",
     examples: [
       {
-        code: `<?xml version="1.0" encoding="UTF-8"?>
-<user>
-  <name>John Doe</name>
-  <roles>
-    <role>admin</role>
-  </roles>
-</user>`,
-        description: "XML: User data with nested elements",
-      },
-      {
-        code: `name,email,role
-john,john@example.com,admin
-jane,jane@example.com,user`,
-        description: "CSV: Simple tabular data format",
-      },
-      {
-        code: `user:
-  name: John Doe
-  roles:
-    - admin
-    - editor
-settings:
-  theme: dark`,
-        description: "YAML: Configuration data with nested structure",
+        code: "Content-Type: text/plain; charset=UTF-8\nContent-Language: en-US",
+        description: "Text media type with language specification",
       },
     ],
     bestPractices: [
-      "XML: Use proper entity encoding for special characters",
-      "CSV: Include headers row for self-documenting data",
-      "YAML: Maintain consistent indentation (2 spaces recommended)",
-      "Set correct Content-Type header for server processing",
-      "Validate document structure before sending",
+      "Always specify charset parameter (RFC 6657)",
+      "Consider Content-Language header (RFC 3282)",
+      "Use proper line endings (CRLF as per RFC 2046)",
+      "Implement content negotiation (RFC 7231 Section 5.3)",
     ],
     common: [
       {
-        title: "XML Documents",
+        title: "Subtypes",
         description:
-          "Use namespaces to avoid element name conflicts, include XML declaration",
+          "text/plain (RFC 2046), text/csv (RFC 4180), text/xml (RFC 7303)",
       },
       {
-        title: "CSV Data",
-        description:
-          "Quote fields containing commas, specify delimiter in Content-Type if not comma",
-      },
-      {
-        title: "YAML Config",
-        description:
-          "Avoid tabs, use --- to separate documents, anchor refs with & and *",
+        title: "Encoding Considerations",
+        description: "7bit, 8bit, or binary transfer encoding (RFC 2045)",
       },
     ],
   },
   binary: {
-    title: "Working with Binary Data",
+    title: "Binary Content Types (RFC 6838)",
     examples: [
       {
-        code: "Content-Type: application/pdf\nContent-Length: 1048576",
-        description: "Upload PDF document",
-      },
-      {
-        code: "Content-Type: image/jpeg\nContent-Length: 524288",
-        description: "Upload JPEG image",
+        code: "Content-Type: application/octet-stream\nContent-Transfer-Encoding: binary",
+        description: "Binary data transfer specification",
       },
     ],
     bestPractices: [
-      "Set accurate Content-Type header",
-      "Include Content-Length for better upload handling",
-      "Consider chunked transfer for large files",
+      "Implement Content-Range for partial transfers (RFC 7233)",
+      "Set explicit Content-Length for non-chunked transfers",
+      "Use appropriate transfer encoding (RFC 2045)",
+      "Implement resume capabilities with Range header",
     ],
     common: [
       {
-        title: "File Types",
-        description: "Verify file type matches Content-Type header",
+        title: "Transfer Mechanisms",
+        description:
+          "Chunked transfer-encoding, content-length, or close connection",
       },
       {
-        title: "Size Limits",
-        description: "Check server upload limits before sending large files",
+        title: "Media Type Selection",
+        description:
+          "Use specific types over octet-stream when known (RFC 6838)",
       },
     ],
   },
@@ -479,7 +428,9 @@ export function BodyTab({
                 </div>
                 <div className="flex items-center gap-1.5 rounded-md bg-slate-800 px-2 py-1">
                   <span className="text-xs text-slate-400">
-                  {navigator.platform.toLowerCase().includes('mac') ? '⌘K' : 'Ctrl+K'}
+                    {navigator.platform.toLowerCase().includes("mac")
+                      ? "⌘K"
+                      : "Ctrl+K"}
                   </span>
                 </div>
               </div>
@@ -488,7 +439,7 @@ export function BodyTab({
           <DropdownMenuContent
             align="start"
             side="bottom"
-            className="w-screen sm:w-[75vw] bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 shadow-lg rounded-none border-2 border-slate-700 overflow-hidden"
+            className="w-screen sm:w-[75vw] bg-slate-900 border-2 border-slate-700/70 shadow-lg rounded-none overflow-hidden z-50"
           >
             <div className="p-1 flex flex-wrap gap-1">
               {contentTypeOptions.data.map((option) => (
@@ -496,10 +447,10 @@ export function BodyTab({
                   key={option.value}
                   onClick={() => handleContentTypeChange(option.value)}
                   className={cn(
-                  "flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs flex-1",
-                  option.value === selectedContentType
-                  ? "bg-blue-500/10 hover:bg-slate-800 text-blue-400"
-                  : "text-slate-300 hover:bg-slate-800"
+                    "flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs flex-1",
+                    option.value === selectedContentType
+                      ? "bg-blue-500/10 hover:bg-slate-800 text-blue-400"
+                      : "text-slate-300 hover:bg-slate-800"
                   )}
                 >
                   <div className="w-3.5 h-3.5">
@@ -815,7 +766,7 @@ export function BodyTab({
             </div>
 
             {/* Examples and Best Practices in Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-3">
               {/* Examples */}
               <div className="space-y-2">
                 {CONTENT_TYPE_TIPS[

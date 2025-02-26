@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/request-panel/shared/code-editor";
 import {
-  SquareFunctionIcon,
   Eraser,
   CheckCircle,
   Info,
@@ -23,7 +22,6 @@ export function PreRequestTab({ script, logs, onChange }: PreRequestTabProps) {
   const handleScriptChange = useCallback(
     (value: string | undefined) => {
       try {
-        // Basic JS syntax validation
         new Function(value || "");
         setIsValidScript(true);
         setScriptError(null);

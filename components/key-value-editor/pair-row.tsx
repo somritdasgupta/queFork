@@ -5,7 +5,7 @@ import { ActionButton } from "./ui-components";
 import { Key, Type, AlignLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STYLES } from "./constants";
-import { NavigableElement } from "../keyboard-navigation";
+import { NavigableElement } from "../keyboard-navigation/keyboard-navigation";
 import { SortablePair } from "./types";
 
 interface PairRowProps {

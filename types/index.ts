@@ -11,8 +11,6 @@ export interface KeyValuePair {
     type?: string;
   };
 }
-
-// Add new interface for environment save event
 export interface EnvironmentSaveEvent extends CustomEvent {
   detail: {
     key: string;
@@ -34,14 +32,15 @@ export interface EnvironmentSaveActionEvent extends CustomEvent {
 }
 
 export type ContentType =
+  | "none"
   | "application/json"
   | "multipart/form-data"
+  | "application/x-www-form-urlencoded"
   | "text/plain"
   | "application/octet-stream"
   | "application/xml"
   | "text/csv"
-  | "text/yaml"
-  | "none";
+  | "text/yaml";
 
 export interface RequestBody {
   type: ContentType;

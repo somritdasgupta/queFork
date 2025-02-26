@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { EnvironmentSelector } from "@/components/environment-selector";
-import { UrlBar } from "@/components/url-bar";
-import { Environment, SidePanelProps } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Layers } from "lucide-react";
 import SidePanel from "./side-panel";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Environment, SidePanelProps } from "@/types";
+import { UrlBar } from "./url-bar";
+import { MethodSelector } from "./url-bar/method-selector";
+import { ActionButton } from "./url-bar/action-button";
 
 type PanelType = "tabs" | "collections" | "history" | "environments";
 
@@ -37,7 +39,7 @@ export function MobileHeader({
     const handleSaveRequest = (e: CustomEvent) => {
       if (e.detail.openSheet && e.detail.isMobile) {
         setIsOpen(true);
-        setCurrentPanel("collections"); // Set the active panel to collections
+        setCurrentPanel("collections");
       }
     };
 
@@ -60,60 +62,75 @@ export function MobileHeader({
   return (
     <>
       <div className="w-full flex flex-col items-stretch gap-2 px-4 py-2">
-        <div className="flex gap-2">
-          <div className="flex items-center gap-2 w-full">
-            {hasExtension && (
-                <button
-                onClick={toggleInterceptor}
-                className={`hidden md:flex h-8 w-8 items-center justify-center rounded-lg transition-colors border ${
-                  interceptorEnabled
-                  ? "bg-slate-900 hover:border-blue-900 border-slate-800 border-2 text-slate-300"
-                  : "bg-slate-900 hover:border-blue-900 border-slate-800 border-2 text-slate-500"
-                }`}
-                title={`Interceptor ${interceptorEnabled ? "enabled" : "disabled"}`}
-                >
-                <img
-                  src="/icons/icon192.png"
-                  alt="queFork"
-                  className={`w-6 h-6 transition-all flex items-center justify-center ${
-                  interceptorEnabled
-                    ? "opacity-100 animate-pulse duration-1200 easeIn"
-                    : "opacity-100 grayscale"
-                  }`}
-                />
-                </button>
-            )}
-            <div className="flex-1">
-              <EnvironmentSelector
-                environments={environments}
-                currentEnvironment={currentEnvironment}
-                onEnvironmentChange={onEnvironmentChange}
-                hasExtension={hasExtension}
-                interceptorEnabled={interceptorEnabled}
-                className="h-8 w-full bg-slate-900 hover:bg-slate-800 border-2 border-slate-800
-                  text-slate-300 rounded-lg transition-colors"
-              />
-            </div>
-            <Button
-              variant="default"
-              size="icon"
-              onClick={handleOpenPanel}
-              className="w-8 h-8 border-2 border-slate-800 bg-slate-900 hover:bg-slate-800 transition-colors rounded-lg flex items-center justify-center"
-            >
-              <Layers
-                className="h-4 w-4"
-                strokeWidth={1}
-                style={{
-                  stroke: "white",
-                  fill: "yellow",
-                  fillOpacity: 0.25,
-                }}
-              />
-            </Button>
+        {/* First Row: URL Bar + Action Button */}
+        <div className="w-full flex items-center gap-2">
+          <div className="flex-1">
+            <UrlBar
+              {...urlBarProps}
+              isMobile={true}
+              hideMethodSelector={true}
+              onStateUpdate={(updates) => {
+                // Handle WebSocket mode updates
+                if (updates.isWebSocketMode !== undefined) {
+                  urlBarProps.onWebSocketToggle();
+                }
+              }}
+            />
           </div>
+          <ActionButton
+            urlType={urlBarProps.isWebSocketMode ? "websocket" : "http"}
+            isConnected={urlBarProps.wsState?.isConnected}
+            connectionStatus={urlBarProps.wsState?.connectionStatus}
+            isLoading={urlBarProps.isLoading}
+            isValidUrl={true}
+            url={urlBarProps.url}
+            onConnect={urlBarProps.onConnect}
+            onDisconnect={urlBarProps.onDisconnect}
+            onWebSocketAction={
+              urlBarProps.wsState?.isConnected
+                ? () => urlBarProps.onDisconnect?.()
+                : () => urlBarProps.onConnect?.()
+            }
+            onSendRequest={urlBarProps.onSendRequest}
+          />
         </div>
-        <div className="w-full flex gap-2">
-          <UrlBar {...urlBarProps} />
+
+        {/* Second Row: Method, Environment, Layers */}
+        <div className="flex items-center gap-2">
+          <MethodSelector
+            method={urlBarProps.method}
+            onMethodChange={urlBarProps.onMethodChange}
+            isMobile={true}
+            isWebSocketMode={urlBarProps.isWebSocketMode}
+          />
+          <div className="flex-1">
+            <EnvironmentSelector
+              environments={environments}
+              currentEnvironment={currentEnvironment}
+              onEnvironmentChange={onEnvironmentChange}
+              hasExtension={hasExtension}
+              interceptorEnabled={interceptorEnabled}
+              className="h-8 w-full bg-slate-900 hover:bg-slate-800 border-2 border-slate-800
+                text-slate-300 rounded-lg transition-colors"
+            />
+          </div>
+          <Button
+            variant="default"
+            size="icon"
+            onClick={handleOpenPanel}
+            className="w-16 h-8 border-2 border-slate-800 bg-slate-900 hover:bg-slate-800 
+              transition-colors rounded-lg flex items-center justify-center"
+          >
+            <Layers
+              className="h-4 w-4"
+              strokeWidth={1}
+              style={{
+                stroke: "white",
+                fill: "yellow",
+                fillOpacity: 0.25,
+              }}
+            />
+          </Button>
         </div>
       </div>
 

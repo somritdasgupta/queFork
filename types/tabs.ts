@@ -1,7 +1,6 @@
 import { KeyValuePair, RequestBody, WebSocketMessage } from ".";
 import { ReactNode } from "react";
 
-// Add TabItem interface
 export interface TabItem {
   id: string;
   label: string;

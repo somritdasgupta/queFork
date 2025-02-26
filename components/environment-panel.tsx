@@ -34,7 +34,10 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
+import {
+  NavigableElement,
+  useKeyboardNavigation,
+} from "./keyboard-navigation/keyboard-navigation";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 

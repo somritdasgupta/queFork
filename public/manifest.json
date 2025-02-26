@@ -1,7 +1,7 @@
 {
-  "name": "queFork / API Testing",
+  "name": "queFork",
   "short_name": "queFork",
-  "description": "A modern, open-source API testing tool for developers",
+  "description": "Restaurant Queue Management System",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -17,5 +17,13 @@
       "platform": "wide",
       "label": "queFork interface"
     }
-  ]
+  ],
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "offline_enabled": true
 }

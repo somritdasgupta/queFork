@@ -2,7 +2,10 @@ import React, { useRef, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NavigableElement, NavigableElementType } from "../keyboard-navigation";
+import {
+  NavigableElement,
+  NavigableElementType,
+} from "../keyboard-navigation/keyboard-navigation";
 import { STYLES } from "./constants";
 import { useDebouncedEffect } from "@/hooks/use-debounced-effect";
 

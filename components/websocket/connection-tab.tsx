@@ -144,7 +144,7 @@ export function ConnectionTab() {
       value: `${rates.messagesPerMinute}/min`,
       subValue: `${(stats.messagesSent + stats.messagesReceived).toLocaleString()} total`,
       icon: <Activity className="h-3.5 w-3.5" />,
-      color: "blue",
+      color: "orange",
     },
     {
       title: "Sent",
@@ -158,7 +158,7 @@ export function ConnectionTab() {
       value: stats.messagesReceived.toLocaleString(),
       subValue: `${rates.receivedRate}/min`,
       icon: <ArrowDownCircle className="h-3.5 w-3.5" />,
-      color: "purple",
+      color: "blue",
     },
   ];
 
@@ -173,7 +173,7 @@ export function ConnectionTab() {
       label: "Data",
       value: formatBytes(stats.bytesTransferred),
       icon: <Database className="h-3.5 w-3.5" />,
-      color: "cyan",
+      color: "orange",
     },
   ];
 

@@ -1,9 +1,10 @@
 import React, {
   useState,
-  useMemo,
-  useEffect,
+  useContext,
   useRef,
+  useMemo,
   useCallback,
+  useEffect,
 } from "react";
 import "highlight.js/styles/github-dark.css";
 import { languageConfigs, type CodeGenLanguage } from "@/utils/code-generators";
@@ -39,15 +40,15 @@ import { useTheme } from "next-themes";
 import type { editor } from "monaco-editor";
 import { motion } from "framer-motion";
 import { CodeEditor } from "@/components/request-panel/shared/code-editor";
-import { useWebSocket } from "@/components/websocket/websocket-context"; // Change import path
-import { PanelState } from "@/types/panel"; // Add this import
+import { useWebSocket } from "@/components/websocket/websocket-context";
+import { PanelState } from "@/types/panel";
 
 interface TabItem {
   id: string;
   label: string | React.ReactNode;
   icon?: React.ReactNode;
   disabled?: boolean;
-  dropdown?: React.ReactNode; // Dropdown property
+  dropdown?: React.ReactNode;
 }
 
 interface RequestResponse {
@@ -73,7 +74,7 @@ interface ResponsePanelProps {
   url: string;
   isWebSocketMode: boolean;
   onPanelStateChange?: () => void;
-  panelState?: PanelState; // Update type
+  panelState?: PanelState;
   showContentOnly?: boolean;
   isOverlay?: boolean;
   preserveStatusBar?: boolean;
@@ -85,7 +86,7 @@ const LoadingDots = () => (
     <div className="flex space-x-2">
       {[1, 2, 3].map((i) => (
         <div
-          key={`loading-dot-${i}`} // More unique key to avoid conflicts
+          key={`loading-dot-${i}`}
           className={cn(
             "w-3 h-3 bg-slate-600 rounded-full",
             "animate-bounce",
@@ -182,6 +183,21 @@ const isCollapsed = (state?: PanelState): boolean => state === "collapsed";
 const isFullscreen = (state?: PanelState): boolean => state === "fullscreen";
 const isExpanded = (state?: PanelState): boolean => state === "expanded";
 
+// Add this function at the top level, before the ResponsePanel component
+const getFormattedContent = (content: any, contentType: string): string => {
+  if (!content) return "";
+  try {
+    if (contentType === "json") {
+      const jsonString =
+        typeof content === "string" ? content : JSON.stringify(content);
+      return JSON.stringify(JSON.parse(jsonString), null, 2);
+    }
+    return typeof content === "string" ? content : JSON.stringify(content);
+  } catch (e) {
+    return typeof content === "string" ? content : JSON.stringify(content);
+  }
+};
+
 export function ResponsePanel({
   response,
   isLoading,
@@ -200,25 +216,6 @@ export function ResponsePanel({
   isOverlay?: boolean;
   preserveStatusBar?: boolean;
 }) {
-  // Move the helper function to the top
-  const getFormattedContent = (content: any, contentType: string): string => {
-    if (!content) return "";
-
-    try {
-      if (contentType === "json") {
-        const jsonString =
-          typeof content === "string" ? content : JSON.stringify(content);
-        return isPrettyPrint
-          ? JSON.stringify(JSON.parse(jsonString), null, 2)
-          : jsonString.replace(/\s+/g, "");
-      }
-
-      return typeof content === "string" ? content : JSON.stringify(content);
-    } catch (e) {
-      return typeof content === "string" ? content : JSON.stringify(content);
-    }
-  };
-
   // 1. All useState hooks
   const [activeTab, setActiveTab] = useState("response");
   const [isPrettyPrint, setIsPrettyPrint] = useState(true);
@@ -265,7 +262,7 @@ export function ResponsePanel({
         icon: (
           <List
             className="h-4 w-4"
-            strokeWidth={1}
+            strokeWidth={2}
             style={{
               stroke: "currentColor",
               fill: "yellow",
@@ -589,7 +586,7 @@ export function ResponsePanel({
 
         <div
           className={cn(
-            "flex-1 min-h-0", // Add min-h-0 to allow flex-1 to work properly
+            "flex-1 min-h-0",
             !showContentOnly && "bg-slate-900/90",
             panelState === "collapsed" && "hidden"
           )}
@@ -743,7 +740,7 @@ export function ResponsePanel({
           <LoadingDots />
         ) : (
           <CodeEditor
-            value={getFormattedContent(response?.body, contentType)}
+            value={formattedContent}
             language={contentType === "json" ? "json" : "text"}
             readOnly={true}
             onMount={(editor) => {
@@ -807,24 +804,26 @@ export function ResponsePanel({
 
                     <div className="flex items-center gap-2 px-2 h-10">
                       {contentType === "json" && activeTab === "response" && (
-                        <div className=" sm:flex items-center gap-2 pr-2 border-r border-slate-700">
+                        <div className="sm:flex items-center gap-2 pr-2 border-r border-slate-700">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setIsPrettyPrint(!isPrettyPrint)}
-                            className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
+                            className={cn(
+                              "h-7 w-7 p-0",
+                              "hover:bg-slate-700/50 hover:text-slate-200",
+                              "active:bg-slate-600/50",
+                              "transition-colors"
+                            )}
                           >
                             <WrapTextIcon
                               className={cn(
                                 "h-4 w-4",
-                                isPrettyPrint && "text-yellow-200"
+                                isPrettyPrint
+                                  ? "text-blue-400"
+                                  : "text-slate-400"
                               )}
-                              strokeWidth={1}
-                              style={{
-                                stroke: "currentColor",
-                                fill: "yellow",
-                                fillOpacity: 0.2,
-                              }}
+                              strokeWidth={2}
                             />
                           </Button>
                         </div>
@@ -833,43 +832,38 @@ export function ResponsePanel({
                         variant="ghost"
                         size="sm"
                         onClick={handleSaveRequest}
-                        className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
+                        className={cn(
+                          "h-7 w-7 p-0",
+                          "hover:bg-slate-700/50 hover:text-slate-200",
+                          "active:bg-slate-600/50",
+                          "transition-colors"
+                        )}
                       >
                         <Save
-                          className="h-4 w-4"
-                          strokeWidth={1}
-                          style={{
-                            stroke: "currentColor",
-                            fill: "yellow",
-                            fillOpacity: 0.2,
-                          }}
+                          className="h-4 w-4 text-slate-400"
+                          strokeWidth={2}
                         />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={copyToClipboard}
-                        className="h-7 w-7 p-0 hover:bg-transparent active:bg-transparent"
+                        className={cn(
+                          "h-7 w-7 p-0",
+                          "hover:bg-slate-700/50 hover:text-slate-200",
+                          "active:bg-slate-600/50",
+                          "transition-colors"
+                        )}
                       >
                         {copyStatus[activeTab] ? (
                           <Check
-                            className="h-4 w-4"
-                            strokeWidth={1}
-                            style={{
-                              stroke: "currentColor",
-                              fill: "yellow",
-                              fillOpacity: 0.2,
-                            }}
+                            className="h-4 w-4 text-emerald-400"
+                            strokeWidth={2}
                           />
                         ) : (
                           <Copy
-                            className="h-4 w-4"
-                            strokeWidth={1}
-                            style={{
-                              stroke: "currentColor",
-                              fill: "yellow",
-                              fillOpacity: 0.2,
-                            }}
+                            className="h-4 w-4 text-slate-400"
+                            strokeWidth={2}
                           />
                         )}
                       </Button>
@@ -889,10 +883,7 @@ export function ResponsePanel({
                     ) : (
                       <div className="h-full">
                         <CodeEditor
-                          value={getFormattedContent(
-                            response?.body,
-                            contentType
-                          )}
+                          value={formattedContent}
                           language={contentType === "json" ? "json" : "text"}
                           readOnly={true}
                           onMount={(editor) => {

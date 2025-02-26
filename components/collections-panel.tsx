@@ -34,7 +34,10 @@ import { Collection, SavedRequest, ImportSource } from "@/types";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { cn } from "@/lib/utils";
-import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
+import {
+  NavigableElement,
+  useKeyboardNavigation,
+} from "./keyboard-navigation/keyboard-navigation";
 import dynamic from "next/dynamic";
 
 // Dynamic import for components that need to be client-side only

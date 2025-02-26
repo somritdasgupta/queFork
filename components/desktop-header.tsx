@@ -2,6 +2,8 @@ import React from "react";
 import { EnvironmentSelector } from "@/components/environment-selector";
 import { UrlBar } from "@/components/url-bar";
 import { Environment } from "@/types";
+import { ActionButton } from "./url-bar/action-button";
+import { MethodSelector } from "./url-bar/method-selector";
 
 interface DesktopHeaderProps {
   hasExtension: boolean;
@@ -61,7 +63,29 @@ export function DesktopHeader({
         </div>
       </div>
       <div className="w-full flex flex-1 gap-2">
+        <MethodSelector
+          method={urlBarProps.method}
+          onMethodChange={urlBarProps.onMethodChange}
+          isMobile={false}
+          isWebSocketMode={urlBarProps.isWebSocketMode}
+        />
         <UrlBar {...urlBarProps} />
+        <ActionButton
+          urlType={urlBarProps.isWebSocketMode ? "websocket" : "http"}
+          isConnected={urlBarProps.wsState?.isConnected}
+          connectionStatus={urlBarProps.wsState?.connectionStatus}
+          isLoading={urlBarProps.isLoading}
+          isValidUrl={true}
+          url={urlBarProps.url}
+          onConnect={urlBarProps.onConnect}
+          onDisconnect={urlBarProps.onDisconnect}
+          onWebSocketAction={
+            urlBarProps.wsState?.isConnected
+              ? () => urlBarProps.onDisconnect?.()
+              : () => urlBarProps.onConnect?.()
+          }
+          onSendRequest={urlBarProps.onSendRequest}
+        />
       </div>
     </div>
   );

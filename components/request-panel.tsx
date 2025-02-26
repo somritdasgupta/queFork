@@ -4,7 +4,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWebSocket } from "./websocket/websocket-context";
-import { PlugZap2 } from "lucide-react";
 import { ConnectionTab } from "./websocket/connection-tab";
 import { QueryTab } from "./request-panel/query-tab";
 import { HeadersTab } from "./request-panel/headers-tab";

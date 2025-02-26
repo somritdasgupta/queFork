@@ -2,9 +2,10 @@ import "@/styles/globals.css";
 import { Inter } from "next/font/google";
 import { WebSocketWrapper } from "@/components/websocket/websocket-wrapper";
 import { Preloader } from "@/components/preloader";
-import { ServiceWorkerRegistration } from "./components/ServiceWorkerRegistration";
 import type { Metadata, Viewport } from "next";
 import { ConnectionLostBackdrop } from "./components/ConnectionLostBackdrop";
+import { Toaster } from "sonner";
+import { ServiceWorkerProvider } from "./components/ServiceWorkerRegistration";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -159,17 +160,18 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} antialiased prevent-elastic`}
+        className={`${inter.className} antialiased overflow-hidden`}
         suppressHydrationWarning
       >
-        <div id="root" className="prevent-elastic" suppressHydrationWarning>
-          <ServiceWorkerRegistration />
+        <div id="root" className="overflow-hidden" suppressHydrationWarning>
+          <ServiceWorkerProvider />
           <Preloader />
-          <div className="contents animate-unblur">
+          <div className="contents animate-[unblur_200ms_ease-in]">
             <WebSocketWrapper>{children}</WebSocketWrapper>
           </div>
           <ConnectionLostBackdrop />
         </div>
+        <Toaster position="top-center" theme="dark" closeButton richColors />
       </body>
     </html>
   );

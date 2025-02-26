@@ -918,7 +918,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     onParamsChange,
     onBodyChange,
     onAuthChange,
-    isWebSocketMode: tabState.isWebSocketMode ?? false, 
+    isWebSocketMode: tabState.isWebSocketMode ?? false,
     environments,
     currentEnvironment,
     onEnvironmentChange: handleEnvironmentChange,
@@ -953,8 +953,8 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     method: tabState.method || "GET",
     url: tabState.url || "",
     isWebSocketMode: tabState.isWebSocketMode ?? false,
-    panelState, 
-    onPanelStateChange: handlePanelStateChange, 
+    panelState,
+    onPanelStateChange: handlePanelStateChange,
   };
 
   // Define mobile nav props
@@ -1052,11 +1052,17 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     return () => clearTimeout(timeoutId);
   }, [recentUrls]);
 
+  const webSocket = useWebSocket();
+
   const urlBarProps = {
     method: tabState.method || "GET",
     url: tabState.url || "",
     isLoading: tabState.isLoading ?? false,
-    wsState: tabState.wsState, // Pass tab-specific WebSocket state
+    wsState: {
+      isConnected: webSocket.isConnected,
+      connectionStatus: webSocket.connectionStatus,
+      messages: webSocket.messages,
+    },
     isWebSocketMode: tabState.isWebSocketMode ?? false,
     variables: mergedEnvironmentVariables.map((v) => ({
       key: v.key,
@@ -1080,6 +1086,19 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
             }
           : undefined,
       });
+    },
+    onConnect: () => {
+      if (tabState.isWebSocketMode && tabState.url) {
+        // First update the WebSocket URL
+        webSocket.onUrlChange(tabState.url);
+        // Then initiate the connection
+        setTimeout(() => webSocket.connect(), 0);
+      }
+    },
+    onDisconnect: () => {
+      if (tabState.isWebSocketMode && webSocket.isConnected) {
+        webSocket.disconnect();
+      }
     },
     hasExtension,
     interceptorEnabled,
@@ -1227,12 +1246,12 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
                 {/* Request Panel */}
                 <div
                   className={cn(
-                    "min-h-0", 
+                    "min-h-0",
                     panelState === "collapsed"
                       ? "flex-grow"
                       : panelState === "fullscreen"
                         ? "h-0"
-                        : "flex-1" 
+                        : "flex-1"
                   )}
                 >
                   <Suspense
@@ -1245,7 +1264,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
                 {(tabState.response || tabState.isWebSocketMode) && (
                   <div
                     className={cn(
-                      "border-t border-slate-800 min-h-0", 
+                      "border-t border-slate-800 min-h-0",
                       panelState === "collapsed"
                         ? "h-10"
                         : panelState === "fullscreen"

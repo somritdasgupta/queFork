@@ -42,19 +42,22 @@ import {
   CircleArrowOutUpRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NavigableElement, useKeyboardNavigation } from "./keyboard-navigation";
-import { BulkEditor } from "./editor/bulk-editor";
-import { EditorToolbar } from "./editor/editor-toolbar";
+import {
+  NavigableElement,
+  useKeyboardNavigation,
+} from "./keyboard-navigation/keyboard-navigation";
+import { BulkEditor } from "./key-value-editor/bulk-editor";
+import { EditorToolbar } from "./key-value-editor/editor-toolbar";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
 } from "@radix-ui/react-popover";
-import { STYLES, createEmptyPair, utils } from "./editor/constants";
-import { ActionButton, VirtualItem } from "./editor/ui-components";
-import { EnvironmentForm } from "./editor/environment-form";
-import { KeyValueInput } from "./editor/key-value-input";
-import { SortableItem } from "./editor/sortable-item";
+import { STYLES, createEmptyPair, utils } from "./key-value-editor/constants";
+import { ActionButton, VirtualItem } from "./key-value-editor/ui-components";
+import { EnvironmentForm } from "./key-value-editor/environment-form";
+import { KeyValueInput } from "./key-value-editor/key-value-input";
+import { SortableItem } from "./key-value-editor/sortable-item";
 
 // Client-only DnD components
 const DndContextClient = dynamic(

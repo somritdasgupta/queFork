@@ -449,17 +449,35 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         return;
       }
 
-      // Clear previous messages and stats only when making a new connection
-      setMessages([]);
-      resetStats();
+      try {
+        // Add URL validation
+        if (!url.startsWith("ws://") && !url.startsWith("wss://")) {
+          toast.error("Invalid WebSocket URL. Must start with ws:// or wss://");
+          return;
+        }
 
-      if (wsRef.current) {
-        disconnect();
+        // Set connecting state first
+        setConnectionStatus("connecting");
+
+        // Clear previous messages and stats only when making a new connection
+        setMessages([]);
+        resetStats();
+
+        // Always disconnect existing connection first
+        if (wsRef.current) {
+          wsRef.current.close();
+          wsRef.current = null;
+        }
+
+        // Initialize new connection
+        initializeNewConnection(url, protocols);
+      } catch (error) {
+        console.error("Connection error:", error);
+        setConnectionStatus("error");
+        toast.error("Failed to establish connection");
       }
-
-      initializeNewConnection(url, protocols);
     },
-    [url, disconnect]
+    [url]
   );
 
   const checkLatency = useCallback(() => {
@@ -505,19 +523,17 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         return;
       }
 
-      if (newUrl !== url) {
-        resetStats();
-        // Ensure proper WebSocket URL format
-        const formattedUrl =
-          newUrl.startsWith("ws://") || newUrl.startsWith("wss://")
-            ? newUrl
-            : newUrl.startsWith("http://") || newUrl.startsWith("https://")
-              ? newUrl.replace(/^http/, "ws")
-              : `ws://${newUrl}`;
-        setUrl(formattedUrl);
-      }
+      // Ensure proper WebSocket URL format
+      const formattedUrl =
+        newUrl.startsWith("ws://") || newUrl.startsWith("wss://")
+          ? newUrl
+          : newUrl.startsWith("http://") || newUrl.startsWith("https://")
+            ? newUrl.replace(/^http/, "ws")
+            : `ws://${newUrl}`;
+
+      setUrl(formattedUrl);
     },
-    [url, isConnected]
+    [isConnected]
   );
 
   const handleHistorySelect = useCallback(

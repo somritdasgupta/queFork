@@ -59,7 +59,7 @@ interface OpenAPIRequestDetails {
   description?: string;
   requestBody?: {
     content: {
-      'application/json'?: {
+      "application/json"?: {
         schema: any;
       };
     };
@@ -70,140 +70,167 @@ export async function importFromUrl(url: string): Promise<Collection[]> {
   try {
     const response = await fetch(url);
     const data = await response.json();
-    
+
     if (data.openapi || data.swagger) {
       return convertOpenAPIToCollections(data);
-    } else if (data.info?.schema?.includes('postman')) {
+    } else if (data.info?.schema?.includes("postman")) {
       return convertPostmanToCollections(data);
     } else if (data._type === "hoppscotch") {
       return convertHoppscotchToCollections(data);
     }
-    
-    throw new Error('Unsupported format');
+
+    throw new Error("Unsupported format");
   } catch (error) {
-    console.error('Import error:', error);
-    throw new Error('Failed to import collection');
+    console.error("Import error:", error);
+    throw new Error("Failed to import collection");
   }
 }
 
-export function parseImportData(source: ImportSource, data: string): Collection[] {
+export function parseImportData(
+  source: ImportSource,
+  data: string
+): Collection[] {
   try {
     const parsed = JSON.parse(data);
-    
+
     // Handle different collection formats
     if (parsed._type === "hoppscotch") {
       return convertHoppscotchToCollections(parsed);
-    } 
-    
-    if (parsed.info?.schema?.includes('postman')) {
+    }
+
+    if (parsed.info?.schema?.includes("postman")) {
       return convertPostmanToCollections(parsed);
-    } 
-    
+    }
+
     if (parsed.openapi || parsed.swagger) {
       return convertOpenAPIToCollections(parsed);
-    } 
-    
+    }
+
     if (Array.isArray(parsed)) {
       // Handle array of requests
-      return [{
-        id: uuidv4(),
-        name: 'Imported Requests',
-        requests: parsed.map(convertGenericRequest),
-        lastModified: new Date().toISOString()
-      }];
+      return [
+        {
+          id: uuidv4(),
+          name: "Imported Requests",
+          requests: parsed.map(convertGenericRequest),
+          lastModified: new Date().toISOString(),
+        },
+      ];
     }
-    
+
     if (parsed.requests && Array.isArray(parsed.requests)) {
       // Handle generic collection format
-      return [{
-        id: uuidv4(),
-        name: parsed.name || 'Imported Collection',
-        description: parsed.description,
-        apiVersion: parsed.version,
-        requests: parsed.requests.map(convertGenericRequest),
-        lastModified: new Date().toISOString()
-      }];
+      return [
+        {
+          id: uuidv4(),
+          name: parsed.name || "Imported Collection",
+          description: parsed.description,
+          apiVersion: parsed.version,
+          requests: parsed.requests.map(convertGenericRequest),
+          lastModified: new Date().toISOString(),
+        },
+      ];
     }
-    
-    throw new Error('Unsupported collection format');
+
+    throw new Error("Unsupported collection format");
   } catch (error) {
-    console.error('Parse error:', error);
-    throw new Error('Failed to parse import data');
+    console.error("Parse error:", error);
+    throw new Error("Failed to parse import data");
   }
 }
 
 function convertPostmanToCollections(data: PostmanCollection): Collection[] {
-  return [{
-    id: uuidv4(),
-    name: data.info.name,
-    description: data.info.description,
-    requests: data.item.map(item => convertPostmanRequest(item)),
-    lastModified: new Date().toISOString()
-  }];
+  return [
+    {
+      id: uuidv4(),
+      name: data.info.name,
+      description: data.info.description,
+      requests: data.item.map((item) => convertPostmanRequest(item)),
+      lastModified: new Date().toISOString(),
+    },
+  ];
 }
 
 function convertPostmanRequest(item: PostmanRequest): SavedRequest {
-  const url = typeof item.request.url === 'string' ? 
-    item.request.url : 
-    item.request.url.raw;
+  const url =
+    typeof item.request.url === "string"
+      ? item.request.url
+      : item.request.url.raw;
 
-  const bodyType: ContentType = item.request.body?.mode === 'raw' ? 'raw' :
-                  item.request.body?.mode === 'formdata' ? 'form-data' :
-                  item.request.body?.mode === 'urlencoded' ? 'x-www-form-urlencoded' :
-                  'none';
+  let bodyType: ContentType = "none";
+
+  if (item.request.body?.mode) {
+    switch (item.request.body.mode) {
+      case "raw":
+        bodyType = "application/json";
+        break;
+      case "formdata":
+        bodyType = "multipart/form-data";
+        break;
+      case "urlencoded":
+        bodyType = "application/x-www-form-urlencoded";
+        break;
+      default:
+        bodyType = "none";
+    }
+  }
 
   return {
     id: uuidv4(),
     name: item.name,
     method: item.request.method,
     url: url,
-    headers: (item.request.header || []).map(h => ({
+    headers: (item.request.header || []).map((h) => ({
       key: h.key,
       value: h.value,
       enabled: true,
-      type: 'text',
-      showSecrets: false
+      type: "text",
+      showSecrets: false,
     })),
     params: [],
     body: {
       type: bodyType,
-      content: item.request.body?.raw || ''
+      content: item.request.body?.raw || "",
     },
     statusCode: 0,
     timestamp: Date.now(),
-    preRequestScript: '',
-    testScript: '',
+    preRequestScript: "",
+    testScript: "",
     testResults: [],
-    scriptLogs: []
+    scriptLogs: [],
   };
 }
 
-function convertHoppscotchToCollections(data: HoppscotchCollection): Collection[] {
+function convertHoppscotchToCollections(
+  data: HoppscotchCollection
+): Collection[] {
   const collections: Collection[] = [];
 
   // Create main collection
   const mainCollection: Collection = {
     id: uuidv4(),
-    name: data.name || 'Imported Collection',
+    name: data.name || "Imported Collection",
     requests: [],
-    lastModified: new Date().toISOString()
+    lastModified: new Date().toISOString(),
   };
 
   // Convert root-level requests
   if (data.requests) {
-    mainCollection.requests = data.requests.map(req => convertHoppscotchRequest(req));
+    mainCollection.requests = data.requests.map((req) =>
+      convertHoppscotchRequest(req)
+    );
   }
 
   collections.push(mainCollection);
 
   // Convert folders to separate collections
   if (data.folders) {
-    data.folders.forEach(folder => {
+    data.folders.forEach((folder) => {
       collections.push({
         id: uuidv4(),
         name: folder.name,
-        requests: folder.requests.map(req => convertHoppscotchRequest(req)),
-        lastModified: new Date().toISOString()
+        requests: folder.requests.map((req) => convertHoppscotchRequest(req)),
+        lastModified: new Date().toISOString(),
       });
     });
   }
@@ -212,90 +239,109 @@ function convertHoppscotchToCollections(data: HoppscotchCollection): Collection[
 }
 
 function convertHoppscotchRequest(req: HoppscotchRequest): SavedRequest {
-  const bodyType: ContentType = req.body?.contentType === 'application/json' ? 'application/json' :
-                               req.body?.contentType === 'multipart/form-data' ? 'multipart/form-data' :
-                               req.body?.contentType === 'application/x-www-form-urlencoded' ? 'application/x-www-form-urlencoded' :
-                               req.body?.contentType ? 'raw' : 'none';
+  let bodyType: ContentType = "none";
+
+  if (req.body?.contentType) {
+    switch (req.body.contentType) {
+      case "application/json":
+        bodyType = "application/json";
+        break;
+      case "multipart/form-data":
+        bodyType = "multipart/form-data";
+        break;
+      case "application/x-www-form-urlencoded":
+        bodyType = "application/x-www-form-urlencoded";
+        break;
+      default:
+        bodyType = "text/plain";
+    }
+  }
 
   return {
     id: uuidv4(),
     name: req.name,
     method: req.method,
     url: req.endpoint,
-    headers: (req.headers || []).map(h => ({
+    headers: (req.headers || []).map((h) => ({
       key: h.key,
       value: h.value,
       enabled: h.active !== false,
-      type: 'text',
-      showSecrets: false
+      type: "text",
+      showSecrets: false,
     })),
-    params: (req.params || []).map(p => ({
+    params: (req.params || []).map((p) => ({
       key: p.key,
       value: p.value,
       enabled: p.active !== false,
-      type: 'text',
-      showSecrets: false
+      type: "text",
+      showSecrets: false,
     })),
     body: {
       type: bodyType,
-      content: req.body?.body || ''
+      content: req.body?.body || "",
     },
     statusCode: 0,
     timestamp: Date.now(),
     auth: convertHoppscotchAuth(req.auth),
-    preRequestScript: '',
-    testScript: '',
+    preRequestScript: "",
+    testScript: "",
     testResults: [],
-    scriptLogs: []
+    scriptLogs: [],
   };
 }
 
-function convertHoppscotchAuth(auth: any): SavedRequest['auth'] {
-  if (!auth || auth.type === 'none') {
-    return { type: 'none' };
+function convertHoppscotchAuth(auth: any): SavedRequest["auth"] {
+  if (!auth || auth.type === "none") {
+    return { type: "none" };
   }
-  
+
   switch (auth.type) {
-    case 'bearer':
-      return { type: 'bearer', token: auth.token || '' };
-    case 'basic':
-      return { type: 'basic', username: auth.username || '', password: auth.password || '' };
+    case "bearer":
+      return { type: "bearer", token: auth.token || "" };
+    case "basic":
+      return {
+        type: "basic",
+        username: auth.username || "",
+        password: auth.password || "",
+      };
     default:
-      return { type: 'none' };
+      return { type: "none" };
   }
 }
 
 interface GenericHeader {
   key?: string;
   value?: string;
-  name?: string;  // For compatibility with other formats
-  content?: string;  // For compatibility with other formats
+  name?: string; // For compatibility with other formats
+  content?: string; // For compatibility with other formats
 }
 
 function convertGenericRequest(req: any): SavedRequest {
   return {
     id: uuidv4(),
-    name: req.name || req.url || 'Unnamed Request',
-    method: req.method || 'GET',
-    url: req.url || req.endpoint || '',
-    headers: Array.isArray(req.headers) ? req.headers.map((h: GenericHeader) => ({
-      key: h.key || h.name || '',
-      value: h.value || h.content || '',
-      enabled: true,
-      type: 'text',
-      showSecrets: false
-    })) : [],
+    name: req.name || req.url || "Unnamed Request",
+    method: req.method || "GET",
+    url: req.url || req.endpoint || "",
+    headers: Array.isArray(req.headers)
+      ? req.headers.map((h: GenericHeader) => ({
+          key: h.key || h.name || "",
+          value: h.value || h.content || "",
+          enabled: true,
+          type: "text",
+          showSecrets: false,
+        }))
+      : [],
     params: [],
     body: {
-      type: 'none',
-      content: ''
+      type: "none",
+      content: "",
     },
     statusCode: 0,
     timestamp: Date.now(),
-    preRequestScript: '',
-    testScript: '',
+    preRequestScript: "",
+    testScript: "",
     testResults: [],
-    scriptLogs: []
+    scriptLogs: [],
   };
 }
 
@@ -306,7 +352,7 @@ function convertOpenAPIToCollections(data: any): Collection[] {
     description: data.info.description,
     apiVersion: data.info.version,
     requests: [],
-    lastModified: new Date().toISOString()
+    lastModified: new Date().toISOString(),
   };
 
   // Convert paths to requests
@@ -322,17 +368,22 @@ function convertOpenAPIToCollections(data: any): Collection[] {
         headers: [],
         params: [],
         body: {
-          type: details.requestBody ? 'json' : 'none',
-          content: details.requestBody ?
-            JSON.stringify(details.requestBody.content['application/json']?.schema, null, 2) :
-            ''
+          // Update content type here
+          type: details.requestBody ? "application/json" : "none",
+          content: details.requestBody
+            ? JSON.stringify(
+                details.requestBody.content["application/json"]?.schema,
+                null,
+                2
+              )
+            : "",
         },
         statusCode: 0,
         timestamp: Date.now(),
         preRequestScript: "",
         testScript: "",
         testResults: [],
-        scriptLogs: []
+        scriptLogs: [],
       });
     }
   }
