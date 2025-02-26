@@ -3,6 +3,7 @@
   "short_name": "queFork",
   "description": "Restaurant Queue Management System",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
@@ -25,5 +26,6 @@
       "type": "image/png"
     }
   ],
-  "offline_enabled": true
+  "offline_enabled": true,
+  "capture_links": "new-client"
 }

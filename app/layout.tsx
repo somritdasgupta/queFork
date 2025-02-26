@@ -143,6 +143,9 @@ export default function RootLayout({
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
         />
+        <meta name="theme-color" content="#0f172a" />
+        {/* Add offline-specific meta */}
+        <meta name="offline-ready" content="true" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

@@ -14,6 +14,8 @@ const nextConfig = {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
+    serviceWorker: true,
+    fallbackNodePolyfills: false
   },
   async headers() {
     return [
@@ -21,13 +23,34 @@ const nextConfig = {
         source: '/sw.js',
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=0, must-revalidate',
+            key: 'Service-Worker-Allowed',
+            value: '/'
           },
-        ],
-      },
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, must-revalidate'
+          }
+        ]
+      }
     ];
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/:path*',
+          destination: '/_offline/:path*',
+          has: [
+            {
+              type: 'header',
+              key: 'x-matched-path',
+              value: '(?!/api).*'
+            }
+          ]
+        }
+      ]
+    };
+  }
 };
 
 export default nextConfig;
