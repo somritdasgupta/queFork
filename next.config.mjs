@@ -15,42 +15,42 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
     serviceWorker: true,
-    fallbackNodePolyfills: false
+    fallbackNodePolyfills: false,
   },
   async headers() {
     return [
       {
-        source: '/sw.js',
+        source: "/sw.js",
         headers: [
           {
-            key: 'Service-Worker-Allowed',
-            value: '/'
+            key: "Service-Worker-Allowed",
+            value: "/",
           },
           {
-            key: 'Cache-Control',
-            value: 'no-cache, must-revalidate'
-          }
-        ]
-      }
+            key: "Cache-Control",
+            value: "no-cache, must-revalidate",
+          },
+        ],
+      },
     ];
   },
   async rewrites() {
     return {
       beforeFiles: [
         {
-          source: '/:path*',
-          destination: '/_offline/:path*',
+          source: "/:path*",
+          destination: "/_offline/:path*",
           has: [
             {
-              type: 'header',
-              key: 'x-matched-path',
-              value: '(?!/api).*'
-            }
-          ]
-        }
-      ]
+              type: "header",
+              key: "x-matched-path",
+              value: "(?!/api).*",
+            },
+          ],
+        },
+      ],
     };
-  }
+  },
 };
 
 export default nextConfig;

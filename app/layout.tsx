@@ -93,8 +93,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0f172a" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+    { media: "(prefers-color-scheme: light)", color: "#0c1325" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c1325" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -136,15 +136,15 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="application-name" content="queFork" />
         <meta name="apple-mobile-web-app-title" content="queFork" />
-        <meta name="msapplication-TileColor" content="#0f172a" />
+        <meta name="msapplication-TileColor" content="#0c1325" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
         <meta name="format-detection" content="telephone=no" />
         <meta
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
         />
-        <meta name="theme-color" content="#0f172a" />
-        {/* Add offline-specific meta */}
+        <meta name="theme-color" content="#0c1325" />
+        <meta name="msapplication-navbutton-color" content="#0c1325" />
         <meta name="offline-ready" content="true" />
         <script
           type="application/ld+json"
@@ -174,7 +174,29 @@ export default function RootLayout({
           </div>
           <ConnectionLostBackdrop />
         </div>
-        <Toaster position="top-center" theme="dark" closeButton richColors />
+        <Toaster
+          position="top-center"
+          theme="dark"
+          closeButton={false}
+          richColors
+          expand
+          visibleToasts={1}
+          gap={6}
+          toastOptions={{
+            style: {
+              maxWidth: "80vw",
+              width: "min-content",
+              minWidth: "min(320px, 80vw)",
+            },
+            classNames: {
+              toast: "flex items-center justify-center sm:text-base text-sm",
+              title: "flex items-center gap-2",
+              description: "text-xs sm:text-sm",
+              actionButton: "mx-auto text-xs sm:text-sm",
+              cancelButton: "mx-auto text-xs sm:text-sm",
+            },
+          }}
+        />
       </body>
     </html>
   );

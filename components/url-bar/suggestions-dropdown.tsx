@@ -30,7 +30,7 @@ export function SuggestionsDropdown({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       className="absolute top-full left-0 z-50 w-full mt-1 
-        rounded-lg border border-slate-800 bg-slate-900/95 backdrop-blur-sm shadow-lg 
+        rounded-xl border border-slate-800 bg-slate-900/95 backdrop-blur-sm shadow-lg 
         overflow-hidden"
     >
       <ScrollArea className="max-h-[280px] overflow-auto">

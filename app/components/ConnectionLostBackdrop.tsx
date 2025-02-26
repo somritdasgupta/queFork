@@ -3,12 +3,21 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnimatedLogo } from "@/components/animated-logo";
+import { toast } from "sonner";
 
 export function ConnectionLostBackdrop() {
   const [isVisible, setIsVisible] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [networkInfo, setNetworkInfo] = useState<string>("");
   const [progress, setProgress] = useState(0);
+  const [canInstall, setCanInstall] = useState(false);
+
+  const shouldShowInstallPrompt = () => {
+    const PROMPT_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7 days
+    const lastPrompt = localStorage.getItem("lastInstallPrompt");
+    if (!lastPrompt) return true;
+    return Date.now() - parseInt(lastPrompt) > PROMPT_INTERVAL;
+  };
 
   useEffect(() => {
     const handleOffline = () => setIsVisible(true);
@@ -27,8 +36,14 @@ export function ConnectionLostBackdrop() {
       }
     };
 
+    const handleInstallable = (e: Event) => {
+      e.preventDefault();
+      setCanInstall(shouldShowInstallPrompt());
+    };
+
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
+    window.addEventListener("beforeinstallprompt", handleInstallable);
 
     if (!navigator.onLine) handleOffline();
 
@@ -43,6 +58,7 @@ export function ConnectionLostBackdrop() {
     return () => {
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
+      window.removeEventListener("beforeinstallprompt", handleInstallable);
     };
   }, [retryCount]);
 
@@ -110,6 +126,30 @@ export function ConnectionLostBackdrop() {
                 <p className="text-white/60 text-sm">
                   Attempting to restore connection...
                 </p>
+
+                {canInstall && (
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="px-4 py-2 bg-blue-500/20 text-blue-300 rounded-lg
+                       border border-blue-500/30 hover:bg-blue-500/30
+                       transition-colors duration-200"
+                    onClick={() => {
+                      toast.message("Install queFork", {
+                        description: "Install our app for offline access",
+                        action: {
+                          label: "Install",
+                          onClick: () =>
+                            window.dispatchEvent(
+                              new Event("beforeinstallprompt")
+                            ),
+                        },
+                      });
+                    }}
+                  >
+                    Install App for Offline Use
+                  </motion.button>
+                )}
               </div>
             </div>
           </div>

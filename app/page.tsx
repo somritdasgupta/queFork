@@ -1223,7 +1223,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
       </header>
 
       {/* Main content - Update height calc to account for header and footer */}
-      <div className="h-[calc(100dvh-theme(spacing.14)-theme(spacing.8))] min-h-0 bg-slate-900">
+      <div className="h-[calc(100dvh-theme(spacing.14))] min-h-0 bg-slate-900">
         {currentTab ? (
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel

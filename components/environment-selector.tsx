@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/select";
 import { PackagePlus, PackagePlusIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { NetworkStatusIndicator } from "@/app/components/NetworkStatusIndicator";
 import { cn } from "@/lib/utils";
 
 interface EnvironmentSelectorProps {

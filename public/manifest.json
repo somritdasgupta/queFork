@@ -5,8 +5,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#0c1325",
+  "theme_color": "#0c1325",
   "orientation": "any",
   "prefer_related_applications": false,
   "categories": ["development", "productivity", "utilities"],
@@ -17,15 +17,51 @@
       "type": "image/png",
       "platform": "wide",
       "label": "queFork interface"
+    },
+    {
+      "src": "/screenshot.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "queFork Interface"
     }
   ],
   "icons": [
     {
       "src": "/logo.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable",
+      "background_color": "#0c1325"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable",
+      "background_color": "#0c1325"
     }
   ],
   "offline_enabled": true,
-  "capture_links": "new-client"
+  "capture_links": "new-client",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "shortcuts": [
+    {
+      "name": "New Request",
+      "url": "/new",
+      "description": "Create a new API request"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+api",
+      "url": "/%s"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }
