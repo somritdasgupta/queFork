@@ -10,22 +10,7 @@
   "orientation": "any",
   "prefer_related_applications": false,
   "categories": ["development", "productivity", "utilities"],
-  "screenshots": [
-    {
-      "src": "/screenshot-1.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "platform": "wide",
-      "label": "queFork interface"
-    },
-    {
-      "src": "/screenshot.png",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "queFork Interface"
-    }
-  ],
+
   "icons": [
     {
       "src": "/logo.png",

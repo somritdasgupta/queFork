@@ -1,7 +1,6 @@
 import React, { useCallback } from "react";
 import { KeyValuePair } from "@/types";
 import { KeyValueInput } from "./key-value-input";
-import { ActionButton } from "./ui-components";
 import { Key, Type, AlignLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STYLES } from "./constants";

@@ -456,9 +456,9 @@ export function AuthTab({ auth, onAuthChange }: AuthTabProps) {
           >
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="inline-flex items-center justify-center p-6 rounded-xl bg-gradient-to-b from-slate-800/50 to-slate-900/50 border border-slate-800/40"
+              className="inline-flex items-center justify-center p-4 rounded-xl bg-gradient-to-b from-slate-800/50 to-slate-900/50 border border-slate-800/40"
             >
-              <Lock className="h-8 w-8 text-slate-500" />
+              <Lock className="h-8 w-8 text-blue-400" strokeWidth={2}/>
             </motion.div>
             <div className="space-y-1">
               <p className="text-sm text-slate-400">

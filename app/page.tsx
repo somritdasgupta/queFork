@@ -55,9 +55,29 @@ const RequestPanel = dynamic<RequestPanelProps>(
 );
 
 const ResponsePanel = dynamic<ResponsePanelProps>(
-  () => import("@/components/response-panel").then((mod) => mod.ResponsePanel),
+  () =>
+    import("@/components/response-panel").then((mod) => {
+      const Component = mod.ResponsePanel;
+      return {
+        default: (props: ResponsePanelProps) => {
+          // Convert the string-returning onCreateCollection to void-returning
+          const wrappedProps = {
+            ...props,
+            onCreateCollection: async (collection: {
+              name: string;
+              description: string;
+              apiVersion: string;
+            }) => {
+              await props.onCreateCollection(collection);
+            },
+          };
+          return <Component {...wrappedProps} />;
+        },
+      };
+    }),
   {
     loading: () => <div className="w-full h-full bg-slate-900/50" />,
+    ssr: false,
   }
 );
 
@@ -183,12 +203,17 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     },
   });
 
+  const handleToggleInterceptor = () => {
+    toggleInterceptor();
+    toast.success(
+      !interceptorEnabled ? "Interceptor is enabled" : "Interceptor is disabled"
+    );
+  };
+
   // Update handlers to work with current tab's state
   const handleStateUpdate = useCallback(
     (updates: Partial<Tab["state"]>) => {
       if (!currentTab) return;
-
-      // Batch multiple state updates
       React.startTransition(() => {
         updateTab(currentTab.id, {
           state: { ...currentTab.state, ...updates },
@@ -660,16 +685,29 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     localStorage.setItem("apiCollections", JSON.stringify(newCollections));
   };
 
-  const handleCreateCollection = (collection: Partial<Collection>) => {
+  const handleCreateCollection = async (collection: {
+    name: string;
+    description: string;
+    apiVersion: string;
+  }): Promise<string> => {
     const newCollection: Collection = {
       id: uuidv4(),
-      name: collection.name || "New Collection",
-      description: collection.description || "",
-      apiVersion: collection.apiVersion || "",
+      name: collection.name,
+      description: collection.description,
+      apiVersion: collection.apiVersion,
       requests: [],
       lastModified: new Date().toISOString(),
     };
-    saveCollections([...collections, newCollection]);
+
+    // Update collections state first
+    const updatedCollections = [...collections, newCollection];
+    setCollections(updatedCollections);
+
+    // Then save to localStorage
+    localStorage.setItem("apiCollections", JSON.stringify(updatedCollections));
+
+    // Return the newly created collection's ID
+    return newCollection.id;
   };
 
   const handleSaveRequest = (
@@ -950,6 +988,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     isLoading: tabState.isLoading ?? false,
     collections,
     onSaveToCollection: handleSaveRequest,
+    onCreateCollection: handleCreateCollection, // Now this should match the type
     method: tabState.method || "GET",
     url: tabState.url || "",
     isWebSocketMode: tabState.isWebSocketMode ?? false,
@@ -983,6 +1022,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
     isMobile: true,
     hasExtension,
     interceptorEnabled,
+    toggleInterceptor: handleToggleInterceptor,
   };
 
   useEffect(() => {
@@ -1201,7 +1241,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
           <DesktopHeader
             hasExtension={hasExtension}
             interceptorEnabled={interceptorEnabled}
-            toggleInterceptor={toggleInterceptor}
+            toggleInterceptor={handleToggleInterceptor} // Use the wrapped version
             environments={environments}
             currentEnvironment={currentEnvironment}
             onEnvironmentChange={handleEnvironmentChange}
@@ -1212,7 +1252,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
           <MobileHeader
             hasExtension={hasExtension}
             interceptorEnabled={interceptorEnabled}
-            toggleInterceptor={toggleInterceptor}
+            toggleInterceptor={handleToggleInterceptor} // Use the wrapped version
             environments={environments}
             currentEnvironment={currentEnvironment}
             onEnvironmentChange={handleEnvironmentChange}

@@ -3,7 +3,6 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { AccordionContent, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -39,8 +38,7 @@ import {
   useKeyboardNavigation,
 } from "./keyboard-navigation/keyboard-navigation";
 import dynamic from "next/dynamic";
-
-// Dynamic import for components that need to be client-side only
+import { RequestSaveForm } from "./request-save-form";
 const DynamicAccordion = dynamic(
   () => import("@/components/ui/accordion").then((mod) => mod.Accordion),
   {
@@ -59,7 +57,12 @@ interface CollectionsPanelProps {
   collections: Collection[];
   onSelectRequest: (request: SavedRequest) => void;
   onSaveRequest: (collectionId: string, request: Partial<SavedRequest>) => void;
-  onCreateCollection: (collection: Partial<Collection>) => void;
+  onCreateCollection: (collection: {
+    name: string;
+    description: string;
+    apiVersion: string;
+  }) => Promise<string>;
+
   onDeleteCollection: (collectionId: string) => void;
   onDeleteRequest: (collectionId: string, requestId: string) => void;
   onUpdateCollections?: (collections: Collection[]) => void;
@@ -107,10 +110,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     description: "",
     apiVersion: "",
   });
-  const [pendingSaveRequest, setPendingSaveRequest] =
-    useState<Partial<SavedRequest> | null>(null);
-  const [requestName, setRequestName] = useState("");
-  const [showSaveForm, setShowSaveForm] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importUrl, setImportUrl] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -131,63 +130,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
     setActiveRequest((window as any).__ACTIVE_REQUEST__);
   }, []);
 
-  useEffect(() => {
-    const handleSaveRequest = (e: CustomEvent) => {
-      const requestData = e.detail;
-      setPendingSaveRequest(requestData);
-      setShowSaveForm(true);
-
-      // Immediate focus attempt
-      requestAnimationFrame(() => {
-        const input = document.querySelector(
-          'input[placeholder="Request name"]'
-        ) as HTMLInputElement;
-        if (input) {
-          input.focus();
-        }
-      });
-    };
-
-    window.addEventListener("saveRequest", handleSaveRequest as EventListener);
-
-    return () => {
-      window.removeEventListener(
-        "saveRequest",
-        handleSaveRequest as EventListener
-      );
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleShowSaveForm = (e: CustomEvent) => {
-      const requestData = e.detail;
-      setPendingSaveRequest(requestData);
-      setShowSaveForm(true);
-
-      // Focus input after a very short delay to ensure form is rendered
-      requestAnimationFrame(() => {
-        const input = document.querySelector(
-          'input[placeholder="Request name"]'
-        ) as HTMLInputElement;
-        if (input) {
-          input.focus();
-        }
-      });
-    };
-
-    window.addEventListener(
-      "showCollectionSaveForm",
-      handleShowSaveForm as EventListener
-    );
-
-    return () => {
-      window.removeEventListener(
-        "showCollectionSaveForm",
-        handleShowSaveForm as EventListener
-      );
-    };
-  }, []);
-
   const handleCreateCollection = (initialRequest?: Partial<SavedRequest>) => {
     if (!newCollection.name) {
       toast.error("Collection name is required");
@@ -199,7 +141,7 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
           id: uuidv4(),
           statusCode: 0,
           timestamp: Date.now(),
-          name: requestName || initialRequest.url || "Untitled Request",
+          name: initialRequest.url || "Untitled Request",
           description: "",
           method: initialRequest.method || "GET",
           url: initialRequest.url || "",
@@ -215,13 +157,10 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
         }
       : undefined;
 
-    const collection: Partial<Collection> = {
-      id: uuidv4(),
+    const collection = {
       name: newCollection.name,
-      description: newCollection.description,
-      apiVersion: newCollection.apiVersion,
-      requests: completeRequest ? [completeRequest] : [],
-      lastModified: new Date().toISOString(),
+      description: newCollection.description || "",
+      apiVersion: newCollection.apiVersion || "",
     };
 
     props.onCreateCollection(collection);
@@ -611,11 +550,11 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
 
   const handleDuplicateCollection = useCallback(
     (collection: Collection) => {
-      const duplicate: Collection = {
-        ...collection,
-        id: uuidv4(),
+      const duplicate = {
         name: `${collection.name} (Copy)`,
-        lastModified: new Date().toISOString(),
+        description: collection.description || "",
+        apiVersion: collection.apiVersion || "",
+        copySource: true,
       };
       props.onCreateCollection(duplicate);
       toast.success("Collection duplicated");
@@ -738,39 +677,6 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
       </div>
     </DynamicAccordionItem>
   );
-
-  const handleSaveToCollection = (
-    collectionId: string,
-    request: Partial<SavedRequest>
-  ) => {
-    props.onSaveRequest(collectionId, {
-      ...request,
-      preRequestScript:
-        (window as any).__ACTIVE_REQUEST__?.preRequestScript ||
-        request.preRequestScript,
-      testScript:
-        (window as any).__ACTIVE_REQUEST__?.testScript || request.testScript,
-      testResults:
-        (window as any).__ACTIVE_REQUEST__?.testResults || request.testResults,
-      scriptLogs:
-        (window as any).__ACTIVE_REQUEST__?.scriptLogs || request.scriptLogs,
-      runConfig: {
-        iterations: 1,
-        delay: 0,
-        parallel: false,
-        environment: null,
-        timeout: 30000,
-        stopOnError: true,
-        retryCount: 0,
-        validateResponse: false,
-      },
-      ...pendingSaveRequest,
-    });
-    setPendingSaveRequest(null);
-    setRequestName("");
-    setShowSaveForm(false);
-    toast.success(`Saved to collection`);
-  };
 
   const handleImportUrl = async () => {
     try {
@@ -1022,195 +928,19 @@ export function CollectionsPanel({ ...props }: CollectionsPanelProps) {
         )}
 
         {isCreating && (
-          <div className="p-4 bg-slate-900/50 border-b border-slate-700">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm font-medium text-slate-300">
-                  Create Collection
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setIsCreating(false);
-                    setNewCollection({
-                      name: "",
-                      description: "",
-                      apiVersion: "",
-                    });
-                  }}
-                  className="h-7 w-7 p-0 hover:bg-slate-900/25"
-                >
-                  <X className="h-4 w-4 text-slate-400" />
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-400">
-                    Collection Name
-                  </label>
-                  <Input
-                    placeholder="Enter collection name"
-                    value={newCollection.name}
-                    maxLength={15}
-                    onChange={(e) =>
-                      setNewCollection((prev) => ({
-                        ...prev,
-                        name: e.target.value.slice(0, 15),
-                      }))
-                    }
-                    className="h-8 bg-slate-900/25 border-slate-700 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-400">
-                    API Version
-                  </label>
-                  <Input
-                    placeholder="e.g., 1.0.0"
-                    value={newCollection.apiVersion}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (
-                        /^[0-9.]*$/.test(value) &&
-                        (value.match(/\./g) || []).length <= 3
-                      ) {
-                        const groups = value.split(".");
-                        const isValid = groups.every(
-                          (group) =>
-                            !group ||
-                            (parseInt(group) <= 999 && group.length <= 3)
-                        );
-                        if (isValid) {
-                          setNewCollection((prev) => ({
-                            ...prev,
-                            apiVersion: value,
-                          }));
-                        }
-                      }
-                    }}
-                    className="h-8 bg-slate-900/25 border-slate-700 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-400">
-                    Description (Optional)
-                  </label>
-                  <Textarea
-                    placeholder="Enter collection description"
-                    value={newCollection.description}
-                    onChange={(e) =>
-                      setNewCollection((prev) => ({
-                        ...prev,
-                        description: e.target.value,
-                      }))
-                    }
-                    className="bg-slate-900/25 border-slate-700 min-h-[80px] text-sm"
-                  />
-                </div>
-
-                <Button
-                  onClick={() => handleCreateCollection()}
-                  disabled={
-                    !newCollection.name.trim() ||
-                    !newCollection.apiVersion.trim()
-                  }
-                  className={cn(
-                    "w-full h-8 bg-slate-900/25 hover:bg-slate-700 text-slate-300 hover:text-slate-200 border border-slate-700",
-                    "disabled:opacity-50"
-                  )}
-                >
-                  Create Collection
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showSaveForm && pendingSaveRequest && (
-          <div className="border-b border-slate-700 bg-slate-900/50">
-            <div className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <h2 className="text-sm font-medium text-slate-300">
-                    Save Request
-                  </h2>
-                  <span className="text-xs text-slate-500">
-                    Press Ctrl+S or ⌘+S to quickly save requests
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setPendingSaveRequest(null);
-                    setRequestName("");
-                    setShowSaveForm(false);
-                  }}
-                  className="h-7 w-7 p-0"
-                >
-                  <X className="h-4 w-4 text-slate-400" />
-                </Button>
-              </div>
-
-              <Input
-                autoFocus
-                placeholder="Request name"
-                value={requestName}
-                onChange={(e) => setRequestName(e.target.value)}
-                className="h-8 bg-slate-950 border-slate-700"
-                maxLength={15}
-              />
-
-              <div className="space-y-2">
-                <div className="text-xs font-medium text-slate-400 mb-2">
-                  Select Collection
-                </div>
-                <div className="space-y-1">
-                  {props.collections.map((collection) => (
-                    <Button
-                      key={collection.id}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (!requestName) {
-                          toast.error("Please enter a request name");
-                          return;
-                        }
-                        handleSaveToCollection(collection.id, {
-                          ...pendingSaveRequest,
-                          name: requestName,
-                        });
-                      }}
-                      className="w-full justify-start text-left h-8 px-3 text-slate-300 hover:text-slate-200 hover:bg-slate-900/25"
-                    >
-                      <FolderOpen className="h-4 w-4 mr-2 text-slate-400" />
-                      {collection.name}
-                      <Badge
-                        variant="outline"
-                        className="ml-2 text-[10px] px-1 bg-transparent border-slate-700 text-slate-400"
-                      >
-                        {collection.requests?.length || 0}
-                      </Badge>
-                    </Button>
-                  ))}
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsCreating(true)}
-                  className="w-full justify-start text-left h-8 px-3 text-emerald-400 hover:text-emerald-300 hover:bg-slate-900/25"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create New Collection
-                </Button>
-              </div>
-            </div>
-          </div>
+          <RequestSaveForm
+            mode="collection-only"
+            collections={[]}
+            onClose={() => setIsCreating(false)}
+            onCreateCollection={async (collection) => {
+              await props.onCreateCollection(collection);
+              setIsCreating(false);
+              toast.success("Collection created successfully");
+            }}
+            onSaveToCollection={() => {}}
+            pendingRequest={{}}
+            className="border-none"
+          />
         )}
 
         {props.collections.length === 0 && !isCreating ? (

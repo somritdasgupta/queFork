@@ -28,6 +28,9 @@ import {
   Minimize2,
   PlugZap2,
   Unplug,
+  X,
+  FolderOpen,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collection, SavedRequest } from "@/types";
@@ -42,6 +45,8 @@ import { motion } from "framer-motion";
 import { CodeEditor } from "@/components/request-panel/shared/code-editor";
 import { useWebSocket } from "@/components/websocket/websocket-context";
 import { PanelState } from "@/types/panel";
+import { Input } from "@/components/ui/input";
+import { RequestSaveForm } from "./request-save-form";
 
 interface TabItem {
   id: string;
@@ -78,6 +83,11 @@ interface ResponsePanelProps {
   showContentOnly?: boolean;
   isOverlay?: boolean;
   preserveStatusBar?: boolean;
+  onCreateCollection: (collection: {
+    name: string;
+    description: string;
+    apiVersion: string;
+  }) => Promise<void>;
 }
 
 // Add new LoadingDots component
@@ -209,6 +219,9 @@ export function ResponsePanel({
   showContentOnly,
   isOverlay,
   preserveStatusBar,
+  collections,
+  onSaveToCollection,
+  onCreateCollection,
 }: ResponsePanelProps & {
   onPanelStateChange?: () => void;
   panelState?: "expanded" | "collapsed" | "fullscreen";
@@ -227,6 +240,11 @@ export function ResponsePanel({
   const [preRequestScript, setPreRequestScript] = useState<string>("");
   const [testScript, setTestScript] = useState<string>("");
   const [isOnline, setIsOnline] = useState(true);
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [requestName, setRequestName] = useState("");
+  const [pendingSaveRequest, setPendingSaveRequest] =
+    useState<Partial<SavedRequest> | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   useTheme();
 
   // 2. All useRef hooks
@@ -697,38 +715,35 @@ export function ResponsePanel({
   const handleSaveRequest = () => {
     if (!response) return;
 
-    const isMobileView = window.innerWidth < 768;
+    const requestDetails: Partial<SavedRequest> = {
+      method,
+      url,
+      headers: Object.entries(response.headers || {}).map(([key, value]) => ({
+        key,
+        value,
+        type: "",
+        enabled: true,
+        showSecrets: false,
+      })),
+      params: [],
+      body: { type: "none", content: "" },
+      auth: { type: "none" },
+      response: {
+        status: response.status,
+        body: response.body,
+        headers: response.headers,
+        time: response.time,
+        size: response.size,
+      },
+      preRequestScript:
+        (window as any).__ACTIVE_REQUEST__?.preRequestScript || "",
+      testScript: (window as any).__ACTIVE_REQUEST__?.testScript || "",
+      testResults: (window as any).__ACTIVE_REQUEST__?.testResults || [],
+      scriptLogs: (window as any).__ACTIVE_REQUEST__?.scriptLogs || [],
+    };
 
-    // Dispatch event with all needed data
-    window.dispatchEvent(
-      new CustomEvent("saveAndShowRequest", {
-        detail: {
-          request: {
-            method,
-            url,
-            headers: response?.headers || [],
-            params: [],
-            body: { type: "none", content: "" },
-            auth: { type: "none" },
-            response: {
-              status: response?.status,
-              body: response?.body,
-              headers: response?.headers,
-              time: response?.time,
-              size: response?.size,
-            },
-            preRequestScript,
-            testScript,
-            testResults,
-            scriptLogs,
-          },
-          showForm: true,
-          isMobile: isMobileView,
-          openSheet: isMobileView,
-          switchToCollections: true,
-        },
-      })
-    );
+    setPendingSaveRequest(requestDetails);
+    setShowSaveForm(true);
   };
 
   const shouldShowContent = response || isWebSocketMode;
@@ -764,25 +779,46 @@ export function ResponsePanel({
     }
   }, [panelState]);
 
+  const handleCreateCollection = async (collection: {
+    name: string;
+    description: string;
+    apiVersion: string;
+  }) => {
+    try {
+      // Wait for the collection to be created and get its ID
+      const newCollectionId = await onCreateCollection(collection);
+      setShowCreateForm(false);
+
+      // If we have a pending save request and collection was created successfully
+      if (pendingSaveRequest && requestName && newCollectionId) {
+        onSaveToCollection(newCollectionId, {
+          ...pendingSaveRequest,
+          name: requestName,
+        });
+        setPendingSaveRequest(null);
+        setRequestName("");
+        setShowSaveForm(false);
+      }
+
+      toast.success("Collection created");
+    } catch (error) {
+      console.error("Failed to create collection:", error);
+      toast.error("Failed to create collection");
+    }
+  };
+
   return (
-    <div
-      className={cn(
-        "h-full flex flex-col bg-slate-900",
-        // Simplify height classes - let parent control the height
-        panelState === "collapsed" ? "h-10" : "h-full"
-      )}
-    >
+    <div className={cn("h-full flex flex-col bg-slate-900")}>
       {shouldShowContent ? (
         <>
           {renderStatusBar()}
           {panelState !== "collapsed" && (
-            <div className="flex-1 min-h-0 flex flex-col">
-              {" "}
-              {/* Add this wrapper */}
+            <div className="flex-1 min-h-0 flex flex-col relative">
               <Tabs
                 defaultValue="response"
                 className="flex-1 flex flex-col min-h-0"
               >
+                {/* Add back the tabs header */}
                 <div className="bg-slate-900 border-b border-slate-700">
                   <div className="flex items-center justify-between">
                     <TabsList className="h-10 w-auto justify-start rounded-none bg-slate-900 p-0">
@@ -794,6 +830,7 @@ export function ResponsePanel({
                           className="h-10 rounded-none border-b-4 border-transparent font-medium text-xs text-slate-400 transition-colors px-3 sm:px-4 py-2 data-[state=active]:bg-transparent data-[state=active]:border-blue-400 data-[state=active]:text-blue-400 hover:text-slate-300"
                         >
                           <div className="flex items-center gap-2">
+                            {tab.icon}
                             <span className="truncate max-w-[80px] sm:max-w-none">
                               {tab.label}
                             </span>
@@ -872,8 +909,23 @@ export function ResponsePanel({
                 </div>
 
                 <div className="flex-1 relative bg-slate-900/50 min-h-0">
-                  {" "}
-                  {/* Add min-h-0 here */}
+                  {showSaveForm && pendingSaveRequest && (
+                    <div className="absolute inset-0 z-10 bg-slate-900/90 backdrop-blur-sm">
+                      <RequestSaveForm
+                        collections={collections}
+                        onClose={() => {
+                          setShowSaveForm(false);
+                          setPendingSaveRequest(null);
+                        }}
+                        onSaveToCollection={onSaveToCollection}
+                        onCreateCollection={handleCreateCollection}
+                        pendingRequest={pendingSaveRequest}
+                        className="border-none" // Now TypeScript knows about this prop
+                      />
+                    </div>
+                  )}
+
+                  {/* ... existing tab content ... */}
                   <TabsContent
                     value="response"
                     className="absolute inset-0 m-0"

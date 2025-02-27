@@ -4,8 +4,8 @@ import { WebSocketWrapper } from "@/components/websocket/websocket-wrapper";
 import { Preloader } from "@/components/preloader";
 import type { Metadata, Viewport } from "next";
 import { ConnectionLostBackdrop } from "./components/ConnectionLostBackdrop";
-import { Toaster } from "sonner";
 import { ServiceWorkerProvider } from "./components/ServiceWorkerRegistration";
+import { Toaster } from "@/components/ui/toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -174,29 +174,7 @@ export default function RootLayout({
           </div>
           <ConnectionLostBackdrop />
         </div>
-        <Toaster
-          position="top-center"
-          theme="dark"
-          closeButton={false}
-          richColors
-          expand
-          visibleToasts={1}
-          gap={6}
-          toastOptions={{
-            style: {
-              maxWidth: "80vw",
-              width: "min-content",
-              minWidth: "min(320px, 80vw)",
-            },
-            classNames: {
-              toast: "flex items-center justify-center sm:text-base text-sm",
-              title: "flex items-center gap-2",
-              description: "text-xs sm:text-sm",
-              actionButton: "mx-auto text-xs sm:text-sm",
-              cancelButton: "mx-auto text-xs sm:text-sm",
-            },
-          }}
-        />
+        <Toaster />
       </body>
     </html>
   );

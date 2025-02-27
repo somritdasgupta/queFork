@@ -354,7 +354,6 @@ export function BodyTab({
     }
 
     try {
-      // Store file directly
       setFilePreview({
         name: file.name,
         size: file.size,
@@ -366,7 +365,7 @@ export function BodyTab({
       onChange({
         type: selectedContentType,
         content: file,
-      });
+      } as RequestBody);
     } catch (error) {
       toast.error("Failed to process file");
       console.error("File processing error:", error);
@@ -382,10 +381,10 @@ export function BodyTab({
     ) {
       // Restore file preview from body content
       setFilePreview({
-        name: body.content.name,
-        size: body.content.size,
-        type: body.content.type || "application/octet-stream",
-        lastModified: body.content.lastModified,
+        name: (body.content as File).name,
+        size: (body.content as File).size,
+        type: (body.content as File).type || "application/octet-stream",
+        lastModified: (body.content as File).lastModified,
       });
     } else {
       // Clear file preview if no file in body content
@@ -416,14 +415,12 @@ export function BodyTab({
       <div className="sticky top-0 z-10 bg-slate-950 border-b border-slate-800/60">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center py-1.5 px-2 bg-slate-900 border-y border-slate-800 text-slate-300 hover:text-slate-200">
+            <button className="flex w-full items-center py-2 px-3 bg-slate-900 border-y border-slate-800 text-slate-300 hover:text-slate-200">
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4">
-                    {getIconForContentType(selectedContentType)}
-                  </div>
+                  {getIconForContentType(selectedContentType)}
                   <span className="font-medium text-xs">
-                    {contentTypeOption?.label || "Select type"}
+                  {contentTypeOption?.label || "Select type"}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 rounded-md bg-slate-800 px-2 py-1">
@@ -472,18 +469,13 @@ export function BodyTab({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="h-full flex items-center justify-center p-8"
+              className="h-full flex items-center justify-center p-10"
             >
               <div className="text-center max-w-sm mx-auto px-4">
-                <div className="inline-flex items-center justify-center p-3 rounded-lg bg-gradient-to-b from-slate-800/50 to-slate-900/50 border border-slate-800/60 mb-4">
+                <div className="inline-flex items-center justify-center p-4 rounded-xl bg-gradient-to-b from-slate-800/50 to-slate-900/50 border border-slate-800/60 mb-4">
                   <FileText
-                    className="h-6 w-6 text-slate-400"
-                    strokeWidth={1.5}
-                    style={{
-                      stroke: "currentColor",
-                      fill: "#1e293b",
-                      fillOpacity: 0.2,
-                    }}
+                    className="h-8 w-8 text-blue-400"
+                    strokeWidth={2}
                   />
                 </div>
                 <h3 className="text-sm font-medium text-slate-200 mb-1">
@@ -507,15 +499,17 @@ export function BodyTab({
                   <KeyValueEditor
                     pairs={Array.isArray(body.content) ? body.content : []}
                     onChange={(pairs: KeyValuePair[]) =>
-                      onChange({ ...body, content: pairs })
+                      onChange({ ...body, content: pairs } as RequestBody)
                     }
                     addButtonText={
-                      selectedContentType === "multipart/form-data"
+                      selectedContentType ===
+                      ("multipart/form-data" as ContentType)
                         ? "Add Form Field"
                         : "Add Parameter"
                     }
                     showDescription={
-                      selectedContentType === "multipart/form-data"
+                      selectedContentType ===
+                      ("multipart/form-data" as ContentType)
                     }
                     environments={environments}
                     currentEnvironment={currentEnvironment}
@@ -583,7 +577,7 @@ export function BodyTab({
                               className="p-4 rounded-xl bg-slate-800/50 group-hover:bg-slate-700/50 
                               transition-colors duration-200 mb-4"
                             >
-                              <FileText className="h-12 w-12 text-slate-400 group-hover:text-slate-300" />
+                              <FileText className="h-10 w-10 text-blue-400 group-hover:text-blue-300" />
                             </div>
                             <span className="text-sm text-slate-300 group-hover:text-slate-200">
                               Click to select a file

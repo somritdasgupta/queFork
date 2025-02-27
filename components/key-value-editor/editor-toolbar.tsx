@@ -102,7 +102,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 }}
                 className={cn(
                   STYLES.input.toolbar,
-                  "w-20 text-center pl-6 pr-6"
+                  "w-20 text-center pl-6 pr-6",
+                  "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 )}
                 autoFocus
                 onKeyDown={(e) => {

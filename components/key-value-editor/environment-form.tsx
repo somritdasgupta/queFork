@@ -6,11 +6,11 @@ import {
   X,
   Key,
   Type,
-  PackagePlusIcon,
   Plus,
   AlertCircle,
   Search,
   SendHorizonal,
+  BoxIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -115,8 +115,8 @@ export const EnvironmentForm: React.FC<EnvironmentFormProps> = ({
               </span>
             </div>
             <Badge
-              variant="secondary"
-              className="ml-auto text-[10px] h-4 bg-slate-900/50 backdrop-blur-sm border-slate-700/50 px-1"
+              variant="default"
+              className="ml-auto text-[10px] h-4 bg-slate-800/50 backdrop-blur-sm border-slate-700 px-2"
             >
               {selectedPair?.type === "secret" ? "Secret" : "Text"}
             </Badge>
@@ -128,11 +128,19 @@ export const EnvironmentForm: React.FC<EnvironmentFormProps> = ({
           <div className="relative flex-1">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
             <input
-              placeholder={isCreatingEnv ? "Enter environment name..." : "Search environments..."}
+              placeholder={
+                isCreatingEnv
+                  ? "Enter environment name..."
+                  : "Search environments..."
+              }
               value={environmentSearch}
               onChange={(e) => setEnvironmentSearch(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && isCreatingEnv && environmentSearch.trim()) {
+                if (
+                  e.key === "Enter" &&
+                  isCreatingEnv &&
+                  environmentSearch.trim()
+                ) {
                   handleCreateNewEnv();
                 } else if (e.key === "Escape" && isCreatingEnv) {
                   setIsCreatingEnv(false);
@@ -157,17 +165,6 @@ export const EnvironmentForm: React.FC<EnvironmentFormProps> = ({
                   disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Create
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setIsCreatingEnv(false);
-                  setEnvironmentSearch("");
-                }}
-                className="h-7 w-7 p-0"
-              >
-                <X className="h-3.5 w-3.5 text-slate-400" />
               </Button>
             </div>
           ) : (
@@ -222,7 +219,7 @@ export const EnvironmentForm: React.FC<EnvironmentFormProps> = ({
                       {isDuplicate ? (
                         <AlertCircle className="h-3 w-3 text-yellow-500" />
                       ) : (
-                        <PackagePlusIcon className="h-3 w-3 text-slate-400 group-hover:text-slate-300" />
+                        <BoxIcon className="h-3 w-3 text-slate-400 group-hover:text-slate-300" />
                       )}
                     </div>
                     <div className="flex items-center gap-2 min-w-0 flex-1">

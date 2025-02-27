@@ -86,7 +86,7 @@ export const KeyValueInput = React.memo(function KeyValueInput({
 
   return (
     <div className="relative">
-      <Icon className="absolute left-2.5 top-2 h-4 w-4 text-slate-500 hidden sm:block" />
+      <Icon className="absolute left-2.5 top-2 h-4 w-4 text-slate-500 block" />
       {disabled && (
         <Lock className="absolute right-2.5 top-2 h-3.5 w-3.5 text-slate-500" />
       )}

@@ -31,21 +31,24 @@ export interface EnvironmentSaveActionEvent extends CustomEvent {
   };
 }
 
-export type ContentType =
+export type ContentTypeValue =
   | "none"
   | "application/json"
   | "multipart/form-data"
-  | "application/x-www-form-urlencoded"
   | "text/plain"
   | "application/octet-stream"
   | "application/xml"
   | "text/csv"
   | "text/yaml";
 
-export interface RequestBody {
+export type ContentType = ContentTypeValue;
+
+export interface RequestBodyContent {
   type: ContentType;
-  content: string | KeyValuePair[] | File | BinaryFileData;
+  content: string | KeyValuePair[] | File;
 }
+
+export interface RequestBody extends RequestBodyContent {}
 
 export interface BinaryFileData {
   name: string;
@@ -123,6 +126,9 @@ export interface SavedRequest {
   response?: {
     status: number;
     body?: any;
+    headers?: Record<string, string>; // Add this
+    time?: string; // Add this
+    size?: string; // Add this
   };
   runConfig?: {
     iterations: number;
@@ -277,7 +283,11 @@ export interface SidePanelProps {
   onSelectRequest: (request: SavedRequest) => void;
   onSelectHistoryItem: (item: HistoryItem) => void;
   onClearHistory: () => void;
-  onCreateCollection: (collection: Partial<Collection>) => void;
+  onCreateCollection: (collection: {
+    name: string;
+    description: string;
+    apiVersion: string;
+  }) => Promise<string>; // Changed from Promise<void> to Promise<string>
   onSaveRequest: (collectionId: string, request: Partial<SavedRequest>) => void;
   onDeleteCollection: (collectionId: string) => void;
   onDeleteRequest: (collectionId: string, requestId: string) => void;
@@ -293,10 +303,11 @@ export interface SidePanelProps {
   onEnvironmentsUpdate: (environments: Environment[]) => void;
   onUpdateCollections: (collections: Collection[]) => void;
   isMobile?: boolean;
-  className?: string; // Add this line
+  className?: string;
   onImportCollections: (source: ImportSource, data: string) => Promise<void>;
   hasExtension?: boolean;
   interceptorEnabled?: boolean;
+  toggleInterceptor?: () => void;
 }
 
 export type ImportSource =
@@ -340,6 +351,11 @@ export interface ResponsePanelProps {
     collectionId: string,
     request: Partial<SavedRequest>
   ) => void;
+  onCreateCollection: (collection: {
+    name: string;
+    description: string;
+    apiVersion: string;
+  }) => Promise<string>; // Changed from Promise<void> to Promise<string>
   method: string;
   url: string;
   isWebSocketMode: boolean;

@@ -397,29 +397,39 @@ export function MessagesTab() {
 
   return (
     <div className="h-full flex flex-col min-h-0">
-      {" "}
-      {/* Simplify root element */}
-      <div
-        className={cn(
-          "flex-1 overflow-y-auto min-h-0", // Add min-h-0 to allow flex-1 to work
-          "bg-slate-900/50"
-        )}
-      >
+      <div className={cn("flex-1 overflow-y-auto min-h-0", "bg-slate-900/50")}>
         <div className="divide-y divide-slate-800/50">
           {messages.length === 0 ? (
-            <div className="h-full flex items-center justify-center p-20">
-              <div className="w-full max-w-sm p-8 rounded-lg border border-slate-800/50 bg-slate-900/50 backdrop-blur-sm">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="p-4 rounded-full bg-slate-800/50 ring-1 ring-slate-700/50">
-                    <MessageSquare className="h-6 w-6 text-slate-400" />
+            <div className="h-full flex items-center justify-center">
+              <div className="max-w-sm mx-auto p-8 text-center">
+                <div className="space-y-6">
+                  {/* Icon Container */}
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-radial from-blue-500/20 to-transparent blur-xl" />
+                    <div className="relative bg-slate-800/50 w-16 h-16 mx-auto rounded-2xl border border-slate-700/50 flex items-center justify-center shadow-xl">
+                      <MessageSquare
+                        className="h-8 w-8 text-blue-400"
+                        strokeWidth={1.5}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2 text-center">
-                    <h3 className="text-sm font-medium text-slate-200">
-                      No Messages Yet
-                    </h3>
-                    <p className="text-xs leading-relaxed text-slate-400 max-w-[200px]">
-                      Connect to a WebSocket endpoint to see the messages
+
+                  {/* Text Content */}
+                  <div className="space-y-2">
+                    <p className="text-sm leading-relaxed text-slate-400 max-w-[280px] mx-auto">
+                      Connect to a WebSocket endpoint to start sending and
+                      receiving messages in real-time
                     </p>
+                  </div>
+
+                  {/* Connection Status */}
+                  <div className="pt-4 border-t border-slate-800">
+                    <div className="flex items-center justify-center gap-2 text-xs">
+                      <div className="h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                      <span className="text-slate-400">
+                        Waiting for connection...
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

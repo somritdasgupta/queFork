@@ -266,16 +266,17 @@ export const SidePanel: React.FC<
 
   const PanelContent = () => (
     <div className="flex flex-col h-full">
-      <div className="bg-slate-950">
+      <div className="sticky top-0 z-10 bg-slate-950 border-b border-slate-700">
         <Tabs className="flex w-full" defaultValue={activePanel}>
-          <TabsList className="flex h-8 w-full overflow-x-auto justify-start bg-slate-900/70 rounded-none border-b border-slate-700 p-0">
+          <TabsList className="flex h-8 w-full overflow-x-auto justify-start bg-slate-900/70 rounded-none p-0">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
                 onClick={() => setActivePanel(tab.id)}
                 className={cn(
-                  "flex-1 h-8 rounded-none border-b-4 border-transparent px-2 lg:px-4 py-2 font-medium text-xs text-slate-400",
+                  "flex-1 h-8 rounded-none border-b-4 border-transparent px-4 py-2",
+                  "font-medium text-xs text-slate-400",
                   "data-[state=active]:border-blue-400",
                   "data-[state=active]:text-blue-400",
                   "data-[state=active]:bg-slate-800",
