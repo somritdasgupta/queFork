@@ -1,5 +1,5 @@
 import { FaGithub, FaLinkedin } from "react-icons/fa";
-import { AnimatedLogo } from "./animated-logo";
+import { AnimatedLogo } from "./shared/animated-logo";
 
 export default function Footer() {
   return (

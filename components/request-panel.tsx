@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWebSocket } from "./websocket/websocket-context";
-import { ConnectionTab } from "./websocket/connection-tab";
+import { ConnectionTab } from "./request-panel/connection-tab";
 import { QueryTab } from "./request-panel/query-tab";
 import { HeadersTab } from "./request-panel/headers-tab";
 import { BodyTab } from "./request-panel/body-tab";

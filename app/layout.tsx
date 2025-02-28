@@ -1,7 +1,7 @@
 import "@/styles/globals.css";
 import { Inter } from "next/font/google";
 import { WebSocketWrapper } from "@/components/websocket/websocket-wrapper";
-import { Preloader } from "@/components/preloader";
+import { Preloader } from "@/components/shared/preloader";
 import type { Metadata, Viewport } from "next";
 import { ConnectionLostBackdrop } from "./components/ConnectionLostBackdrop";
 import { ServiceWorkerProvider } from "./components/ServiceWorkerRegistration";

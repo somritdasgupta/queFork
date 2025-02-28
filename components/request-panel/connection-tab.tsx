@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useWebSocket } from "./websocket-context";
+import { useWebSocket } from "../websocket/websocket-context";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Terminal, Github } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { AnimatedLogo } from '@/components/animated-logo';
+import { useEffect } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { Terminal, Github } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AnimatedLogo } from "@/components/shared/animated-logo";
 
 export default function NotFound() {
   useEffect(() => {
@@ -20,10 +20,10 @@ export default function NotFound() {
         className="w-full max-w-lg px-4"
       >
         <div className="mb-16">
-          <AnimatedLogo 
-            animate={true} 
-            showSubtitle={false} 
-            size="lg" 
+          <AnimatedLogo
+            animate={true}
+            showSubtitle={false}
+            size="lg"
             subtitlePosition="bottom"
             primaryColor="text-slate-200"
             secondaryColor="text-blue-500"
@@ -42,7 +42,7 @@ export default function NotFound() {
 
         <div className="flex justify-center gap-6">
           <Link href="/">
-            <Button 
+            <Button
               variant="secondary"
               size="lg"
               className="bg-slate-800/50 hover:bg-slate-700/50 border-slate-700/50 border text-slate-300 gap-2 text-base transition-all backdrop-blur-sm"
@@ -51,11 +51,11 @@ export default function NotFound() {
               Home
             </Button>
           </Link>
-          <Link 
-            href="https://github.com/somritdasgupta/queFork" 
+          <Link
+            href="https://github.com/somritdasgupta/queFork"
             target="_blank"
           >
-            <Button 
+            <Button
               variant="secondary"
               size="lg"
               className="bg-slate-800/50 hover:bg-slate-700/50 border-slate-700/50 border text-slate-300 gap-2 text-base transition-all backdrop-blur-sm"

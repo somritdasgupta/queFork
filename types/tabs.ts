@@ -3,9 +3,10 @@ import { ReactNode } from "react";
 
 export interface TabItem {
   id: string;
-  label: string;
-  icon: ReactNode;
+  label: string | ReactNode;
+  icon?: ReactNode;
   disabled?: boolean;
+  dropdown?: ReactNode;
   hidden?: boolean;
 }
 

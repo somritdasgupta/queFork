@@ -39,7 +39,7 @@ import {
   getIconForContentType,
   type EditorType,
 } from "@/lib/content-type-utils";
-import { CodeEditor } from "@/components/request-panel/shared/code-editor";
+import { CodeEditor } from "@/components/shared/code-editor";
 import {
   readFileAsBase64,
   getAcceptedFileTypes,
@@ -420,7 +420,7 @@ export function BodyTab({
                 <div className="flex items-center gap-2">
                   {getIconForContentType(selectedContentType)}
                   <span className="font-medium text-xs">
-                  {contentTypeOption?.label || "Select type"}
+                    {contentTypeOption?.label || "Select type"}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 rounded-md bg-slate-800 px-2 py-1">
@@ -473,10 +473,7 @@ export function BodyTab({
             >
               <div className="text-center max-w-sm mx-auto px-4">
                 <div className="inline-flex items-center justify-center p-4 rounded-xl bg-gradient-to-b from-slate-800/50 to-slate-900/50 border border-slate-800/60 mb-4">
-                  <FileText
-                    className="h-8 w-8 text-blue-400"
-                    strokeWidth={2}
-                  />
+                  <FileText className="h-8 w-8 text-blue-400" strokeWidth={2} />
                 </div>
                 <h3 className="text-sm font-medium text-slate-200 mb-1">
                   No Body Content

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AnimatedLogo } from "@/components/animated-logo";
+import { AnimatedLogo } from "@/components/shared/animated-logo";
 import { toast } from "sonner";
 
 export function ConnectionLostBackdrop() {

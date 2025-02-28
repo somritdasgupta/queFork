@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useWebSocket } from "./websocket-context";
+import { useWebSocket } from "../../websocket/websocket-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,9 +30,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { SelectDropdown } from "./select-dropdown";
+import { SelectDropdown } from "../../websocket/select-dropdown";
 import { formatDistance } from "date-fns";
-import { CodeEditor } from "@/components/request-panel/shared/code-editor";
+import { CodeEditor } from "@/components/shared/code-editor";
 
 // Update the Message interface to make size optional since we'll calculate it
 interface Message {
@@ -549,6 +549,7 @@ export function MessagesTab() {
                   language="json"
                   height="100%"
                   className="rounded-lg"
+                  showLineNumbers={false}
                 />
               </div>
             )}

@@ -10,6 +10,8 @@ interface CodeEditorProps {
   readOnly?: boolean;
   className?: string;
   onMount?: (editor: editor.IStandaloneCodeEditor) => void;
+  options?: Partial<editor.IStandaloneEditorConstructionOptions>;
+  showLineNumbers?: boolean; // Add this prop
 }
 
 export function CodeEditor({
@@ -20,6 +22,8 @@ export function CodeEditor({
   readOnly = false,
   className = "",
   onMount,
+  options = {},
+  showLineNumbers = true,
 }: CodeEditorProps) {
   useTheme();
 
@@ -27,8 +31,9 @@ export function CodeEditor({
     readOnly,
     minimap: { enabled: false },
     fontSize: 12,
-    lineNumbers: "on",
-    folding: true,
+    lineNumbers: showLineNumbers ? "on" : "off",
+    glyphMargin: showLineNumbers,
+    folding: showLineNumbers,
     foldingStrategy: "indentation",
     formatOnPaste: true,
     formatOnType: true,
@@ -45,8 +50,8 @@ export function CodeEditor({
       highlightActiveIndentation: true,
       bracketPairsHorizontal: true,
     },
-    lineNumbersMinChars: 3,
-    lineDecorationsWidth: 0,
+    lineNumbersMinChars: showLineNumbers ? 3 : 0,
+    lineDecorationsWidth: showLineNumbers ? undefined : 0,
     suggestOnTriggerCharacters: true,
     acceptSuggestionOnEnter: "on",
     autoClosingBrackets: "always",
@@ -54,17 +59,14 @@ export function CodeEditor({
     autoSurround: "languageDefined",
     autoClosingOvertype: "auto",
     autoClosingDelete: "auto",
-    // Add these options for clipboard support
     contextmenu: true,
     quickSuggestions: false,
-    // Enable clipboard permissions
     ariaLabel: "code editor",
     copyWithSyntaxHighlighting: true,
-    // Enable mouse support for better copy/paste experience
     mouseWheelZoom: true,
     multiCursorModifier: "alt",
-    // Add selection clipboard support
     selectionClipboard: true,
+    ...options,
   };
 
   return (

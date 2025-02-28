@@ -1,11 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { CodeEditor } from "@/components/request-panel/shared/code-editor";
-import {
-  Eraser,
-  CheckCircle,
-  Info,
-  SquareActivityIcon,
-} from "lucide-react";
+import { CodeEditor } from "@/components/shared/code-editor";
+import { Eraser, CheckCircle, Info, SquareActivityIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useCallback } from "react";
 
