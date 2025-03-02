@@ -8,7 +8,7 @@ export function ServiceWorkerProvider() {
   const deferredPrompt = useRef<any>(null);
 
   useEffect(() => {
-    const PROMPT_INTERVAL = 0; // 14 days
+    const PROMPT_INTERVAL = 14 * 24 * 60 * 60 * 1000; // 14 days
     const STORAGE_KEY = "lastInstallPrompt";
 
     const shouldShowPrompt = () => {

@@ -38,9 +38,8 @@ export const STYLES = {
     toolbar: "h-6 bg-transparent border-0 text-slate-300 text-xs",
   },
   layout: {
-    container: "flex flex-col",
-    virtualList: "w-full relative",
-    row: "flex w-full transition-colors group border border-slate-800/40",
+    container: "flex flex-col h-full",
+    row: "flex w-full h-8 transition-colors group border border-slate-800/40", // Add fixed height
     rowHover: "hover:bg-slate-800/50 hover:border-slate-700/40",
   },
 };

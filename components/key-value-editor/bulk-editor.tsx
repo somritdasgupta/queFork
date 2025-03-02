@@ -6,11 +6,13 @@ import { Hash, ListPlus, BracketsIcon, Braces } from "lucide-react";
 interface BulkEditorProps {
   content: string;
   onChange: (content: string) => void;
+  footer?: React.ReactNode; // Add this prop
 }
 
 export const BulkEditor: React.FC<BulkEditorProps> = ({
   content,
   onChange,
+  footer,
 }) => {
   const placeholderGuide = [
     "→ Simple Format:",
@@ -68,6 +70,7 @@ export const BulkEditor: React.FC<BulkEditorProps> = ({
         autoComplete="off"
         autoCorrect="off"
       />
+      {footer}
     </div>
   );
 };

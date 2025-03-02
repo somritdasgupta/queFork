@@ -1,6 +1,10 @@
 import { KeyValuePair, Environment, RequestBody } from "@/types";
 import { useEffect, useCallback, useMemo } from "react";
 import { KeyValueEditor } from "../key-value-editor";
+import {
+  HeaderSuggestion,
+  headerSuggestions,
+} from "@/utils/header-suggestions";
 
 const commonHeaders = [
   "Accept",
@@ -133,19 +137,77 @@ export function HeadersTab({
     }
   }, [managedHeaders, headers, onHeadersChange]);
 
+  const renderHeaderSuggestions = useCallback(
+    (
+      index: number,
+      value: string,
+      onSelect: (suggestion: HeaderSuggestion) => void
+    ) => {
+      const suggestions = !value
+        ? headerSuggestions
+        : headerSuggestions.filter((s) =>
+            s.name.toLowerCase().includes(value.toLowerCase())
+          );
+
+      return (
+        <div className="space-y-0.5 py-1">
+          {suggestions.map((suggestion) => (
+            <div
+              key={suggestion.name}
+              className="px-2 py-1 hover:bg-slate-800/70 rounded cursor-pointer transition-colors"
+              onMouseDown={() => onSelect(suggestion)}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-slate-200 truncate">
+                  {suggestion.name}
+                </span>
+                {suggestion.commonValues?.[0] && (
+                  <span className="text-[10px] text-slate-400 font-mono truncate shrink-0">
+                    {suggestion.commonValues[0]}
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] text-slate-400 truncate">
+                {suggestion.description}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    },
+    []
+  );
+
+  const handleSuggestionSelect = useCallback(
+    (index: number, suggestion: HeaderSuggestion) => {
+      const newHeaders = [...headers];
+      newHeaders[index] = {
+        ...newHeaders[index],
+        key: suggestion.name,
+        value: suggestion.commonValues?.[0] || "",
+      };
+      onHeadersChange(newHeaders);
+    },
+    [headers, onHeadersChange]
+  );
+
   return (
     <div className="bg-slate-900">
       <KeyValueEditor
         pairs={managedHeaders}
         onChange={onHeadersChange}
         addButtonText="Add Header"
-        presetKeys={commonHeaders}
+        requireUniqueKeys={true}
         environments={environments}
         currentEnvironment={currentEnvironment}
         onEnvironmentChange={onEnvironmentChange}
         onEnvironmentsUpdate={onEnvironmentsUpdate}
         onAddToEnvironment={onAddToEnvironment}
         onSourceRedirect={onSourceRedirect}
+        suggestions={{
+          renderContent: renderHeaderSuggestions,
+          onSelect: handleSuggestionSelect,
+        }}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import {
   XCircle,
   MinusCircle,
   PlusCircle,
+  CopyX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -22,6 +23,7 @@ interface EditorToolbarProps {
   onBulkEdit: () => void;
   onBulkAdd: (count: number) => void;
   addButtonText: string;
+  onPurge: () => void;
 }
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
@@ -31,6 +33,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   onBulkEdit,
   onBulkAdd,
   addButtonText,
+  onPurge,
 }) => {
   const [isAddingMultiple, setIsAddingMultiple] = useState(false);
   const [fieldCount, setFieldCount] = useState("");
@@ -57,6 +60,20 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
   return (
     <div className="flex-none flex border-y border-slate-800 bg-slate-900/90 backdrop-blur-sm divide-x divide-slate-800">
+      <Button
+        variant="ghost"
+        onClick={onPurge}
+        className={cn(
+          STYLES.button.common,
+          "w-8 justify-center",
+          "border-slate-800 hover:border-red-600/40",
+          "text-blue-400 hover:text-red-400"
+        )}
+        title="Purge all items"
+      >
+        <CopyX className="h-4 w-4" />
+      </Button>
+
       <div
         className={cn(
           "flex-1 h-8 rounded-none",
@@ -179,7 +196,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 }
               }}
               className={cn(
-                "text-[10px] py-0 h-4 bg-slate-800 text-slate-400",
+                "text-[10px] py-0 h-4 bg-slate-800 text-blue-400",
                 "transition-colors border border-slate-600/50",
                 !isBulkMode &&
                   "cursor-pointer hover:bg-slate-600 hover:border-slate-600",

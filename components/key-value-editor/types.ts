@@ -22,7 +22,6 @@ export interface InputProps extends EditorBaseProps {
 export interface PairRendererProps {
   pair: KeyValuePair;
   index: number;
-  virtualRow?: { size: number; start: number };
 }
 
 export type UpdatePairFunction = (

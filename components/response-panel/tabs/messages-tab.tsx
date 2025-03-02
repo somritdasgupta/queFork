@@ -407,29 +407,18 @@ export function MessagesTab() {
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-radial from-blue-500/20 to-transparent blur-xl" />
                     <div className="relative bg-slate-800/50 w-16 h-16 mx-auto rounded-2xl border border-slate-700/50 flex items-center justify-center shadow-xl">
-                      <MessageSquare
-                        className="h-8 w-8 text-blue-400"
-                        strokeWidth={1.5}
+                      <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 to-transparent rounded-2xl" />
+                      <div className="absolute inset-0 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] rounded-2xl" />
+                      <PlugZap2
+                        className="h-8 w-8 text-blue-400 drop-shadow-[0_0_3px_rgba(96,165,250,0.3)]"
+                        strokeWidth={2}
                       />
                     </div>
                   </div>
-
-                  {/* Text Content */}
                   <div className="space-y-2">
                     <p className="text-sm leading-relaxed text-slate-400 max-w-[280px] mx-auto">
-                      Connect to a WebSocket endpoint to start sending and
-                      receiving messages in real-time
+                      Connect to WebSocket endpoint to send and receive messages
                     </p>
-                  </div>
-
-                  {/* Connection Status */}
-                  <div className="pt-4 border-t border-slate-800">
-                    <div className="flex items-center justify-center gap-2 text-xs">
-                      <div className="h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                      <span className="text-slate-400">
-                        Waiting for connection...
-                      </span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -542,13 +531,13 @@ export function MessagesTab() {
                 />
               </>
             ) : (
-              <div className="h-40 rounded-lg overflow-hidden border border-blue-800/30">
+              <div className="h-50 rounded-lg overflow-hidden border border-blue-800/30">
                 <CodeEditor
                   value={message}
                   onChange={handleMessageChange}
                   language="json"
                   height="100%"
-                  className="rounded-lg"
+                  className="rounded-md"
                   showLineNumbers={false}
                 />
               </div>

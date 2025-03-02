@@ -23,23 +23,19 @@ import {
 import { Transform } from "@dnd-kit/utilities";
 
 import dynamic from "next/dynamic";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { debounce } from "lodash";
 import { cn } from "@/lib/utils";
 
 import {
   Key,
   Type,
-  AlignLeft,
-  ArrowUpRight,
   CheckCircle,
   XCircle,
   Copy,
   PackagePlusIcon,
-  Trash2,
   Eraser,
   EllipsisIcon,
   CircleArrowOutUpRight,
+  SquareX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,12 +48,15 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
+  PopoverPortal,
 } from "@radix-ui/react-popover";
 import { STYLES, createEmptyPair, utils } from "./key-value-editor/constants";
-import { ActionButton, VirtualItem } from "./key-value-editor/ui-components";
+import { ActionButton } from "./key-value-editor/ui-components";
 import { EnvironmentForm } from "./key-value-editor/environment-form";
 import { KeyValueInput } from "./key-value-editor/key-value-input";
 import { SortableItem } from "./key-value-editor/sortable-item";
+import { SuggestionsWrapper } from "./key-value-editor/suggestions/suggestions-wrapper";
+import { HeaderSuggestions } from "./key-value-editor/suggestions/header-suggestions";
 
 // Client-only DnD components
 const DndContextClient = dynamic(
@@ -100,13 +99,20 @@ interface KeyValueEditorProps {
   onExpandedChange?: (id: string | null) => void;
   onSave?: (pairs: KeyValuePair[]) => void;
   onSourceRedirect?: (source: { tab: string; type?: string }) => void;
+  suggestions?: {
+    renderContent: (
+      index: number,
+      value: string,
+      onSelect: (suggestion: any) => void
+    ) => React.ReactNode;
+    onSelect: (index: number, suggestion: any) => void;
+  };
 }
 
 export function KeyValueEditor({
   pairs = [createEmptyPair(utils.generateStableId(0))], // Ensure default value has one empty pair
   onChange,
   addButtonText = "Add Item",
-  showDescription = false,
   requireUniqueKeys = false,
   onAddToEnvironment,
   environments = [],
@@ -114,6 +120,7 @@ export function KeyValueEditor({
   preventFirstItemDeletion = false,
   autoSave = false,
   onSourceRedirect,
+  suggestions,
   ...props
 }: KeyValueEditorProps) {
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -126,6 +133,9 @@ export function KeyValueEditor({
   const [showEnvironmentForm, setShowEnvironmentForm] = useState(false);
   const navigableElements = useRef<NavigableElement[]>([]);
   const parentRef = useRef<HTMLDivElement>(null);
+  const [showSuggestionsFor, setShowSuggestionsFor] = useState<number | null>(
+    null
+  );
 
   // Setup DnD sensors
   const sensors = useSensors(
@@ -218,17 +228,6 @@ export function KeyValueEditor({
     onChange([...pairs, newPair]);
   }, [pairs, onChange]);
 
-  const debouncedSave = useMemo(
-    () =>
-      debounce((pairs: KeyValuePair[]) => {
-        if (autoSave) {
-          // Only debounce if autoSave is enabled
-          onChange(pairs);
-        }
-      }, 1000),
-    [onChange, autoSave]
-  );
-
   const ensurePairId = useCallback(
     (pair: KeyValuePair, index: number): string => {
       return pair.id || utils.generateStableId(index);
@@ -238,16 +237,14 @@ export function KeyValueEditor({
 
   const updatePair = useCallback(
     (index: number, field: keyof KeyValuePair, value: string | boolean) => {
-      requestAnimationFrame(() => {
-        const newPairs = [...pairs];
-        const updatedPair = {
-          ...newPairs[index],
-          [field]: value,
-          id: ensurePairId(newPairs[index], index),
-        };
-        newPairs[index] = updatedPair;
-        onChange(newPairs);
-      });
+      const newPairs = [...pairs];
+      const updatedPair = {
+        ...newPairs[index],
+        [field]: value,
+        id: ensurePairId(newPairs[index], index),
+      };
+      newPairs[index] = updatedPair;
+      onChange(newPairs);
     },
     [pairs, onChange, ensurePairId]
   );
@@ -263,9 +260,22 @@ export function KeyValueEditor({
     [pairs, onChange, requireUniqueKeys, updatePair]
   );
 
+  const handlePurge = useCallback(() => {
+    // Keep only source items
+    const sourceItems = pairs.filter((p) => p.source);
+    onChange(
+      sourceItems.length
+        ? sourceItems
+        : [createEmptyPair(utils.generateStableId(0))]
+    );
+    toast.success("All custom items purged");
+  }, [pairs, onChange]);
+
   const handleBulkEdit = () => {
     if (isBulkMode) {
       try {
+        // Keep existing source items
+        const sourceItems = pairs.filter((p) => p.source);
         const newPairs = bulkContent
           .split("\n")
           .filter((line: string) => line.trim())
@@ -306,12 +316,8 @@ export function KeyValueEditor({
           })
           .filter((pair: KeyValuePair) => pair.key || pair.value);
 
-        // Always ensure at least one pair
-        onChange(
-          newPairs.length > 0
-            ? newPairs
-            : [createEmptyPair(utils.generateStableId(0))]
-        );
+        // Combine source items with new pairs
+        onChange([...newPairs, ...sourceItems]);
 
         setIsBulkMode(false);
         setBulkContent("");
@@ -320,8 +326,9 @@ export function KeyValueEditor({
         toast.error("Error processing bulk edit");
       }
     } else {
+      // Only include non-source items in bulk editor
       const content = pairs
-        .filter((p: KeyValuePair) => p.key || p.value)
+        .filter((p: KeyValuePair) => !p.source && (p.key || p.value))
         .map(
           (p: KeyValuePair) => `${!p.enabled ? "#" : ""}${p.key}: ${p.value}`
         )
@@ -342,43 +349,16 @@ export function KeyValueEditor({
     }
   };
 
-  const rowVirtualizer = useVirtualizer({
-    count: pairs.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 32,
-    overscan: 10,
-    initialRect: { width: 0, height: 68 },
-    scrollToFn: (offset, { behavior }) => {
-      if (parentRef.current) {
-        parentRef.current.scrollTop = offset;
-      }
-    },
-    getItemKey: useCallback(
-      (index: number) => pairs[index]?.id || `fallback-${index}`,
-      [pairs]
-    ),
-  });
-
   // Force initial render to show first item
-  useEffect(() => {
-    rowVirtualizer.measure();
-  }, []);
-
-  // Add initial pairs effect
   useEffect(() => {
     if (!pairs.length) {
       onChange([createEmptyPair(utils.generateStableId(0))]);
     }
   }, [pairs.length, onChange]);
 
-  const visiblePairs = useMemo(
-    () =>
-      rowVirtualizer.getVirtualItems().map((virtualRow) => ({
-        pair: pairs[virtualRow.index],
-        virtualRow,
-      })),
-    [rowVirtualizer, pairs]
-  );
+  const canPerformActions = useCallback((pair: KeyValuePair) => {
+    return pair.key.trim() !== "" && pair.value.trim() !== "";
+  }, []);
 
   const renderActionButtons = (pair: KeyValuePair, index: number) => {
     if (pair.source && onSourceRedirect) {
@@ -398,7 +378,7 @@ export function KeyValueEditor({
 
     return (
       <ActionButton
-        icon={shouldShowClear ? Eraser : Trash2}
+        icon={shouldShowClear ? Eraser : SquareX}
         onClick={() => {
           if (shouldShowClear) {
             // Clear the pair instead of removing it
@@ -467,7 +447,12 @@ export function KeyValueEditor({
                 );
                 toast.success("Copied to clipboard");
               }}
-              className="h-6 w-6 p-0 text-blue-400"
+              disabled={!canPerformActions(pair)}
+              className={cn(
+                "h-6 w-6 p-0",
+                canPerformActions(pair) ? "text-blue-400" : "text-slate-600",
+                "transition-colors"
+              )}
               title="Copy"
             >
               <Copy className="h-4 w-4" />
@@ -485,7 +470,14 @@ export function KeyValueEditor({
                   });
                   setShowEnvironmentForm(true);
                 }}
-                className="h-6 w-6 p-0 text-purple-400"
+                disabled={!canPerformActions(pair)}
+                className={cn(
+                  "h-6 w-6 p-0",
+                  canPerformActions(pair)
+                    ? "text-purple-400"
+                    : "text-slate-600",
+                  "transition-colors"
+                )}
                 title="Add to environment"
               >
                 <PackagePlusIcon className="h-4 w-4" />
@@ -499,57 +491,131 @@ export function KeyValueEditor({
     </div>
   );
 
+  const handleKeyChange = (index: number, value: string) => {
+    const newPairs = [...pairs];
+    newPairs[index].key = value;
+    onChange(newPairs);
+  };
+
+  const renderKeyInput = (
+    pair: KeyValuePair,
+    index: number,
+    pairId: string
+  ) => {
+    if (!suggestions) {
+      return (
+        <KeyValueInput
+          value={pair.key}
+          onChange={(value) => handleKeyChange(index, value)}
+          placeholder="Key"
+          icon={Key}
+          onPaste={(e) => handleSmartPaste(e, index, "key")}
+          className={cn(
+            STYLES.input.base,
+            STYLES.input.text,
+            STYLES.input.hover
+          )}
+          pairId={pairId}
+          navigableElements={navigableElements}
+          setFocus={setFocus}
+          disabled={!!pair.source}
+        />
+      );
+    }
+
+    return (
+      <SuggestionsWrapper
+        value={pair.key}
+        onChange={(value) => handleKeyChange(index, value)}
+        isOpen={showSuggestionsFor === index}
+        onOpenChange={(open) => setShowSuggestionsFor(open ? index : null)}
+        inputProps={{
+          placeholder: "Key",
+          icon: Key,
+          onPaste: (e: React.ClipboardEvent<HTMLInputElement>) =>
+            handleSmartPaste(e, index, "key"),
+          className: cn(
+            STYLES.input.base,
+            STYLES.input.text,
+            STYLES.input.hover
+          ),
+          pairId,
+          navigableElements,
+          setFocus,
+          disabled: !!pair.source,
+        }}
+        renderSuggestions={(value, onSelect) => (
+          <HeaderSuggestions value={value} onSelect={onSelect} />
+        )}
+      />
+    );
+  };
+
+  // Modify sort function to keep source items at bottom
+  const sortedPairs = useMemo(() => {
+    return [...pairs].sort((a, b) => {
+      // Source items go to bottom
+      if (a.source && !b.source) return 1;
+      if (!a.source && b.source) return -1;
+      // Within source items, maintain their order
+      if (a.source && b.source) return 0;
+      // For non-source items, maintain existing sort
+      return 0;
+    });
+  }, [pairs]);
+
   return (
-    <div
-      className="flex flex-col"
-      style={{
-        maxHeight: "38vh", // Only set max-height, let height be automatic
-        minHeight: "68px", // Keep minimum height for one row + toolbar
-      }}
-    >
-      {showEnvironmentForm && selectedPairForEnv && (
-        <EnvironmentForm
-          environments={environments}
-          selectedPair={selectedPairForEnv}
-          onClose={() => {
-            setShowEnvironmentForm(false);
-            setSelectedPairForEnv(null);
-          }}
-          onEnvironmentsUpdate={onEnvironmentsUpdate!}
-          onEnvironmentSave={(envId) => {
-            if (selectedPairForEnv) {
-              const event = new CustomEvent("environmentSave", {
-                detail: {
-                  key: selectedPairForEnv.key,
-                  value: selectedPairForEnv.value,
-                  type: selectedPairForEnv.type,
-                  environmentId: envId,
-                },
-              });
-              window.dispatchEvent(event);
+    <div className="flex flex-col">
+      <div className="flex flex-col h-full min-h-[68px]">
+        {showEnvironmentForm && selectedPairForEnv && (
+          <EnvironmentForm
+            environments={environments}
+            selectedPair={selectedPairForEnv}
+            onClose={() => {
               setShowEnvironmentForm(false);
               setSelectedPairForEnv(null);
-              toast.success(`Added to environment`);
-            }
-          }}
-        />
-      )}
+            }}
+            onEnvironmentsUpdate={onEnvironmentsUpdate!}
+            onEnvironmentSave={(envId) => {
+              if (selectedPairForEnv) {
+                const event = new CustomEvent("environmentSave", {
+                  detail: {
+                    key: selectedPairForEnv.key,
+                    value: selectedPairForEnv.value,
+                    type: "text",
+                    environmentId: envId,
+                  },
+                });
+                window.dispatchEvent(event);
+                setShowEnvironmentForm(false);
+                setSelectedPairForEnv(null);
+                toast.success(`Added to environment`);
+              }
+            }}
+          />
+        )}
 
-      <div
-        ref={parentRef}
-        className="flex-1 overflow-y-auto min-h-[32px] scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent"
-        style={{
-          height: isBulkMode ? "38vh" : "auto", // Use auto height in normal mode
-          willChange: "transform",
-        }}
-      >
-        {isBulkMode ? (
-          <BulkEditor content={bulkContent} onChange={setBulkContent} />
-        ) : (
-          <div
-            className="w-full relative"
-            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
-          >
+        <div
+          ref={parentRef}
+          className={cn(
+            "flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent",
+            "max-h-[calc(38vh-68px)]" // Subtract toolbar height
+          )}
+        >
+          {isBulkMode ? (
+            <BulkEditor
+              content={bulkContent}
+              onChange={setBulkContent}
+              footer={
+                pairs.some((p) => p.source) ? (
+                  <div className="text-xs text-yellow-500 px-3 py-2 bg-yellow-500/10">
+                    Note: Items from other tabs will be preserved but not shown
+                    in bulk editor
+                  </div>
+                ) : null
+              }
+            />
+          ) : (
             <DndContextClient
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -557,207 +623,165 @@ export function KeyValueEditor({
               modifiers={restrictToVerticalAxis.modifiers}
             >
               <SortableContextClient
-                items={pairs.map(
+                items={sortedPairs.map(
                   (p) => p.id || utils.generateStableId(pairs.indexOf(p))
                 )}
                 strategy={verticalListSortingStrategy}
               >
-                {visiblePairs.map(({ pair, virtualRow }) => {
-                  const pairId = ensurePairId(pair, virtualRow.index);
-
+                {sortedPairs.map((pair, index) => {
+                  const pairId = ensurePairId(pair, index);
                   return (
-                    <VirtualItem
+                    <SortableItem
                       key={pairId}
-                      id={pairId}
-                      size={virtualRow.size}
-                      start={virtualRow.start}
+                      pair={{ ...pair, id: pairId }}
+                      index={index}
                     >
-                      <SortableItem
-                        pair={{ ...pair, id: pairId }}
-                        index={virtualRow.index}
+                      <div
+                        className={cn(
+                          "flex w-full transition-colors group border border-slate-800/40",
+                          pair.source
+                            ? "bg-slate-800/20"
+                            : "hover:bg-slate-800/50 hover:border-slate-600/40"
+                        )}
                       >
                         <div
                           className={cn(
-                            "flex w-full transition-colors group border border-slate-800/40",
-                            pair.source
-                              ? "bg-slate-800/20"
-                              : "hover:bg-slate-800/50 hover:border-slate-600/40"
+                            "grid gap-[1px] flex-1",
+                            "grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
+                            !pair.enabled && "opacity-50"
                           )}
                         >
-                          <div
+                          {renderKeyInput(pair, index, pairId)}
+                          <KeyValueInput
+                            value={pair.value}
+                            onChange={(value) =>
+                              updatePair(index, "value", value)
+                            }
+                            placeholder="Value"
+                            icon={Type}
+                            onPaste={(e) => handleSmartPaste(e, index, "value")}
                             className={cn(
-                              "grid gap-[1px] flex-1",
-                              showDescription
-                                ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]"
-                                : "grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
-                              !pair.enabled && "opacity-50"
+                              STYLES.input.base,
+                              STYLES.input.text,
+                              STYLES.input.hover
                             )}
-                          >
-                            <KeyValueInput
-                              value={pair.key}
-                              onChange={(value) =>
-                                updatePair(virtualRow.index, "key", value)
-                              }
-                              placeholder="Key"
-                              icon={Key}
-                              onPaste={(e) =>
-                                handleSmartPaste(e, virtualRow.index, "key")
+                            pairId={pairId}
+                            isValue
+                            navigableElements={navigableElements}
+                            setFocus={setFocus}
+                            disabled={!!pair.source}
+                          />
+                        </div>
+                        <div className="flex items-center gap-1 relative px-1">
+                          <div className="hidden sm:flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                updatePair(index, "enabled", !pair.enabled)
                               }
                               className={cn(
-                                STYLES.input.base,
-                                STYLES.input.text,
-                                STYLES.input.hover
+                                "h-6 w-6 p-0",
+                                pair.enabled
+                                  ? "text-emerald-400"
+                                  : "text-slate-500"
                               )}
-                              pairId={pairId}
-                              navigableElements={navigableElements}
-                              setFocus={setFocus}
-                              disabled={!!pair.source}
-                            />
-                            <KeyValueInput
-                              value={pair.value}
-                              onChange={(value) =>
-                                updatePair(virtualRow.index, "value", value)
-                              }
-                              placeholder="Value"
-                              icon={Type}
-                              onPaste={(e) =>
-                                handleSmartPaste(e, virtualRow.index, "value")
-                              }
-                              className={cn(
-                                STYLES.input.base,
-                                STYLES.input.text,
-                                STYLES.input.hover
+                              title={pair.enabled ? "Disable" : "Enable"}
+                            >
+                              {pair.enabled ? (
+                                <CheckCircle className="h-4 w-4" />
+                              ) : (
+                                <XCircle className="h-4 w-4" />
                               )}
-                              pairId={pairId}
-                              isValue
-                              navigableElements={navigableElements}
-                              setFocus={setFocus}
-                              disabled={!!pair.source}
-                            />
-                            {showDescription && (
-                              <KeyValueInput
-                                value={pair.description || ""}
-                                onChange={(value) =>
-                                  updatePair(
-                                    virtualRow.index,
-                                    "description",
-                                    value
-                                  )
-                                }
-                                placeholder="Description"
-                                icon={AlignLeft}
-                                className={cn(
-                                  STYLES.input.base,
-                                  STYLES.input.text,
-                                  STYLES.input.hover
-                                )}
-                                pairId={pairId}
-                                navigableElements={navigableElements}
-                                setFocus={setFocus}
-                                disabled={!!pair.source}
-                              />
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 relative px-1">
-                            <div className="hidden sm:flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  updatePair(
-                                    virtualRow.index,
-                                    "enabled",
-                                    !pair.enabled
-                                  )
-                                }
-                                className={cn(
-                                  "h-6 w-6 p-0",
-                                  pair.enabled
-                                    ? "text-emerald-400"
-                                    : "text-slate-500"
-                                )}
-                                title={pair.enabled ? "Disable" : "Enable"}
-                              >
-                                {pair.enabled ? (
-                                  <CheckCircle className="h-4 w-4" />
-                                ) : (
-                                  <XCircle className="h-4 w-4" />
-                                )}
-                              </Button>
+                            </Button>
 
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  JSON.stringify({
+                                    key: pair.key,
+                                    value: pair.value,
+                                  })
+                                );
+                                toast.success("Copied to clipboard");
+                              }}
+                              disabled={!canPerformActions(pair)}
+                              className={cn(
+                                "h-6 w-6 p-0",
+                                canPerformActions(pair)
+                                  ? "text-blue-400"
+                                  : "text-slate-600",
+                                "transition-colors"
+                              )}
+                              title="Copy"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+
+                            {onAddToEnvironment && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(
-                                    JSON.stringify({
-                                      key: pair.key,
-                                      value: pair.value,
-                                    })
-                                  );
-                                  toast.success("Copied to clipboard");
+                                  setSelectedPairForEnv({
+                                    key: pair.key,
+                                    value: pair.value,
+                                    type: "text",
+                                  });
+                                  setShowEnvironmentForm(true);
                                 }}
-                                className="h-6 w-6 p-0 text-blue-400"
-                                title="Copy"
+                                disabled={!canPerformActions(pair)}
+                                className={cn(
+                                  "h-6 w-6 p-0",
+                                  canPerformActions(pair)
+                                    ? "text-purple-400"
+                                    : "text-slate-600",
+                                  "transition-colors"
+                                )}
+                                title="Add to environment"
                               >
-                                <Copy className="h-4 w-4" />
+                                <PackagePlusIcon className="h-4 w-4" />
                               </Button>
+                            )}
 
-                              {onAddToEnvironment && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedPairForEnv({
-                                      key: pair.key,
-                                      value: pair.value,
-                                      type: "text",
-                                    });
-                                    setShowEnvironmentForm(true);
-                                  }}
-                                  className="h-6 w-6 p-0 text-purple-400"
-                                  title="Add to environment"
-                                >
-                                  <PackagePlusIcon className="h-4 w-4" />
-                                </Button>
-                              )}
-
-                              {renderActionButtons(pair, virtualRow.index)}
-                            </div>
-
-                            {renderMobileActions(pair, virtualRow.index)}
+                            {renderActionButtons(pair, index)}
                           </div>
+
+                          {renderMobileActions(pair, index)}
                         </div>
-                      </SortableItem>
-                    </VirtualItem>
+                      </div>
+                    </SortableItem>
                   );
                 })}
               </SortableContextClient>
             </DndContextClient>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      <EditorToolbar
-        isBulkMode={isBulkMode}
-        pairsCount={pairs.length}
-        onAddPair={handleAddPair}
-        onBulkEdit={handleBulkEdit}
-        onBulkAdd={(count) => {
-          const newPairs = Array.from({ length: count }, () => ({
-            id: utils.generateStableId(pairs.length + Math.random()),
-            key: "",
-            value: "",
-            description: "",
-            enabled: true,
-            type: "text",
-            showSecrets: false,
-          }));
-          onChange([...pairs, ...newPairs]);
-          toast.success(`Added ${count} new fields`);
-        }}
-        addButtonText={addButtonText}
-      />
+        <EditorToolbar
+          isBulkMode={isBulkMode}
+          pairsCount={pairs.length}
+          onAddPair={handleAddPair}
+          onBulkEdit={handleBulkEdit}
+          onBulkAdd={(count) => {
+            const newPairs = Array.from({ length: count }, () => ({
+              id: utils.generateStableId(pairs.length + Math.random()),
+              key: "",
+              value: "",
+              description: "",
+              enabled: true,
+              type: "text",
+              showSecrets: false,
+            }));
+            onChange([...pairs, ...newPairs]);
+            toast.success(`Added ${count} new fields`);
+          }}
+          addButtonText={addButtonText}
+          onPurge={handlePurge}
+        />
+      </div>
     </div>
   );
 }

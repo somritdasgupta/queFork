@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import { TestsTab } from "./request-panel/tests-tab";
 import { useTabPanel } from "@/hooks/use-tab-panel";
 import { RequestPanelProps } from "@/types";
 import { toast } from "sonner";
+import { TbBeta } from "react-icons/tb";
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -119,6 +120,41 @@ export function RequestPanel({
     toast.success(`Switched to ${tabLabel}${typeLabel}`);
   };
 
+  const handleRequestChange = useCallback(
+    (newRequest: any) => {
+      console.log("Request change triggered:", newRequest);
+
+      if (newRequest) {
+        // Handle headers update
+        if (Array.isArray(newRequest.headers)) {
+          console.log("Headers changed:", newRequest.headers);
+          onHeadersChange([...newRequest.headers]);
+        }
+
+        // Handle params update
+        if (Array.isArray(newRequest.params)) {
+          console.log("Params changed:", newRequest.params);
+          onParamsChange([...newRequest.params]);
+        }
+
+        // Handle body update
+        if (newRequest.body) {
+          console.log("Body changed:", newRequest.body);
+          // Create a new object to ensure UI updates
+          onBodyChange({ ...newRequest.body });
+        }
+
+        // Handle auth update
+        if (newRequest.auth) {
+          console.log("Auth changed:", newRequest.auth);
+          // Create a new object to ensure UI updates
+          onAuthChange({ ...newRequest.auth });
+        }
+      }
+    },
+    [onHeadersChange, onParamsChange, onBodyChange, onAuthChange]
+  );
+
   return (
     <div className="h-full flex flex-col bg-slate-900 overflow-hidden">
       <AnimatePresence mode="wait">
@@ -165,6 +201,12 @@ export function RequestPanel({
                           <div className="flex items-center justify-center gap-2">
                             {tab.icon}
                             <span>{tab.label}</span>
+                            {(tab.id === "pre-request" ||
+                              tab.id === "tests") && (
+                              <span className="inline-flex items-center justify-center px-1 text-[8px] font-medium bg-amber-500/10 text-amber-500 rounded">
+                                beta
+                              </span>
+                            )}
                           </div>
                         </TabsTrigger>
                       )
@@ -240,6 +282,13 @@ export function RequestPanel({
                             ).__ACTIVE_REQUEST__.preRequestScript = script;
                           }
                         }}
+                        request={{
+                          headers,
+                          params,
+                          body,
+                          auth,
+                        }}
+                        onRequestChange={handleRequestChange}
                       />
                     </TabsContent>
 

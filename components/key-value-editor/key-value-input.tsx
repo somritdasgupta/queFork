@@ -22,6 +22,8 @@ interface KeyValueInputProps {
   navigableElements: React.RefObject<NavigableElement[]>;
   setFocus: (id: string) => void;
   disabled?: boolean;
+  onFocus?: () => void; // Add this line
+  onBlur?: () => void; // Add this line
 }
 
 export const KeyValueInput = React.memo(function KeyValueInput({
@@ -36,6 +38,8 @@ export const KeyValueInput = React.memo(function KeyValueInput({
   onKeyDown,
   navigableElements,
   disabled,
+  onFocus, // Add this line
+  onBlur, // Add this line
 }: KeyValueInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const stableId = useRef(`${pairId}-${isValue ? "value" : "key"}`);
@@ -110,6 +114,8 @@ export const KeyValueInput = React.memo(function KeyValueInput({
         autoCapitalize="off"
         spellCheck="false"
         onKeyDown={onKeyDown}
+        onFocus={onFocus} // Add this line
+        onBlur={onBlur} // Add this line
       />
     </div>
   );
