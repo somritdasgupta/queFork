@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Popover,
   PopoverTrigger,
@@ -29,6 +29,25 @@ export function SuggestionsWrapper({
 }: SuggestionsWrapperProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const [isBlurring, setIsBlurring] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  const handleInputFocus = () => {
+    setIsBlurring(false);
+    onOpenChange(true);
+  };
+
+  const handleInputBlur = () => {
+    if (!isBlurring) {
+      setIsBlurring(true);
+      setTimeout(() => {
+        if (isBlurring) onOpenChange(false);
+      }, 200);
+    }
+  };
 
   return (
     <div className="relative flex-1" ref={inputRef}>
@@ -37,23 +56,14 @@ export function SuggestionsWrapper({
           <div>
             <KeyValueInput
               {...inputProps}
-              value={value}
+              value={inputValue}
               onChange={(newValue) => {
+                setInputValue(newValue);
                 onChange(newValue);
                 onOpenChange(true);
               }}
-              onFocus={() => {
-                setIsBlurring(false);
-                onOpenChange(true);
-              }}
-              onBlur={() => {
-                if (!isBlurring) {
-                  setIsBlurring(true);
-                  setTimeout(() => {
-                    if (isBlurring) onOpenChange(false);
-                  }, 200);
-                }
-              }}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
             />
           </div>
         </PopoverTrigger>
@@ -62,7 +72,7 @@ export function SuggestionsWrapper({
             side="bottom"
             align="start"
             sideOffset={2}
-            className="p-0 bg-slate-900/95 backdrop-blur-sm border border-slate-700/50 rounded-md shadow-lg z-50 w-[calc(100vw-1rem)] sm:w-auto"
+            className="p-0 bg-slate-900/95 backdrop-blur-sm border border-slate-700/50 rounded-b-md shadow-lg z-50 sm:w-[calc(34vw-1.2rem)]"
             style={{
               minWidth: Math.max(
                 200,

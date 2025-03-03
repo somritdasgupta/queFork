@@ -174,9 +174,13 @@ export function ResponsePanel({ ...props }: ResponsePanelProps) {
 
   // Essential handlers
   const handleSaveRequest = () => {
-    if (!response) return;
+    if (!response) {
+      toast.error("No response to save");
+      return;
+    }
 
     const requestDetails: Partial<SavedRequest> = {
+      name: url.split("/").pop() || "New Request", // Add default name
       method,
       url,
       headers: Object.entries(response.headers || {}).map(([key, value]) => ({
@@ -416,17 +420,19 @@ export function ResponsePanel({ ...props }: ResponsePanelProps) {
 
                 <div className="flex-1 relative bg-slate-900/50 min-h-0">
                   {showSaveForm && pendingSaveRequest && (
-                    <RequestSaveForm
-                      collections={collections}
-                      onClose={() => {
-                        setShowSaveForm(false);
-                        setPendingSaveRequest(null);
-                      }}
-                      onSaveToCollection={onSaveToCollection}
-                      onCreateCollection={handleCreateCollection}
-                      pendingRequest={pendingSaveRequest}
-                      className="border-none"
-                    />
+                    <div className="absolute inset-0 z-50 bg-slate-900/50 backdrop-blur-sm">
+                      <RequestSaveForm
+                        collections={collections}
+                        onClose={() => {
+                          setShowSaveForm(false);
+                          setPendingSaveRequest(null);
+                        }}
+                        onSaveToCollection={onSaveToCollection}
+                        onCreateCollection={handleCreateCollection}
+                        pendingRequest={pendingSaveRequest}
+                        className="border-none"
+                      />
+                    </div>
                   )}
 
                   <ResponseContent

@@ -12,16 +12,32 @@ export function ServiceWorkerProvider() {
     const STORAGE_KEY = "lastInstallPrompt";
 
     const shouldShowPrompt = () => {
+      // Check if PWA app is already installed
+      if (window.matchMedia("(display-mode: standalone)").matches) {
+        return false;
+      }
+
       const lastPrompt = localStorage.getItem(STORAGE_KEY);
       if (!lastPrompt) return true;
-      return Date.now() - parseInt(lastPrompt) > PROMPT_INTERVAL;
+
+      const timeSinceLastPrompt = Date.now() - parseInt(lastPrompt);
+      return timeSinceLastPrompt > PROMPT_INTERVAL;
     };
 
     const handleInstallPrompt = (e: Event) => {
       e.preventDefault();
-      if (!shouldShowPrompt()) return;
       deferredPrompt.current = e;
-      showInstallPrompt(deferredPrompt.current);
+
+      if (shouldShowPrompt()) {
+        // Update the timestamp before showing prompt
+        localStorage.setItem(STORAGE_KEY, Date.now().toString());
+        showInstallPrompt(deferredPrompt.current);
+
+        // Debug logging
+        console.debug("[PWA] Showing install prompt");
+      } else {
+        console.debug("[PWA] Skipping install prompt - too soon");
+      }
     };
 
     // Listen for install prompt

@@ -8,7 +8,6 @@ import React, {
 import { KeyValuePair, Environment } from "@/types";
 import { toast } from "sonner";
 import {
-  DndContext,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
@@ -48,7 +47,6 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-  PopoverPortal,
 } from "@radix-ui/react-popover";
 import { STYLES, createEmptyPair, utils } from "./key-value-editor/constants";
 import { ActionButton } from "./key-value-editor/ui-components";
@@ -118,10 +116,8 @@ export function KeyValueEditor({
   environments = [],
   onEnvironmentsUpdate,
   preventFirstItemDeletion = false,
-  autoSave = false,
   onSourceRedirect,
   suggestions,
-  ...props
 }: KeyValueEditorProps) {
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkContent, setBulkContent] = useState("");
@@ -220,13 +216,32 @@ export function KeyValueEditor({
     }
   );
 
+  // Update the isPairEmpty check to ignore source items
+  const isPairEmpty = useCallback((pair: KeyValuePair) => {
+    // Don't consider source items as empty pairs
+    if (pair.source) return false;
+    return pair.key.trim() === "" && pair.value.trim() === "";
+  }, []);
+
+  const canPerformActions = useCallback((pair: KeyValuePair) => {
+    return pair.key.trim() !== "" && pair.value.trim() !== "";
+  }, []);
+
   // Core functionality handlers
   const handleAddPair = useCallback(() => {
+    // Find the first empty pair if it exists
+    const emptyPairIndex = pairs.findIndex(isPairEmpty);
+
+    // If we found an empty pair and it's not the only pair, don't add a new one
+    if (emptyPairIndex !== -1 && pairs.length > 1) {
+      return;
+    }
+
     const newPair = createEmptyPair(
       utils.generateStableId(pairs.length + Math.random())
     );
     onChange([...pairs, newPair]);
-  }, [pairs, onChange]);
+  }, [pairs, onChange, isPairEmpty]);
 
   const ensurePairId = useCallback(
     (pair: KeyValuePair, index: number): string => {
@@ -235,6 +250,7 @@ export function KeyValueEditor({
     []
   );
 
+  // Update updatePair to handle empty fields correctly
   const updatePair = useCallback(
     (index: number, field: keyof KeyValuePair, value: string | boolean) => {
       const newPairs = [...pairs];
@@ -244,9 +260,31 @@ export function KeyValueEditor({
         id: ensurePairId(newPairs[index], index),
       };
       newPairs[index] = updatedPair;
-      onChange(newPairs);
+
+      // If this pair is now populated and it's the last non-source pair, add a new empty one
+      const isLastManualPair =
+        index === newPairs.findIndex((p, i) => !p.source && i >= index);
+
+      if (
+        isLastManualPair &&
+        updatedPair.key.trim() !== "" &&
+        updatedPair.value.trim() !== "" &&
+        !updatedPair.source
+      ) {
+        newPairs.push(createEmptyPair(utils.generateStableId(newPairs.length)));
+      }
+
+      // Clean up empty pairs except for the last manual one
+      const cleanedPairs = newPairs.filter((pair, idx) => {
+        if (pair.source) return true; // Always keep source pairs
+        const isLastManual =
+          idx === newPairs.findIndex((p, i) => !p.source && i >= idx);
+        return !isPairEmpty(pair) || isLastManual;
+      });
+
+      onChange(cleanedPairs);
     },
-    [pairs, onChange, ensurePairId]
+    [pairs, onChange, ensurePairId, isPairEmpty]
   );
 
   const handleSmartPaste = useCallback(
@@ -349,16 +387,19 @@ export function KeyValueEditor({
     }
   };
 
-  // Force initial render to show first item
+  // Update effect to ensure one empty field for manual entries
   useEffect(() => {
-    if (!pairs.length) {
-      onChange([createEmptyPair(utils.generateStableId(0))]);
-    }
-  }, [pairs.length, onChange]);
+    const manualPairs = pairs.filter((p) => !p.source);
+    const needsEmptyField =
+      manualPairs.length === 0 || !manualPairs.some(isPairEmpty);
 
-  const canPerformActions = useCallback((pair: KeyValuePair) => {
-    return pair.key.trim() !== "" && pair.value.trim() !== "";
-  }, []);
+    if (needsEmptyField) {
+      onChange([
+        ...pairs,
+        createEmptyPair(utils.generateStableId(pairs.length)),
+      ]);
+    }
+  }, [pairs, onChange, isPairEmpty]);
 
   const renderActionButtons = (pair: KeyValuePair, index: number) => {
     if (pair.source && onSourceRedirect) {
@@ -372,9 +413,11 @@ export function KeyValueEditor({
       );
     }
 
-    const isLastItem = pairs.length === 1;
+    // Count non-source pairs
+    const manualPairsCount = pairs.filter((p) => !p.source).length;
+    const isLastManualPair = manualPairsCount === 1 && !pair.source;
     const isFirstItem = index === 0 && preventFirstItemDeletion;
-    const shouldShowClear = isLastItem || isFirstItem;
+    const shouldShowClear = isLastManualPair || isFirstItem;
 
     return (
       <ActionButton
@@ -389,13 +432,9 @@ export function KeyValueEditor({
             newPairs[index] = clearedPair;
             onChange(newPairs);
           } else {
-            // Only remove if it's not the last pair
+            // Only remove if it's not the last manual pair
             const newPairs = pairs.filter((_, i) => i !== index);
-            onChange(
-              newPairs.length
-                ? newPairs
-                : [createEmptyPair(utils.generateStableId(0))]
-            );
+            onChange(newPairs);
           }
         }}
         variant={shouldShowClear ? "clear" : "delete"}

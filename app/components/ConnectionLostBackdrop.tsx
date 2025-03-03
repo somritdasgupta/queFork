@@ -4,24 +4,21 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnimatedLogo } from "@/components/shared/animated-logo";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Wifi, WifiOff } from "lucide-react";
 
 export function ConnectionLostBackdrop() {
   const [isVisible, setIsVisible] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [networkInfo, setNetworkInfo] = useState<string>("");
-  const [progress, setProgress] = useState(0);
-  const [canInstall, setCanInstall] = useState(false);
-
-  const shouldShowInstallPrompt = () => {
-    const PROMPT_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7 days
-    const lastPrompt = localStorage.getItem("lastInstallPrompt");
-    if (!lastPrompt) return true;
-    return Date.now() - parseInt(lastPrompt) > PROMPT_INTERVAL;
-  };
+  const [offlineMode, setOfflineMode] = useState(false);
 
   useEffect(() => {
-    const handleOffline = () => setIsVisible(true);
+    const handleOffline = () => {
+      if (!offlineMode) setIsVisible(true);
+    };
+
     const handleOnline = async () => {
+      if (offlineMode) return;
       try {
         const response = await fetch("/api/health", { method: "HEAD" });
         if (response.ok) {
@@ -36,41 +33,27 @@ export function ConnectionLostBackdrop() {
       }
     };
 
-    const handleInstallable = (e: Event) => {
-      e.preventDefault();
-      setCanInstall(shouldShowInstallPrompt());
-    };
-
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
-    window.addEventListener("beforeinstallprompt", handleInstallable);
 
     if (!navigator.onLine) handleOffline();
-
-    // Get network information if available
-    if ("connection" in navigator) {
-      const connection = (navigator as any).connection;
-      setNetworkInfo(
-        `${connection.effectiveType || ""} ${connection.type || ""}`
-      );
-    }
 
     return () => {
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
-      window.removeEventListener("beforeinstallprompt", handleInstallable);
     };
-  }, [retryCount]);
+  }, [retryCount, offlineMode]);
 
-  // Animated progress bar
-  useEffect(() => {
-    if (isVisible) {
-      const interval = setInterval(() => {
-        setProgress((p) => (p + 1) % 100);
-      }, 100);
-      return () => clearInterval(interval);
+  const handleOfflineModeToggle = (checked: boolean) => {
+    setOfflineMode(checked);
+    if (checked) {
+      setIsVisible(false);
+      toast.success("Offline mode enabled");
+    } else if (!navigator.onLine) {
+      setIsVisible(true);
+      toast.info("Attempting to reconnect...");
     }
-  }, [isVisible]);
+  };
 
   if (!isVisible) return null;
 
@@ -80,77 +63,52 @@ export function ConnectionLostBackdrop() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px]"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm"
       >
         <motion.div
-          initial={{ scale: 0.9, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          className="relative overflow-hidden max-w-[90vw] md:max-w-md w-full"
+          initial={{ scale: 0.95 }}
+          animate={{ scale: 1 }}
+          className="w-full max-w-sm mx-4"
         >
-          <div
-            className="relative p-6 md:p-8 rounded-xl 
-                        bg-slate-800 backdrop-blur-xl
-                        border border-white/[0.08] shadow-2xl
-                        before:absolute before:inset-0
-                        before:pointer-events-none"
-          >
-            <div className="relative space-y-6">
-              {/* Logo section */}
-              <div className="flex justify-center">
+          <div className="p-6 rounded-lg bg-slate-900 border border-slate-800 shadow-xl">
+            <div className="space-y-6">
+              <div className="flex justify-center -mt-2 mb-2">
                 <AnimatedLogo
                   size="lg"
                   animate={true}
                   showSubtitle={true}
-                  primaryColor="text-white"
-                  secondaryColor="text-blue-400"
-                  className="transform-gpu scale-75 md:scale-100"
+                  primaryColor="text-slate-200"
+                  secondaryColor="text-blue-500"
+                  className="transform-gpu scale-75"
                 />
               </div>
 
-              {/* Status section */}
-              <div className="space-y-4 text-center">
-                {/* Progress bar */}
-                <div className="relative h-1 bg-white/[0.03] rounded-full overflow-hidden">
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-blue-400/50 to-purple-400/50"
-                    animate={{ x: [`-${100}%`, "0%"] }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  />
-                </div>
-
-                {/* Status text */}
-                <p className="text-white/60 text-sm">
-                  Attempting to restore connection...
+              {/* Status Message */}
+              <div className="text-center space-y-1">
+                <h3 className="text-lg font-medium text-slate-200">
+                  {offlineMode ? "Offline Mode" : "Connection Lost"}
+                </h3>
+                <p className="text-sm text-slate-400">
+                  {offlineMode
+                    ? "You can continue working offline"
+                    : "Check your internet connection"}
                 </p>
-
-                {canInstall && (
-                  <motion.button
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="px-4 py-2 bg-blue-500/20 text-blue-300 rounded-lg
-                       border border-blue-500/30 hover:bg-blue-500/30
-                       transition-colors duration-200"
-                    onClick={() => {
-                      toast.message("Install queFork", {
-                        description: "Install our app for offline access",
-                        action: {
-                          label: "Install",
-                          onClick: () =>
-                            window.dispatchEvent(
-                              new Event("beforeinstallprompt")
-                            ),
-                        },
-                      });
-                    }}
-                  >
-                    Install App for Offline Use
-                  </motion.button>
-                )}
               </div>
+
+              <div className="flex items-center justify-between p-3 rounded-md bg-slate-800">
+                <span className="text-sm text-slate-300">Offline Mode</span>
+                <Switch
+                  checked={offlineMode}
+                  onCheckedChange={handleOfflineModeToggle}
+                  className="data-[state=checked]:bg-blue-600"
+                />
+              </div>
+              {/* Retry Status */}
+              {!offlineMode && retryCount > 0 && (
+                <p className="text-xs text-center text-slate-500">
+                  Retrying... (Attempt {retryCount})
+                </p>
+              )}
             </div>
           </div>
         </motion.div>
