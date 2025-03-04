@@ -7,7 +7,7 @@
   "display": "standalone",
   "background_color": "#0c1325",
   "theme_color": "#0c1325",
-  "orientation": "any",
+  "orientation": "portrait",
   "prefer_related_applications": false,
   "categories": ["development", "productivity", "utilities"],
 
@@ -29,7 +29,7 @@
   ],
   "offline_enabled": true,
   "capture_links": "new-client",
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": ["standalone", "fullscreen"],
   "launch_handler": {
     "client_mode": "focus-existing"
   },

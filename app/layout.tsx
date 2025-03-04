@@ -102,8 +102,6 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  colorScheme: "dark",
-  interactiveWidget: "resizes-visual",
   height: "device-height",
 };
 
@@ -117,7 +115,7 @@ export default function RootLayout({
       lang="en"
       dir="ltr"
       suppressHydrationWarning
-      className="prevent-elastic"
+      className="prevent-elastic h-full"
     >
       <head>
         <link rel="canonical" href="https://quefork.somrit.in" />
@@ -163,10 +161,20 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} antialiased overflow-hidden`}
+        className={`${inter.className} antialiased overflow-hidden min-h-[100dvh] bg-slate-900`}
         suppressHydrationWarning
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
       >
-        <div id="root" className="overflow-hidden" suppressHydrationWarning>
+        <div
+          id="root"
+          className="overflow-hidden flex flex-col min-h-[100dvh]"
+          suppressHydrationWarning
+        >
           <ServiceWorkerProvider />
           <Preloader />
           <div className="contents animate-[unblur_200ms_ease-in]">
