@@ -28,7 +28,7 @@
       ]
     }
   ],
-  "regions": ["iad1", "sfo1", "hnd1"],
+  "regions": ["iad1"],
   "cleanUrls": true,
   "framework": "nextjs"
 }
