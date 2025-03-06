@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import "./styles/highlight.css";
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 210 50% 5%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 262 83% 58%;
+  --radius: 0.5rem;
+  --app-height: 100%;
+}
+
+/* Base styles */
+html {
+  height: -webkit-fill-available;
+}
+
+body {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  width: 100%;
+  height: 100%;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: none;
+  overscroll-behavior: none;
+}
+
+#root {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+/* Command menu styles */
+[cmdk-overlay] {
+  background: rgb(0 0 0 / 0.4);
+  backdrop-filter: blur(4px);
+}
+
+[cmdk-list] {
+  max-height: min(400px, calc(100vh - 100px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  transition: 100ms ease;
+  transition-property: height;
+}
+
+[cmdk-item] {
+  cursor: pointer;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: rgb(31, 39, 49);
+  user-select: none;
+  will-change: background, color;
+  transition: all 150ms ease;
+}
+
+[cmdk-item][data-selected="true"] {
+  background: rgb(59 130 246 / 0.1);
+  color: rgb(96 165 250);
+}
+
+[cmdk-item]:hover {
+  background: rgb(51 65 85 / 0.5);
+}
+
+/* Mobile & PWA optimizations */
+@supports (-webkit-touch-callout: none) {
+  .h-screen {
+    height: -webkit-fill-available;
+  }
+
+  input, textarea, select {
+    font-size: 16px;
+  }
+}
+
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-area-padding {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+@media screen and (display-mode: standalone) {
+  body {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    min-height: var(--app-height);
+  }
+}

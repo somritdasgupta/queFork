@@ -61,9 +61,9 @@ export function MobileHeader({
 
   return (
     <>
-      <div className="w-full flex flex-col items-stretch gap-2 px-4 py-2">
+      <div className="w-full flex flex-col items-stretch gap-1 p-1 sm:gap-2 sm:p-2">
         {/* First Row: URL Bar + Action Button */}
-        <div className="w-full flex items-center gap-2">
+        <div className="w-full flex items-center gap-1 sm:gap-2">
           <div className="flex-1">
             <UrlBar
               {...urlBarProps}
@@ -96,7 +96,7 @@ export function MobileHeader({
         </div>
 
         {/* Second Row: Method, Environment, Layers */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <MethodSelector
             method={urlBarProps.method}
             onMethodChange={urlBarProps.onMethodChange}
@@ -110,19 +110,19 @@ export function MobileHeader({
               onEnvironmentChange={onEnvironmentChange}
               hasExtension={hasExtension}
               interceptorEnabled={interceptorEnabled}
-              className="h-8 w-full bg-slate-900 hover:bg-slate-800 border-2 border-slate-800
-                text-slate-300 rounded-lg transition-colors"
+              className="h-7 sm:h-8 w-full bg-slate-900 hover:bg-slate-800 border border-slate-800
+                text-slate-300 rounded-lg transition-colors text-xs sm:text-sm"
             />
           </div>
           <Button
             variant="default"
             size="icon"
             onClick={handleOpenPanel}
-            className="w-16 h-8 border-2 border-slate-800 bg-slate-900 hover:bg-slate-800 
+            className="w-12 sm:w-16 h-7 sm:h-8 border border-slate-800 bg-slate-900 hover:bg-slate-800 
               transition-colors rounded-lg flex items-center justify-center"
           >
             <Layers
-              className="h-4 w-4"
+              className="h-3.5 w-3.5 sm:h-4 sm:w-4"
               strokeWidth={1}
               style={{
                 stroke: "white",

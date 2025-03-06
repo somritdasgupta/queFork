@@ -1235,8 +1235,8 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
   }, [handleStateUpdate]);
 
   return (
-    <div className="flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden">
-      <header className="flex flex-col border-b border-slate-800 bg-slate-950/25 shrink-0">
+    <div className="flex flex-col min-h-[100dvh] h-[100dvh] overflow-hidden bg-[#0c1325]">
+      <header className="flex flex-col border-b border-slate-800 bg-slate-950/25 shrink-0 safe-area-padding">
         <div className="hidden 3xl:block">
           <DesktopHeader
             hasExtension={hasExtension}
@@ -1262,8 +1262,8 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
         </div>
       </header>
 
-      {/* Main content - Update height calc to account for header and footer */}
-      <div className="h-[calc(100dvh-theme(spacing.14))] min-h-0 bg-slate-900">
+      {/* Main content */}
+      <div className="flex-1 min-h-0 bg-slate-900">
         {currentTab ? (
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel
@@ -1335,7 +1335,7 @@ function MainContentWrapper({ tab }: { tab: Tab }): JSX.Element {
         )}
       </div>
 
-      <div className="h-8 shrink-0 border-t border-slate-800">
+      <div className="h-8 shrink-0 border-t border-slate-800 safe-area-padding">
         <Footer />
       </div>
     </div>

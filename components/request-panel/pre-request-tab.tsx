@@ -441,7 +441,7 @@ export function PreRequestTab({
               <div className="flex sm:hidden">{renderToolbar(true)}</div>
             </div>
           </div>
-          <div className="h-[35vh]">
+          <div className="h-[30vh]">
             <CodeEditor
               value={scriptSequences[activeSequence]?.code || ""}
               onChange={handleScriptChange}
@@ -456,8 +456,8 @@ export function PreRequestTab({
       <div className="flex-1 overflow-hidden w-full max-w-full">
         <Tabs defaultValue="console" className="h-full flex flex-col">
           <div className="flex-none border-y-2 border-slate-700/50 bg-slate-900/50">
-            <div className="flex px-2 items-center justify-between">
-              <TabsList className="bg-transparent flex overflow-x-auto scrollbar-none max-w-[100vw] sm:max-w-[75vw]">
+            <div className="flex items-center justify-between">
+              <TabsList className="bg-transparent h-7 sm:h-8 p-0 rounded-none flex flex-wrap items-center gap-0">
                 {[
                   {
                     value: "console",
@@ -483,22 +483,25 @@ export function PreRequestTab({
                     key={tab.value}
                     value={tab.value}
                     className={cn(
-                      "h-8 rounded-none border-b-4 border-transparent flex-shrink-0",
-                      "font-medium text-xs text-slate-400",
+                      "h-7 sm:h-8 rounded-none border-b-2 sm:border-b-4 border-transparent",
+                      "font-medium text-[0.65rem] sm:text-xs text-slate-400 px-2 sm:px-3",
                       "data-[state=active]:border-blue-400",
                       "data-[state=active]:text-blue-400",
                       "data-[state=active]:bg-transparent",
                       "hover:text-slate-300",
                       "hover:bg-slate-800/70",
-                      "transition-colors"
+                      "transition-colors",
+                      "whitespace-nowrap",
+                      "flex-shrink-0"
                     )}
                   >
-                    <div className="flex items-center gap-1 whitespace-nowrap">
-                      <tab.icon className="hidden sm:block h-3.5 w-3.5" />
-                      <span className="inline">{tab.label}</span>
+                    <div className="flex items-center gap-1 sm:gap-1.5">
+                      <tab.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <span>{tab.label}</span>
                       {tab.badge > 0 && (
                         <Badge
-                          className="flex p-1 bg-slate-800 text-slate-400 hover:bg-slate-800"
+                          className="flex p-0.5 sm:p-1 bg-slate-800 text-slate-400 hover:bg-slate-800 
+                            text-[0.65rem] sm:text-xs"
                           variant="secondary"
                         >
                           {tab.badge}
@@ -511,8 +514,8 @@ export function PreRequestTab({
 
               <div
                 className={cn(
-                  "flex items-center gap-1 sm:gap-1.5 p-1 rounded-md text-xs",
-                  "border transition-colors w-fit",
+                  "flex items-center gap-1 sm:gap-1.5 p-1 rounded-md text-xs mr-2",
+                  "border transition-colors w-fit shrink-0",
                   isValidScript
                     ? "bg-emerald-950/60 text-emerald-400 border-emerald-800/50"
                     : "bg-red-950/60 text-red-400 border-red-800/50"

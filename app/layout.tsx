@@ -1,4 +1,4 @@
-import "@/styles/globals.css";
+import "./styles/globals.css";
 import { Inter } from "next/font/google";
 import { WebSocketWrapper } from "@/components/websocket/websocket-wrapper";
 import { Preloader } from "@/components/shared/preloader";
@@ -92,17 +92,15 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0c1325" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c1325" },
-  ],
+  themeColor: "#0c1325",
   width: "device-width",
   initialScale: 1,
   minimumScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   viewportFit: "cover",
-  height: "device-height",
+  colorScheme: "dark",
+  interactiveWidget: "resizes-visual",
 };
 
 export default function RootLayout({
@@ -141,7 +139,20 @@ export default function RootLayout({
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
         />
-        <meta name="theme-color" content="#0c1325" />
+        <meta
+          name="theme-color"
+          content="#0c1325"
+          media="(prefers-color-scheme: light)"
+        />
+        <meta
+          name="theme-color"
+          content="#0c1325"
+          media="(prefers-color-scheme: dark)"
+        />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+        />
         <meta name="msapplication-navbutton-color" content="#0c1325" />
         <meta name="offline-ready" content="true" />
         <script
@@ -161,18 +172,12 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} antialiased overflow-hidden min-h-[100dvh] bg-slate-900`}
+        className={`${inter.className} antialiased overflow-hidden min-h-[100dvh] bg-[#0c1325]`}
         suppressHydrationWarning
-        style={{
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "env(safe-area-inset-bottom)",
-          paddingLeft: "env(safe-area-inset-left)",
-          paddingRight: "env(safe-area-inset-right)",
-        }}
       >
         <div
           id="root"
-          className="overflow-hidden flex flex-col min-h-[100dvh]"
+          className="min-h-[100dvh] flex flex-col"
           suppressHydrationWarning
         >
           <ServiceWorkerProvider />
