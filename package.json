@@ -21,7 +21,8 @@
     "test:watch": "vitest",
     "extension:package": "node scripts/package-extension.js",
     "extension:release": "npm run extension:package && git add .",
-    "release:create": "node scripts/create-release.js"
+    "release:create": "node scripts/create-release.js",
+    "secrets:vercel": "node scripts/setup-vercel-secrets.js"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",

@@ -1,84 +1,100 @@
 name: Chrome Extension - Package & Release
+
 on:
-    workflow_dispatch:
-        inputs:
-            version:
-                description: "Version to release (e.g., 2.1.0)"
-                required: true
-                default: ""
-            release_type:
-                description: "Release type"
-                required: true
-                default: "minor"
-                type: choice
-                options:
-                    - major
-                    - minor
-                    - patch
+  push:
+    tags:
+      - "extension-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 2.1.0)"
+        required: true
+        default: ""
+      release_type:
+        description: "Release type"
+        required: true
+        default: "minor"
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
 
 jobs:
-    package-extension:
-        runs-on: ubuntu-latest
+  package-extension:
+    runs-on: ubuntu-latest
 
-        steps:
-            - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "20.x"
-                  cache: "npm"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
 
-            - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Verify extension manifest
-              run: |
-                  if ! command -v jq &> /dev/null; then apt-get update && apt-get install -y jq; fi
-                  jq . chrome-extension/manifest.json > /dev/null && echo "✅ Manifest is valid JSON"
+      - name: Verify extension manifest
+        run: |
+          if ! command -v jq &> /dev/null; then apt-get update && apt-get install -y jq; fi
+          jq . chrome-extension/manifest.json > /dev/null && echo "✅ Manifest is valid JSON"
 
-            - name: Package extension
-              run: npm run extension:package
+      - name: Package extension
+        run: npm run extension:package
 
-            - name: List release files
-              run: ls -lh releases/
+      - name: List release files
+        run: ls -lh releases/
 
-            - name: Create Release
-              uses: softprops/action-gh-release@v1
-              with:
-                  tag_name: extension-v${{ github.event.inputs.version }}
-                  name: Chrome Extension v${{ github.event.inputs.version }}
-                  files: releases/*.zip
-                  body: |
-                      ## Chrome Extension v${{ github.event.inputs.version }}
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#extension-v}"
+          fi
 
-                      ### 📦 Package Contents
-                      - Localhost request interceptor
-                      - CORS proxy agent
-                      - Side panel integration
+          if [ -z "$VERSION" ]; then
+            echo "Release version could not be resolved."
+            exit 1
+          fi
 
-                      ### 📥 Installation
-                      1. Download the ZIP file
-                      2. Go to `chrome://extensions/`
-                      3. Enable "Developer mode" (top right)
-                      4. Click "Load unpacked"
-                      5. Select the extracted folder
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION"
 
-                      ### 🚀 Upload to Chrome Web Store
-                      https://chrome.google.com/webstore/devconsole/
-                  draft: false
-                  prerelease: false
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: extension-v${{ steps.version.outputs.value }}
+          name: Chrome Extension v${{ steps.version.outputs.value }}
+          files: releases/*.zip
+          body: |
+            ## Chrome Extension v${{ steps.version.outputs.value }}
 
-            - name: Comment on release
-              if: success()
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      github.rest.issues.createComment({
-                        issue_number: context.issue.number,
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        body: '✅ Chrome Extension v${{ github.event.inputs.version }} released!\n\n📦 [Download](https://github.com/${{ github.repository }}/releases/tag/extension-v${{ github.event.inputs.version }})\n\n🚀 [Upload to Chrome Web Store](https://chrome.google.com/webstore/devconsole/)'
-                      })
+            ### 📦 Package Contents
+            - Localhost request interceptor
+            - CORS proxy agent
+            - Side panel integration
+
+            ### 📥 Installation
+            1. Download the ZIP file
+            2. Go to `chrome://extensions/`
+            3. Enable "Developer mode" (top right)
+            4. Click "Load unpacked"
+            5. Select the extracted folder
+
+            ### 🚀 Upload to Chrome Web Store
+            https://chrome.google.com/webstore/devconsole/
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release summary
+        if: success()
+        run: |
+          echo "✅ Chrome Extension v${{ steps.version.outputs.value }} released" >> $GITHUB_STEP_SUMMARY
+          echo "📦 https://github.com/${{ github.repository }}/releases/tag/extension-v${{ steps.version.outputs.value }}" >> $GITHUB_STEP_SUMMARY
