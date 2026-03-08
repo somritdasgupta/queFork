@@ -1,5 +1,8 @@
 name: Chrome Extension - Package & Release
 
+permissions:
+  contents: write
+
 on:
   push:
     tags:
