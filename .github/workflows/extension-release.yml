@@ -72,7 +72,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: extension-v${{ steps.version.outputs.value }}
-          name: Chrome Extension v${{ steps.version.outputs.value }}
+          name: queFork Agent
           files: releases/*.zip
           body: |
             ## Chrome Extension v${{ steps.version.outputs.value }}
