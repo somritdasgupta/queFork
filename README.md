@@ -118,6 +118,7 @@ npm run dev
 | `npm run preview` | Preview production build locally |
 | `npm run lint` | Run ESLint checks |
 | `npm test` | Run test suite |
+| `npm run secrets:vercel` | Auto-set `VERCEL_*` GitHub secrets from local Vercel config |
 
 ---
 
@@ -280,8 +281,20 @@ quefork/
 
 ```bash
 npm install -g vercel
-vercel
+vercel login
+vercel link
+npm run secrets:vercel
 ```
+
+When Vercel asks for your code directory, use `.` (repository root).
+
+Required repository secrets for deploy workflows:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+The `npm run secrets:vercel` command sets all three automatically after `vercel login` and `vercel link`.
 
 ### Netlify
 
@@ -308,9 +321,27 @@ npx serve dist
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `edge-deploy.yml` | Push to main | Type check, build, deploy to Vercel |
-| `docker-publish.yml` | Push to main, version tags | Build and push Docker image to GHCR |
-| `dependency-update.yml` | Weekly schedule | Update dependencies, verify build, create PR |
+| `ci.yml` | Push to main/develop, pull requests | Lint, test, and build matrix checks |
+| `build-deploy.yml` | Push to main, manual dispatch | Build + deploy summary workflow |
+| `edge-deploy.yml` | Push to main/develop, pull requests, manual dispatch | Type check, build, deploy to Vercel |
+| `docker-publish.yml` | Push to main, tags, manual dispatch | Build and push Docker image to GHCR |
+| `extension-release.yml` | Tag push `extension-v*`, manual dispatch | Package Chrome extension and publish GitHub release |
+| `dependency-update.yml` | Weekly schedule, manual dispatch | Update dependencies, verify build, create PR |
+
+### Extension Release Automation
+
+Automatic release from tag:
+
+```bash
+git tag extension-v2.1.0
+git push origin extension-v2.1.0
+```
+
+Manual release is still available from the Actions tab via `workflow_dispatch`.
+
+### Badge Status Note
+
+GitHub Actions badges show `no status` until that workflow has at least one run on the default branch.
 
 ---
 
