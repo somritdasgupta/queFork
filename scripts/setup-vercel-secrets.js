@@ -29,10 +29,20 @@ function readJsonIfExists(filePath) {
 }
 
 const projectFile = join(process.cwd(), ".vercel", "project.json");
-const authFile = join(homedir(), ".vercel", "auth.json");
+
+const authCandidates = [
+  // Legacy locations
+  join(homedir(), ".vercel", "auth.json"),
+  join(homedir(), ".vercel", "Data", "auth.json"),
+  // Current Windows Vercel CLI location
+  process.env.APPDATA ? join(process.env.APPDATA, "com.vercel.cli", "Data", "auth.json") : "",
+  process.env.APPDATA ? join(process.env.APPDATA, "com.vercel.cli", "auth.json") : "",
+].filter(Boolean);
 
 const projectJson = readJsonIfExists(projectFile);
-const authJson = readJsonIfExists(authFile);
+const authJson = authCandidates
+  .map((candidate) => ({ candidate, json: readJsonIfExists(candidate) }))
+  .find((item) => item.json?.token)?.json;
 
 const orgId = process.env.VERCEL_ORG_ID || projectJson?.orgId || "";
 const projectId = process.env.VERCEL_PROJECT_ID || projectJson?.projectId || "";
@@ -57,4 +67,4 @@ run("gh", ["secret", "set", "VERCEL_ORG_ID", "-b", orgId]);
 run("gh", ["secret", "set", "VERCEL_PROJECT_ID", "-b", projectId]);
 
 console.log("Set GitHub secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID");
-console.log("Source: .vercel/project.json and ~/.vercel/auth.json (or env vars)");
+console.log("Source: .vercel/project.json and Vercel CLI auth file (or env vars)");
