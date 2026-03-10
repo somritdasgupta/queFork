@@ -130,6 +130,7 @@ const PROTOCOLS: {
 ];
 const REALTIME_PROTOCOLS: ProtocolType[] = ["websocket", "sse", "socketio"];
 const WS_IO_PROTOCOLS: ProtocolType[] = ["websocket", "socketio"];
+const AGENT_TOAST_SESSION_KEY = "qf_agent_missing_toast_shown";
 
 function getProtocolBadge(protocol: ProtocolType): string {
   return PROTOCOLS.find((p) => p.value === protocol)?.badge || "REST";
@@ -356,8 +357,19 @@ export default function Index() {
   // Agent toast
   useEffect(() => {
     if (agentStatus === "not-installed" && !agentToastShown) {
+      try {
+        if (sessionStorage.getItem(AGENT_TOAST_SESSION_KEY) === "1") {
+          setAgentToastShown(true);
+          return;
+        }
+        sessionStorage.setItem(AGENT_TOAST_SESSION_KEY, "1");
+      } catch {
+        // Ignore storage errors and still show one toast in this render cycle.
+      }
+
       setAgentToastShown(true);
       toast("queFork Agent not detected", {
+        id: "qf-agent-not-detected",
         description: "Install the agent for local testing without CORS issues.",
         action: {
           label: "Learn more",
