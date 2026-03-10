@@ -3,7 +3,7 @@ name: Auto Dependency Update
 on:
   schedule:
     # Every Monday at 6:00 AM UTC
-    - cron: '0 6 * * 1'
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install dependencies
         run: npm ci
@@ -73,8 +73,8 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore(deps): auto-update dependencies'
-          title: '📦 Auto Dependency Update'
+          commit-message: "chore(deps): auto-update dependencies"
+          title: "📦 Auto Dependency Update"
           body: |
             ## Automated Dependency Update
 

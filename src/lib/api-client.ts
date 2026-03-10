@@ -6,6 +6,7 @@ import type {
   Environment,
 } from "@/types/api";
 import { safeNewFunction, createSafeConsole } from "@/lib/safe-eval";
+import { bridgeDebug } from "@/lib/bridge-debug";
 
 // ── Custom proxy support ──────────────────────────────────────────────
 function getCustomProxyUrl(): string | null {
@@ -220,9 +221,11 @@ async function tryExtensionFetch(
   if (typeof window === "undefined") return null;
 
   const marker = document.querySelector('meta[name="quefork-agent"]');
-  if (!marker || marker.getAttribute("content") !== "active") return null;
+  const hasMarker = marker?.getAttribute("content") === "active";
+  const timeoutMs = hasMarker ? 2500 : 450;
 
   return new Promise((resolve) => {
+    const startedAt = performance.now();
     const requestId = `qf-ext-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     const cleanup = () => {
@@ -231,12 +234,25 @@ async function tryExtensionFetch(
     };
 
     const onMessage = (event: MessageEvent) => {
-      if (event.source !== window) return;
-      if (event.data?.type !== "QUEFORK_PROXY_RESPONSE") return;
-      if (event.data?.id !== requestId) return;
+      // In extension isolated worlds, source can be inconsistent.
+      // Match only on message shape and request id.
+      const data = event.data as
+        | { type?: string; id?: string; payload?: any }
+        | undefined;
+
+      if (!data || data.type !== "QUEFORK_PROXY_RESPONSE") return;
+      if (data.id !== requestId) return;
 
       cleanup();
-      const payload = event.data.payload || {};
+      const payload = data.payload || {};
+      bridgeDebug("proxy-response", {
+        requestId,
+        hasMarker,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        status: payload.status ?? null,
+        hasError: Boolean(payload.error),
+      });
+
       if (payload.error || payload.status === 0) {
         resolve(null);
         return;
@@ -253,10 +269,23 @@ async function tryExtensionFetch(
 
     const timeout = setTimeout(() => {
       cleanup();
+      bridgeDebug("proxy-timeout", {
+        requestId,
+        hasMarker,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        timeoutMs,
+      });
       resolve(null);
-    }, 2500);
+    }, timeoutMs);
 
     window.addEventListener("message", onMessage);
+    bridgeDebug("proxy-request", {
+      requestId,
+      hasMarker,
+      timeoutMs,
+      method: (options.method || "GET").toUpperCase(),
+      url,
+    });
     window.postMessage(
       {
         type: "QUEFORK_PROXY_REQUEST",

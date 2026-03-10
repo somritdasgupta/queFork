@@ -27,6 +27,7 @@ import {
   getStatusColor,
 } from "@/types/api";
 import { executeRequest, runTests } from "@/lib/api-client";
+import { bridgeDebug } from "@/lib/bridge-debug";
 import { lsGet, lsSet } from "@/lib/secure-storage";
 import { updateFaviconStatus } from "@/lib/dynamic-favicon";
 import { RequestTabs } from "@/components/RequestTabs";
@@ -156,6 +157,7 @@ type AgentStatus = "not-installed" | "inactive" | "active" | "error";
 
 function pingExtensionAgent(timeoutMs = 1200): Promise<boolean> {
   return new Promise((resolve) => {
+    const startedAt = performance.now();
     const requestId = `qf-agent-ping-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     const cleanup = () => {
@@ -164,19 +166,29 @@ function pingExtensionAgent(timeoutMs = 1200): Promise<boolean> {
     };
 
     const onMessage = (event: MessageEvent) => {
-      if (event.source !== window) return;
-      if (event.data?.type !== "QUEFORK_AGENT_PONG") return;
-      if (event.data?.id !== requestId) return;
+      const data = event.data as { type?: string; id?: string } | undefined;
+      if (!data || data.type !== "QUEFORK_AGENT_PONG") return;
+      if (data.id !== requestId) return;
       cleanup();
+      bridgeDebug("ping-ok", {
+        requestId,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
       resolve(true);
     };
 
     const timer = setTimeout(() => {
       cleanup();
+      bridgeDebug("ping-timeout", {
+        requestId,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        timeoutMs,
+      });
       resolve(false);
     }, timeoutMs);
 
     window.addEventListener("message", onMessage);
+    bridgeDebug("ping-send", { requestId, timeoutMs });
     window.postMessage({ type: "QUEFORK_AGENT_PING", id: requestId }, "*");
   });
 }
@@ -204,6 +216,7 @@ function useAgentStatus(): AgentStatus {
       // Check for meta tag injected by content script
       const marker = document.querySelector('meta[name="quefork-agent"]');
       if (marker && marker.getAttribute("content") === "active") {
+        bridgeDebug("status-marker-active");
         if (!disposed) setStatus("active");
         return;
       }
@@ -213,6 +226,7 @@ function useAgentStatus(): AgentStatus {
         pingExtensionAgent(),
         pingLocalAgent(),
       ]);
+      bridgeDebug("status-probe-result", { hasBridge, hasLocalAgent });
       if (!disposed) {
         setStatus(hasBridge || hasLocalAgent ? "active" : "not-installed");
       }
@@ -222,7 +236,10 @@ function useAgentStatus(): AgentStatus {
     void detect();
 
     // Also listen for the custom event (if page loads before content script)
-    const handler = () => setStatus("active");
+    const handler = () => {
+      bridgeDebug("status-event-ready");
+      setStatus("active");
+    };
     window.addEventListener("quefork-agent-ready", handler);
 
     // Re-check periodically (e.g. if extension is enabled/disabled)

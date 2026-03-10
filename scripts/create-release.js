@@ -2,7 +2,7 @@
 
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const manifestPath = path.join("chrome-extension", "manifest.json");
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -45,7 +45,7 @@ try {
   // Try using GitHub CLI
   try {
     console.log("📋 Checking for GitHub CLI...");
-    execSync("gh --version", { stdio: "ignore" });
+    execFileSync("gh", ["--version"], { stdio: "ignore" });
 
     // Create release using gh CLI
     console.log(`Creating release using GitHub CLI...`);
@@ -53,17 +53,27 @@ try {
 
     // Create tag
     try {
-      execSync(`git tag ${tagName}`, { stdio: "pipe" });
+      execFileSync("git", ["tag", tagName], { stdio: "pipe" });
     } catch (e) {
       // Tag might already exist
     }
 
     // Push tag
-    execSync(`git push origin ${tagName}`, { stdio: "pipe" });
+    execFileSync("git", ["push", "origin", tagName], { stdio: "pipe" });
 
     // Create release
-    execSync(
-      `gh release create ${tagName} "${zipPath}" --title "Chrome Extension v${version}" --notes "${releaseNotes.replace(/"/g, '\\"')}"`,
+    execFileSync(
+      "gh",
+      [
+        "release",
+        "create",
+        tagName,
+        zipPath,
+        "--title",
+        `Chrome Extension v${version}`,
+        "--notes",
+        releaseNotes,
+      ],
       {
         stdio: "inherit",
       },

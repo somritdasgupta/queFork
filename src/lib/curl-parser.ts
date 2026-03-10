@@ -21,6 +21,30 @@ function extractQuotedArgs(cmd: string, flag: string): string[] {
   return results;
 }
 
+function toShellSingleQuoted(value: string): string {
+  // POSIX-safe single-quoted shell literal: 'foo' -> 'foo', a'b -> 'a'\''b'
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function escapeSingleQuotedLiteral(value: string): string {
+  // Used for Ruby/PHP single-quoted literals.
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n");
+}
+
+function escapeDartSingleQuotedLiteral(value: string): string {
+  // Dart interpolates $ in normal strings, so escape it as well.
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/\$/g, "\\$")
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n");
+}
+
 export function parseCurl(curlCommand: string): RequestConfig {
   const req = createEmptyRequest();
   let cmd = normalizeCurl(curlCommand);
@@ -163,25 +187,29 @@ export function exportToCurl(config: RequestConfig): string {
       .join("&");
     url += (url.includes("?") ? "&" : "?") + qs;
   }
-  parts.push(`'${url}'`);
+  parts.push(toShellSingleQuoted(url));
 
   config.headers
     .filter((h) => h.enabled && h.key)
     .forEach((h) => {
-      parts.push(`-H '${h.key}: ${h.value}'`);
+      parts.push(`-H ${toShellSingleQuoted(`${h.key}: ${h.value}`)}`);
     });
 
   if (config.auth.type === "bearer" && config.auth.bearer?.token) {
-    parts.push(`-H 'Authorization: Bearer ${config.auth.bearer.token}'`);
+    parts.push(
+      `-H ${toShellSingleQuoted(`Authorization: Bearer ${config.auth.bearer.token}`)}`,
+    );
   } else if (config.auth.type === "basic" && config.auth.basic) {
     parts.push(
-      `-u '${config.auth.basic.username}:${config.auth.basic.password}'`,
+      `-u ${toShellSingleQuoted(`${config.auth.basic.username}:${config.auth.basic.password}`)}`,
     );
   } else if (
     config.auth.type === "api-key" &&
     config.auth.apiKey?.addTo === "header"
   ) {
-    parts.push(`-H '${config.auth.apiKey.key}: ${config.auth.apiKey.value}'`);
+    parts.push(
+      `-H ${toShellSingleQuoted(`${config.auth.apiKey.key}: ${config.auth.apiKey.value}`)}`,
+    );
   }
 
   if (
@@ -194,7 +222,7 @@ export function exportToCurl(config: RequestConfig): string {
         parts.push(`-H 'Content-Type: application/json'`);
       else if (config.body.type === "xml")
         parts.push(`-H 'Content-Type: application/xml'`);
-      parts.push(`-d '${config.body.raw.replace(/'/g, "\\'")}'`);
+      parts.push(`-d ${toShellSingleQuoted(config.body.raw)}`);
     }
   } else if (config.body.type === "graphql") {
     parts.push(`-H 'Content-Type: application/json'`);
@@ -202,7 +230,7 @@ export function exportToCurl(config: RequestConfig): string {
       query: config.body.graphql.query,
       variables: config.body.graphql.variables,
     });
-    parts.push(`-d '${gqlBody}'`);
+    parts.push(`-d ${toShellSingleQuoted(gqlBody)}`);
   }
 
   return parts.join(" \\\n  ");
@@ -473,7 +501,9 @@ export function exportToDart(config: RequestConfig): string {
   const headersStr = Object.keys(headers).length
     ? `\n  headers: ${JSON.stringify(headers, null, 4)},`
     : "";
-  const bodyStr = body ? `\n  body: '${body.replace(/'/g, "\\'")}',` : "";
+  const bodyStr = body
+    ? `\n  body: '${escapeDartSingleQuotedLiteral(body)}',`
+    : "";
 
   return `import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -502,7 +532,9 @@ export function exportToRuby(config: RequestConfig): string {
   const headerLines = Object.entries(headers)
     .map(([k, v]) => `request["${k}"] = "${v}"`)
     .join("\n");
-  const bodyLine = body ? `request.body = '${body.replace(/'/g, "\\'")}'` : "";
+  const bodyLine = body
+    ? `request.body = '${escapeSingleQuotedLiteral(body)}'`
+    : "";
 
   return `require 'net/http'
 require 'uri'
@@ -531,7 +563,7 @@ export function exportToPhp(config: RequestConfig): string {
     .map(([k, v]) => `    '${k}: ${v}',`)
     .join("\n");
   const bodyLine = body
-    ? `\nCURLOPT_POSTFIELDS => '${body.replace(/'/g, "\\'")}',`
+    ? `\nCURLOPT_POSTFIELDS => '${escapeSingleQuotedLiteral(body)}',`
     : "";
 
   return `<?php

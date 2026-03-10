@@ -4,13 +4,13 @@
  * ensuring perfect consistency with the app's text logo.
  */
 
-import { generateBrandIcon } from './brand-icon';
+import { generateBrandIcon } from "./brand-icon";
 
 const FAVICON_SELECTOR = 'link[rel="icon"]';
 const DOT_DISPLAY_MS = 5000;
 let clearTimer: ReturnType<typeof setTimeout> | null = null;
 let baseIconCanvas: HTMLCanvasElement | null = null;
-const DEFAULT_FAVICON = '/favicon.ico?v=3';
+const DEFAULT_FAVICON = "/favicon.ico?v=3";
 let originalFaviconHref: string | null = null;
 
 function getFaviconLink(): HTMLLinkElement | null {
@@ -36,10 +36,10 @@ function drawFaviconWithDot(color: string) {
   if (!link) return;
 
   const size = 64;
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
   // Draw base brand icon
@@ -53,7 +53,7 @@ function drawFaviconWithDot(color: string) {
   // Dark border ring
   ctx.beginPath();
   ctx.arc(dotX, dotY, dotRadius + 2, 0, Math.PI * 2);
-  ctx.fillStyle = '#141414';
+  ctx.fillStyle = "#141414";
   ctx.fill();
 
   // Colored dot
@@ -62,7 +62,7 @@ function drawFaviconWithDot(color: string) {
   ctx.fillStyle = color;
   ctx.fill();
 
-  link.href = canvas.toDataURL('image/png');
+  link.href = canvas.toDataURL("image/png");
 }
 
 function restoreFavicon() {
@@ -80,11 +80,11 @@ export function updateFaviconStatus(statusCode: number) {
   if (clearTimer) clearTimeout(clearTimer);
 
   if (statusCode >= 200 && statusCode < 300) {
-    drawFaviconWithDot('#22c55e'); // green
+    drawFaviconWithDot("#22c55e"); // green
   } else if (statusCode >= 400) {
-    drawFaviconWithDot('#ef4444'); // red
+    drawFaviconWithDot("#ef4444"); // red
   } else if (statusCode >= 300 && statusCode < 400) {
-    drawFaviconWithDot('#eab308'); // yellow
+    drawFaviconWithDot("#eab308"); // yellow
   }
 
   clearTimer = setTimeout(() => {
