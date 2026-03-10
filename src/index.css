@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -99,29 +99,38 @@
   * {
     @apply border-border;
   }
-  html, body {
+  html,
+  body {
     overscroll-behavior: none;
-    -webkit-overflow-scrolling: auto;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
     -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     touch-action: manipulation;
   }
   /* Prevent zoom on input focus on iOS */
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     font-size: 16px !important;
   }
   @media (min-width: 768px) {
-    input, textarea, select {
+    input,
+    textarea,
+    select {
       font-size: inherit !important;
     }
+  }
+  .sidebar-vars {
+    --sidebar-width: 16rem;
+    --sidebar-width-icon: 3rem;
   }
 }
 
 @layer utilities {
   .font-mono {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
   }
   /* Hide all scrollbars globally */
   .no-scrollbar::-webkit-scrollbar,

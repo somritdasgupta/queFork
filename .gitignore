@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Test interceptor (disposable)
+_test-interceptor/

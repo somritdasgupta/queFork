@@ -28,7 +28,18 @@ import {
 } from "@/types/api";
 import { executeRequest, runTests } from "@/lib/api-client";
 import { bridgeDebug } from "@/lib/bridge-debug";
-import { lsGet, lsSet } from "@/lib/secure-storage";
+import { lsGet, lsSet, secureGet } from "@/lib/secure-storage";
+import {
+  isFileSyncSupported,
+  pickSyncDirectory,
+  exportWorkspaceToDir,
+  importWorkspaceFromDir,
+  getSyncHandle,
+  clearSyncHandle,
+  tryAutoReconnect,
+  syncToExtension,
+  isExtensionSyncAvailable,
+} from "@/lib/file-sync";
 import { updateFaviconStatus } from "@/lib/dynamic-favicon";
 import { RequestTabs } from "@/components/RequestTabs";
 import { EnvAutocompleteInput } from "@/components/EnvAutocomplete";
@@ -62,6 +73,7 @@ import {
   Download,
   X,
   Search,
+  Trash2,
   FolderOpen,
   Layers,
   PanelLeftClose,
@@ -88,6 +100,9 @@ import {
   MoreHorizontal,
   Pencil,
   Save,
+  FolderSync,
+  FolderInput,
+  FolderOutput,
 } from "lucide-react";
 import type { KeyValuePair } from "../types/api";
 import { toast } from "sonner";
@@ -398,6 +413,9 @@ export default function Index() {
   const [showDocs, setShowDocs] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [editingWorkspaceName, setEditingWorkspaceName] = useState(false);
+  const [fileSyncHandle, setFileSyncHandle] =
+    useState<FileSystemDirectoryHandle | null>(null);
+  const [fileSyncEnabled, setFileSyncEnabled] = useState(false);
   const [realtimeConnected, setRealtimeConnected] = useState<
     Record<string, boolean>
   >({});
@@ -418,9 +436,9 @@ export default function Index() {
   const urlInputRef = useRef<HTMLInputElement>(null);
   const prevSplitRef = useRef<"vertical" | "horizontal">(splitDirection);
 
-  // Force vertical (top/bottom) split when sidebar is expanded
+  // Force vertical (top/bottom) split on mobile or when sidebar is expanded
   const effectiveSplit =
-    !isMobile && !sidebarCollapsed ? "vertical" : splitDirection;
+    isMobile || !sidebarCollapsed ? "vertical" : splitDirection;
 
   // When sidebar expands, save current direction; when collapses, restore it
   useEffect(() => {
@@ -429,20 +447,56 @@ export default function Index() {
     }
   }, [sidebarCollapsed, splitDirection]);
 
+  // ── Async hydration of encrypted keys ─────────────────────────────
+  // secureGet (async) can decrypt AES-GCM data; sync lsGet cannot.
+  // Guard persistence effects until hydration completes so the initial
+  // default values don't overwrite real encrypted data.
+  const storageReadyRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [savedWorkspaces, savedTabs, savedHistory] = await Promise.all([
+        secureGet<Workspace[]>(LS_KEYS.workspaces, [createEmptyWorkspace()]),
+        secureGet<RequestConfig[]>(LS_KEYS.tabs, [createEmptyRequest()]),
+        secureGet<HistoryItem[]>(LS_KEYS.history, []),
+      ]);
+      if (cancelled) return;
+      setWorkspaces(savedWorkspaces);
+      setTabs(savedTabs);
+      setActiveTabId((prev) => {
+        const ids = new Set(savedTabs.map((t) => t.id));
+        return ids.has(prev) ? prev : savedTabs[0]?.id || prev;
+      });
+      setActiveWorkspaceId((prev) => {
+        const ids = new Set(savedWorkspaces.map((w) => w.id));
+        return ids.has(prev) ? prev : savedWorkspaces[0]?.id || prev;
+      });
+      setHistory(savedHistory);
+      storageReadyRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // ── Persist to localStorage on change ───────────────────────────────
   useEffect(() => {
+    if (!storageReadyRef.current) return;
     lsSet(LS_KEYS.workspaces, workspaces);
   }, [workspaces]);
   useEffect(() => {
     lsSet(LS_KEYS.activeWorkspace, activeWorkspaceId);
   }, [activeWorkspaceId]);
   useEffect(() => {
+    if (!storageReadyRef.current) return;
     lsSet(LS_KEYS.tabs, tabs);
   }, [tabs]);
   useEffect(() => {
     lsSet(LS_KEYS.activeTab, activeTabId);
   }, [activeTabId]);
   useEffect(() => {
+    if (!storageReadyRef.current) return;
     lsSet(LS_KEYS.history, history);
   }, [history]);
   useEffect(() => {
@@ -466,6 +520,32 @@ export default function Index() {
   useEffect(() => {
     lsSet("qf_pinned_tabs", [...pinnedTabs]);
   }, [pinnedTabs]);
+
+  // ── Extension install prompt (desktop only) ─────────────────────────
+  useEffect(() => {
+    if (isMobile) return;
+    if (sessionStorage.getItem("qf_ext_toast")) return;
+    const timer = setTimeout(() => {
+      if (agentStatus === "not-installed") {
+        sessionStorage.setItem("qf_ext_toast", "1");
+        toast("Enhance your workflow", {
+          description:
+            "Install the queFork browser extension for CORS bypass and request interception.",
+          action: {
+            label: "Get Extension",
+            onClick: () =>
+              window.open(
+                "https://github.com/somritdasgupta/queFork/releases/",
+                "_blank",
+                "noopener",
+              ),
+          },
+          duration: 10000,
+        });
+      }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [agentStatus, isMobile]);
 
   // ── Derived ─────────────────────────────────────────────────────────
   const workspace =
@@ -584,7 +664,12 @@ export default function Index() {
       if (response.status) updateFaviconStatus(response.status);
       setResponses((prev) => ({ ...prev, [activeRequest.id]: response }));
       if (activeRequest.tests) {
-        const results = runTests(activeRequest.tests, response, activeEnv);
+        const results = runTests(
+          activeRequest.tests,
+          response,
+          activeEnv,
+          activeRequest,
+        );
         setTestResults((prev) => ({ ...prev, [activeRequest.id]: results }));
       }
       if (historyEnabled) {
@@ -627,7 +712,7 @@ export default function Index() {
         if (response.status) updateFaviconStatus(response.status);
         setResponses((prev) => ({ ...prev, [tabId]: response }));
         if (req.tests) {
-          const results = runTests(req.tests, response, activeEnv);
+          const results = runTests(req.tests, response, activeEnv, req);
           setTestResults((prev) => ({ ...prev, [tabId]: results }));
         }
         if (historyEnabled) {
@@ -1005,6 +1090,87 @@ export default function Index() {
     setShowWorkspaceMenu(false);
     toast.success("Workspace deleted");
   };
+
+  // ── File Sync (Local-first git storage) ──────────────────────────
+
+  // Auto-reconnect to a previously-picked sync folder on page load
+  useEffect(() => {
+    if (!isFileSyncSupported()) return;
+    tryAutoReconnect().then((handle) => {
+      if (handle) {
+        setFileSyncHandle(handle);
+        setFileSyncEnabled(true);
+      }
+    });
+  }, []);
+
+  const handleEnableFileSync = async () => {
+    const handle = await pickSyncDirectory();
+    if (!handle) return;
+    setFileSyncHandle(handle);
+    setFileSyncEnabled(true);
+    try {
+      await exportWorkspaceToDir(handle, workspace, flows);
+      toast.success(`Syncing to "${handle.name}" folder`);
+    } catch {
+      toast.error("Failed to export workspace to folder");
+    }
+  };
+
+  const handleDisableFileSync = () => {
+    clearSyncHandle();
+    setFileSyncHandle(null);
+    setFileSyncEnabled(false);
+    toast.success("File sync disabled");
+  };
+
+  const handleImportFromFolder = async () => {
+    const handle = fileSyncHandle || (await pickSyncDirectory());
+    if (!handle) return;
+    try {
+      const result = await importWorkspaceFromDir(handle);
+      if (!result) {
+        toast.error("No workspace.json found in folder");
+        return;
+      }
+      const { workspace: imported, flows: importedFlows } = result;
+      // Merge into current workspace: replace matching IDs, add new ones
+      setWorkspace((prev) => ({
+        ...prev,
+        name: imported.name || prev.name,
+        description: imported.description || prev.description,
+        collections: imported.collections.length
+          ? imported.collections
+          : prev.collections,
+        environments: imported.environments.length
+          ? imported.environments
+          : prev.environments,
+      }));
+      if (importedFlows.length) setFlows(importedFlows);
+      if (!fileSyncHandle) {
+        setFileSyncHandle(handle);
+        setFileSyncEnabled(true);
+      }
+      toast.success("Workspace imported from folder");
+    } catch {
+      toast.error("Failed to import workspace from folder");
+    }
+  };
+
+  // Auto-export on workspace changes when file sync is enabled
+  useEffect(() => {
+    if (!fileSyncEnabled || !fileSyncHandle) return;
+    const timer = setTimeout(() => {
+      exportWorkspaceToDir(fileSyncHandle, workspace, flows).catch(() => {
+        console.warn("[qF] File sync export failed");
+      });
+      // Also mirror to extension storage when available
+      if (isExtensionSyncAvailable()) {
+        syncToExtension(workspace).catch(() => {});
+      }
+    }, 1000); // debounce 1s
+    return () => clearTimeout(timer);
+  }, [fileSyncEnabled, fileSyncHandle, workspace, flows]);
 
   const commandActions: CommandAction[] = [
     {
@@ -1452,7 +1618,7 @@ export default function Index() {
                 "Extension bridge not detected. Enable extension site access for this domain and reload the page.",
             };
 
-  const expandedSidebarWidth = "w-80";
+  const expandedSidebarWidth = "w-96";
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
@@ -1578,6 +1744,67 @@ export default function Index() {
                   >
                     <Plus className="h-3 w-3" /> New Workspace
                   </button>
+                  {isFileSyncSupported() && (
+                    <>
+                      <div className="border-t border-border" />
+                      <div className="px-3 py-1 border-b border-border">
+                        <p className="text-[8px] font-extrabold uppercase tracking-widest text-muted-foreground/30">
+                          File Sync
+                        </p>
+                      </div>
+                      {fileSyncEnabled ? (
+                        <>
+                          <div className="flex items-center gap-2 px-3 py-1 text-[9px] text-status-success">
+                            <FolderSync className="h-3 w-3" />
+                            <span className="font-bold truncate">
+                              {fileSyncHandle?.name}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              handleImportFromFolder();
+                              setShowWorkspaceMenu(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-left hover:bg-accent transition-colors text-muted-foreground"
+                          >
+                            <FolderInput className="h-3 w-3" /> Pull from Folder
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleDisableFileSync();
+                              setShowWorkspaceMenu(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-left hover:bg-accent transition-colors text-destructive"
+                          >
+                            <X className="h-3 w-3" /> Disconnect
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              handleEnableFileSync();
+                              setShowWorkspaceMenu(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-left hover:bg-accent transition-colors text-muted-foreground"
+                          >
+                            <FolderOutput className="h-3 w-3" /> Sync to
+                            Folder...
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleImportFromFolder();
+                              setShowWorkspaceMenu(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-left hover:bg-accent transition-colors text-muted-foreground"
+                          >
+                            <FolderInput className="h-3 w-3" /> Import from
+                            Folder...
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -1864,6 +2091,9 @@ export default function Index() {
                     className={`group relative w-10 h-[37px] flex items-center justify-center transition-colors shrink-0 ${sidebarTab === t.key ? "text-primary bg-primary/10" : "text-muted-foreground/40 hover:text-foreground hover:bg-accent/50"}`}
                   >
                     <t.icon className="h-3.5 w-3.5" />
+                    {fileSyncEnabled && t.key !== "history" && (
+                      <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary animate-sync-pulse" />
+                    )}
                     <span className="absolute left-full ml-1 px-2 py-1 text-[9px] font-bold bg-card border border-border shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
                       {t.label}
                     </span>
@@ -1913,7 +2143,7 @@ export default function Index() {
                     <button
                       key={t.key}
                       onClick={() => setSidebarTab(t.key)}
-                      className={`flex items-center justify-center gap-1 px-2 text-[9px] font-bold border-b-2 transition-all ${
+                      className={`relative flex items-center justify-center gap-1 px-2 text-[9px] font-bold border-b-2 transition-all ${
                         sidebarTab === t.key
                           ? "border-primary text-foreground flex-1"
                           : "border-transparent text-muted-foreground/40 hover:text-foreground"
@@ -1921,6 +2151,9 @@ export default function Index() {
                       title={t.label}
                     >
                       <t.icon className="h-3 w-3 shrink-0" />
+                      {fileSyncEnabled && t.key !== "history" && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-sync-pulse shrink-0" />
+                      )}
                       {sidebarTab === t.key && (
                         <span className="truncate">{t.label}</span>
                       )}
@@ -1936,6 +2169,9 @@ export default function Index() {
                         setWorkspace((prev) => ({ ...prev, collections: c }))
                       }
                       onOpenRequest={openRequest}
+                      onRunRequest={(req) =>
+                        executeRequest(req, activeEnv, useProxy)
+                      }
                     />
                   )}
                   {sidebarTab === "environments" && (
@@ -2077,7 +2313,7 @@ export default function Index() {
                   className="flex-1 h-full px-3 text-[10px] font-mono bg-transparent focus:outline-none placeholder:text-muted-foreground/20 min-w-0"
                 />
 
-                {!isRealtime && sidebarCollapsed && (
+                {!isRealtime && !isMobile && sidebarCollapsed && (
                   <button
                     onClick={() =>
                       setSplitDirection((d) =>
@@ -2243,9 +2479,6 @@ export default function Index() {
             className={`flex items-center gap-1 text-[9px] font-bold transition-colors ${agentCfg.color}`}
             title={agentCfg.title}
           >
-            {(agentSource === "extension" || agentSource === "both") && (
-              <span className="w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />
-            )}
             <agentCfg.icon className="h-2.5 w-2.5" />
             <span className="hidden sm:inline">{agentCfg.label}</span>
           </button>
@@ -2350,11 +2583,50 @@ export default function Index() {
         >
           <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" />
           <div
-            className="relative bg-card border-t border-border max-h-[75vh] animate-slide-up flex flex-col"
+            className="relative bg-card border-t border-border rounded-t-xl h-[75vh] animate-slide-up flex flex-col"
             onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => {
+              const tag = (e.target as HTMLElement).tagName;
+              if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT")
+                return;
+              (e.currentTarget as any)._touchY = e.touches[0].clientY;
+              (e.currentTarget as any)._touchMoved = false;
+            }}
+            onTouchMove={(e) => {
+              const startY = (e.currentTarget as any)._touchY;
+              if (startY == null) return;
+              const delta = e.touches[0].clientY - startY;
+              if (delta > 0) {
+                (e.currentTarget as any)._touchMoved = true;
+                e.currentTarget.style.transform = `translateY(${delta}px)`;
+                e.currentTarget.style.transition = "none";
+              }
+            }}
+            onTouchEnd={(e) => {
+              const startY = (e.currentTarget as any)._touchY;
+              if (startY == null) return;
+              const el = e.currentTarget;
+              (el as any)._touchY = null;
+              if ((el as any)._touchMoved) {
+                const delta =
+                  parseFloat(el.style.transform.replace(/[^0-9.-]/g, "")) || 0;
+                if (delta > 100) {
+                  setShowMobileSidebar(false);
+                } else {
+                  el.style.transition = "transform 0.2s ease-out";
+                  el.style.transform = "translateY(0)";
+                }
+              }
+            }}
           >
-            <div className="flex justify-center py-2 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-border" />
+            <div className="flex items-center justify-center py-2 shrink-0 relative">
+              <button
+                onClick={() => setShowMobileSidebar(false)}
+                className="flex items-center justify-center w-8 h-5 rounded-full bg-muted hover:bg-muted-foreground/20 transition-colors"
+                aria-label="Close sidebar"
+              >
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
             </div>
             <div className="flex-1 overflow-hidden">
               <div className="flex flex-col h-full">
@@ -2392,9 +2664,12 @@ export default function Index() {
                     <button
                       key={t.key}
                       onClick={() => setSidebarTab(t.key)}
-                      className={`flex items-center justify-center gap-1 flex-1 text-[9px] font-bold border-b-2 transition-all ${sidebarTab === t.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground/40 hover:text-foreground"}`}
+                      className={`relative flex items-center justify-center gap-1 flex-1 text-[9px] font-bold border-b-2 transition-all ${sidebarTab === t.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground/40 hover:text-foreground"}`}
                     >
                       <t.icon className="h-3 w-3 shrink-0" />
+                      {fileSyncEnabled && t.key !== "history" && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-sync-pulse shrink-0" />
+                      )}
                       {sidebarTab === t.key && <span>{t.label}</span>}
                     </button>
                   ))}
@@ -2407,6 +2682,9 @@ export default function Index() {
                         setWorkspace((prev) => ({ ...prev, collections: c }))
                       }
                       onOpenRequest={openRequest}
+                      onRunRequest={(req) =>
+                        executeRequest(req, activeEnv, useProxy)
+                      }
                     />
                   )}
                   {sidebarTab === "environments" && (
@@ -2522,10 +2800,22 @@ function HistoryList({
   historyEnabled: boolean;
   onToggleHistory: () => void;
 }) {
+  const [showSearch, setShowSearch] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+
   const grouped = React.useMemo(() => {
     const groups: { label: string; items: HistoryItem[] }[] = [];
     let currentLabel = "";
-    for (const item of history) {
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = q
+      ? history.filter(
+          (item) =>
+            item.request.url?.toLowerCase().includes(q) ||
+            item.request.method.toLowerCase().includes(q) ||
+            (item.response && String(item.response.status).includes(q)),
+        )
+      : history;
+    for (const item of filtered) {
       const label = getDateLabel(item.timestamp);
       if (label !== currentLabel) {
         groups.push({ label, items: [item] });
@@ -2535,7 +2825,7 @@ function HistoryList({
       }
     }
     return groups;
-  }, [history]);
+  }, [history, searchQuery]);
 
   return (
     <div className="flex flex-col h-full">
@@ -2546,38 +2836,81 @@ function HistoryList({
           <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60">
             History
           </h3>
+          {!historyEnabled && (
+            <span className="text-[8px] font-bold uppercase tracking-wide text-destructive/60">
+              paused
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => {
+              setShowSearch((p) => !p);
+              if (showSearch) setSearchQuery("");
+            }}
+            className={`p-1 rounded-md transition-all ${showSearch ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
+            title="Search history"
+            aria-label="Search history"
+          >
+            <Search className="h-3.5 w-3.5" />
+          </button>
           <button
             onClick={onToggleHistory}
-            className={`px-2 py-0.5 rounded-full text-[9px] font-bold transition-all ${
+            className={`p-1 rounded-md transition-all ${
               historyEnabled
-                ? "bg-status-success/15 text-status-success"
-                : "bg-muted text-muted-foreground"
+                ? "text-status-success hover:bg-status-success/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             }`}
+            title={historyEnabled ? "Pause recording" : "Resume recording"}
+            aria-label="Toggle recording"
           >
-            {historyEnabled ? "ON" : "OFF"}
+            {historyEnabled ? (
+              <Activity className="h-3.5 w-3.5" />
+            ) : (
+              <Activity className="h-3.5 w-3.5" />
+            )}
           </button>
           {history.length > 0 && (
             <button
               onClick={onClear}
-              className="px-2 py-0.5 rounded-full text-[9px] font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+              className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+              title="Clear history"
+              aria-label="Clear history"
             >
-              Clear
+              <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
       </div>
 
+      {/* Search bar */}
+      {showSearch && (
+        <div className="px-3 py-1.5 border-b border-border bg-surface-sunken">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
+            <input
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter by URL, method, status..."
+              aria-label="Search history"
+              className="w-full text-[10px] font-medium bg-transparent pl-6 pr-6 py-1 focus:outline-none border border-border rounded-md text-foreground placeholder:text-muted-foreground/30"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {!historyEnabled && (
-          <div className="mx-3 mt-2 px-3 py-2 rounded-md bg-destructive/5 border border-destructive/10">
-            <p className="text-[9px] font-bold text-destructive/60">
-              Recording paused
-            </p>
-          </div>
-        )}
         {grouped.map((group) => (
           <div key={group.label}>
             <div className="px-4 py-1.5 bg-surface-sunken/50 border-b border-border sticky top-0 z-10">

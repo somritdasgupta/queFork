@@ -638,6 +638,11 @@ export function ResponsePanel({
         <span className="text-[12px] text-muted-foreground font-bold">
           {formatSize(response.size)}
         </span>
+        {response.proxyRoute && response.proxyRoute !== "direct" && (
+          <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+            via {response.proxyRoute}
+          </span>
+        )}
         {totalTests > 0 && (
           <span
             className={`text-[12px] font-extrabold ${passedTests === totalTests ? "text-status-success" : "text-destructive"}`}

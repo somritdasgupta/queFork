@@ -58,6 +58,26 @@
         },
       );
     }
+
+    // Storage bridge — workspace sync via chrome.storage.local
+    if (
+      data.type === "QUEFORK_STORAGE_SET" ||
+      data.type === "QUEFORK_STORAGE_GET"
+    ) {
+      chrome.runtime.sendMessage(
+        { type: data.type, data: data.payload },
+        (response) => {
+          const payload = chrome.runtime.lastError
+            ? { error: chrome.runtime.lastError.message }
+            : response;
+
+          window.postMessage(
+            { type: "QUEFORK_STORAGE_RESPONSE", id: data.id, payload },
+            "*",
+          );
+        },
+      );
+    }
   });
 
   // --- Heartbeat (re-signals every 5s for late-loading pages) ---

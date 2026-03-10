@@ -210,16 +210,23 @@ function hasExtensionBridgeMarker(): boolean {
   if (typeof document === "undefined") return false;
   const meta = document.querySelector('meta[name="quefork-agent"]');
   if (meta?.getAttribute("content") === "active") return true;
-  if (document.documentElement?.getAttribute("data-quefork-agent") === "active") return true;
+  if (document.documentElement?.getAttribute("data-quefork-agent") === "active")
+    return true;
   return false;
 }
 
 if (typeof window !== "undefined") {
-  const latchExtension = () => { extensionEverDetected = true; };
+  const latchExtension = () => {
+    extensionEverDetected = true;
+  };
   window.addEventListener("quefork-agent-ready", latchExtension);
   window.addEventListener("message", (e) => {
     const d = e.data as { type?: string } | undefined;
-    if (d?.type === "QUEFORK_AGENT_READY" || d?.type === "QUEFORK_AGENT_HEARTBEAT" || d?.type === "QUEFORK_AGENT_PONG") {
+    if (
+      d?.type === "QUEFORK_AGENT_READY" ||
+      d?.type === "QUEFORK_AGENT_HEARTBEAT" ||
+      d?.type === "QUEFORK_AGENT_PONG"
+    ) {
       latchExtension();
     }
   });
@@ -368,19 +375,21 @@ async function tryAgentFetch(
 }
 
 // ── Fetch with proxy cascade ──────────────────────────────────────────
+type FetchResult = { res: Response; route: import("@/types/api").ProxyRoute };
+
 async function fetchWithProxy(
   url: string,
   options: RequestInit,
   useProxy: boolean,
-): Promise<Response> {
+): Promise<FetchResult> {
   // Localhost requests always go direct
   if (isLocalhostUrl(url)) {
-    return fetch(url, options);
+    return { res: await fetch(url, options), route: "direct" };
   }
 
   // If proxy disabled, just try direct
   if (!useProxy) {
-    return fetch(url, options);
+    return { res: await fetch(url, options), route: "direct" };
   }
 
   // 1) Try direct fetch first (might work if API allows CORS)
@@ -394,7 +403,7 @@ async function fetchWithProxy(
     });
     clearTimeout(timeout);
     // If we get any response (even 4xx), CORS is not blocking us
-    return res;
+    return { res, route: "direct" };
   } catch (directErr: any) {
     // TypeError = CORS blocked or network error, continue to proxies
     if (directErr.name !== "TypeError" && directErr.name !== "AbortError") {
@@ -404,11 +413,11 @@ async function fetchWithProxy(
 
   // 2) Try Chrome extension bridge if available
   const extensionRes = await tryExtensionFetch(url, options);
-  if (extensionRes) return extensionRes;
+  if (extensionRes) return { res: extensionRes, route: "extension" };
 
   // 3) Try local queFork Agent service if available
   const agentRes = await tryAgentFetch(url, options);
-  if (agentRes) return agentRes;
+  if (agentRes) return { res: agentRes, route: "agent" };
 
   // 3.5) Try custom proxy (Vercel/Edge Function) if configured
   const customProxy = getCustomProxyUrl();
@@ -426,11 +435,14 @@ async function fetchWithProxy(
       });
       if (proxyRes.ok) {
         const proxyData = await proxyRes.json();
-        return new Response(proxyData.body, {
-          status: proxyData.status,
-          statusText: proxyData.statusText,
-          headers: proxyData.headers || {},
-        });
+        return {
+          res: new Response(proxyData.body, {
+            status: proxyData.status,
+            statusText: proxyData.statusText,
+            headers: proxyData.headers || {},
+          }),
+          route: "custom-proxy" as const,
+        };
       }
     } catch (e: any) {
       // Custom proxy failed, continue to built-in proxies
@@ -489,7 +501,7 @@ async function fetchWithProxy(
       clearTimeout(timeout);
 
       // Accept any non-5xx response
-      if (res.status < 500) return res;
+      if (res.status < 500) return { res, route: "cors-proxy" as const };
       errors.push(`${proxy.name}: HTTP ${res.status}`);
     } catch (e: any) {
       errors.push(`${proxy.name}: ${e.message || "failed"}`);
@@ -557,6 +569,33 @@ export async function executeRequest(
   }
 
   url = buildUrl(url, resolvedConfig.params);
+
+  // Auto-refresh OAuth2 token if enabled and expired/expiring (30s buffer)
+  if (
+    resolvedConfig.auth.type === "oauth2" &&
+    resolvedConfig.auth.oauth2?.autoRefresh &&
+    resolvedConfig.auth.oauth2.tokenUrl &&
+    resolvedConfig.auth.oauth2.clientId &&
+    resolvedConfig.auth.oauth2.tokenExpiresAt &&
+    Date.now() > resolvedConfig.auth.oauth2.tokenExpiresAt - 30000
+  ) {
+    try {
+      const { accessToken, expiresAt } = await fetchOAuth2Token(
+        resolvedConfig.auth.oauth2,
+      );
+      resolvedConfig.auth = {
+        ...resolvedConfig.auth,
+        oauth2: {
+          ...resolvedConfig.auth.oauth2,
+          accessToken,
+          tokenExpiresAt: expiresAt,
+        },
+      };
+    } catch {
+      console.warn("[qF] OAuth2 auto-refresh failed, using existing token.");
+    }
+  }
+
   const headers = buildHeaders(resolvedConfig);
   const body = buildBody(resolvedConfig);
 
@@ -576,7 +615,7 @@ export async function executeRequest(
     });
     if (body instanceof FormData) delete fetchHeaders["Content-Type"];
 
-    const res = await fetchWithProxy(
+    const { res, route } = await fetchWithProxy(
       url,
       {
         method: resolvedConfig.method,
@@ -600,6 +639,7 @@ export async function executeRequest(
       body: text,
       size: new Blob([text]).size,
       time: Math.round(elapsed),
+      proxyRoute: route,
     };
 
     if (config.postScript) {
@@ -688,6 +728,10 @@ function createQfApi(
         return this;
       },
       list: () => ({ ...store }),
+      clear: function () {
+        Object.keys(store).forEach((k) => delete store[k]);
+        return this;
+      },
     },
     request: {
       method: config.method,
@@ -732,6 +776,7 @@ export function runTests(
   testScript: string,
   response: ResponseData,
   env?: Environment | null,
+  config?: RequestConfig,
   flowVars?: Record<string, any>,
 ): TestResult[] {
   const results: TestResult[] = [];
@@ -748,8 +793,13 @@ export function runTests(
       if (val !== expected) throw new Error(`Expected ${expected}, got ${val}`);
     },
     toContain: (expected: any) => {
-      if (typeof val === "string" && !val.includes(expected))
+      if (
+        (typeof val === "string" || Array.isArray(val)) &&
+        !val.includes(expected)
+      )
         throw new Error(`Expected to contain "${expected}"`);
+      if (typeof val !== "string" && !Array.isArray(val))
+        throw new Error(`Expected a string or array, got ${typeof val}`);
     },
     toBeTruthy: () => {
       if (!val) throw new Error(`Expected truthy, got ${val}`);
@@ -776,29 +826,26 @@ export function runTests(
     },
   });
 
-  const qf = createQfApi(
-    env || null,
-    {
-      id: "",
-      name: "",
-      protocol: "rest",
-      method: "GET",
-      url: "",
-      params: [],
-      headers: [],
-      body: {
-        type: "none",
-        raw: "",
-        formData: [],
-        graphql: { query: "", variables: "{}" },
-      },
-      auth: { type: "none" },
-      preScript: "",
-      postScript: "",
-      tests: "",
+  const defaultConfig: RequestConfig = {
+    id: "",
+    name: "",
+    protocol: "rest",
+    method: "GET",
+    url: "",
+    params: [],
+    headers: [],
+    body: {
+      type: "none",
+      raw: "",
+      formData: [],
+      graphql: { query: "", variables: "{}" },
     },
-    flowVars,
-  );
+    auth: { type: "none" },
+    preScript: "",
+    postScript: "",
+    tests: "",
+  };
+  const qf = createQfApi(env || null, config || defaultConfig, flowVars);
 
   // Add response to qf object so scripts use qf.response.*
   (qf as any).response = {
@@ -817,7 +864,11 @@ export function runTests(
   };
 
   // Backward compat: also expose as pm for any legacy scripts
-  const pm = { response: (qf as any).response };
+  const pm = {
+    response: (qf as any).response,
+    environment: qf.environment,
+    request: qf.request,
+  };
 
   try {
     const fn = safeNewFunction(
@@ -840,7 +891,7 @@ function runScript(
 ) {
   const qf = createQfApi(env, request, flowVars);
   (qf as any).response = response;
-  const pm = { response, request, environment: {} };
+  const pm = { response, request, environment: qf.environment };
   const safeConsole = createSafeConsole();
   const fn = safeNewFunction(["qf", "pm", "console"], script);
   fn(qf, pm, safeConsole);
@@ -848,7 +899,7 @@ function runScript(
 
 export async function fetchOAuth2Token(
   config: RequestConfig["auth"]["oauth2"],
-): Promise<string> {
+): Promise<{ accessToken: string; expiresAt?: number }> {
   if (!config) throw new Error("OAuth2 config required");
   const body = new URLSearchParams();
   body.append("client_id", config.clientId);
@@ -863,7 +914,12 @@ export async function fetchOAuth2Token(
     body,
   });
   const data = await res.json();
-  if (data.access_token) return data.access_token;
+  if (data.access_token) {
+    const expiresAt = data.expires_in
+      ? Date.now() + data.expires_in * 1000
+      : undefined;
+    return { accessToken: data.access_token, expiresAt };
+  }
   throw new Error(
     data.error_description || data.error || "Failed to get token",
   );

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "queFork Agent",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Localhost request interceptor & CORS proxy agent for queFork API testing",
   "permissions": [
     "sidePanel",

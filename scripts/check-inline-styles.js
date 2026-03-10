@@ -17,7 +17,7 @@ const allowList = new Set([
 
 function walk(dir, out = []) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
+  for (const entry of entries)  {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       walk(full, out);

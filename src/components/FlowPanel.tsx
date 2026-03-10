@@ -497,13 +497,11 @@ function makeNode(
 function chainEdges(
   nodes: FlowNode[],
 ): { id: string; from: string; to: string }[] {
-  return nodes
-    .slice(0, -1)
-    .map((n, i) => ({
-      id: crypto.randomUUID(),
-      from: n.id,
-      to: nodes[i + 1].id,
-    }));
+  return nodes.slice(0, -1).map((n, i) => ({
+    id: crypto.randomUUID(),
+    from: n.id,
+    to: nodes[i + 1].id,
+  }));
 }
 
 const FLOW_TEMPLATES: FlowTemplate[] = [
@@ -1658,13 +1656,11 @@ export function FlowPanel({
       const nodes = [...f.nodes];
       const swapIdx = direction === "up" ? idx - 1 : idx + 1;
       [nodes[idx], nodes[swapIdx]] = [nodes[swapIdx], nodes[idx]];
-      const edges = nodes
-        .slice(0, -1)
-        .map((n, i) => ({
-          id: crypto.randomUUID(),
-          from: n.id,
-          to: nodes[i + 1].id,
-        }));
+      const edges = nodes.slice(0, -1).map((n, i) => ({
+        id: crypto.randomUUID(),
+        from: n.id,
+        to: nodes[i + 1].id,
+      }));
       return { ...f, nodes, edges };
     });
   };
@@ -1680,13 +1676,11 @@ export function FlowPanel({
       };
       const nodes = [...f.nodes];
       nodes.splice(idx + 1, 0, dup);
-      const edges = nodes
-        .slice(0, -1)
-        .map((n, i) => ({
-          id: crypto.randomUUID(),
-          from: n.id,
-          to: nodes[i + 1].id,
-        }));
+      const edges = nodes.slice(0, -1).map((n, i) => ({
+        id: crypto.randomUUID(),
+        from: n.id,
+        to: nodes[i + 1].id,
+      }));
       return { ...f, nodes, edges };
     });
   };
@@ -2097,7 +2091,13 @@ export function FlowPanel({
             switchRequestTab("tests");
             addLog(`▶ Running tests...`);
             await uiDelay(2000, "Running tests");
-            testResults = runTests(combinedTests, response, activeEnv, vars);
+            testResults = runTests(
+              combinedTests,
+              response,
+              activeEnv,
+              mergedReq,
+              vars,
+            );
             const passedTests = testResults.filter((t) => t.passed).length;
             const failedTests = testResults.filter((t) => !t.passed).length;
             addLog(`✓ Tests: ${passedTests} passed, ${failedTests} failed`);
