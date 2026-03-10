@@ -29,18 +29,10 @@ jobs:
             - name: Build project
               run: npm run build
 
-            - name: Deploy to Vercel
-              env:
-                  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-              run: |
-                  npm install -g vercel
-                  vercel --prod --token=$VERCEL_TOKEN
-              continue-on-error: true
-
             - name: Create deployment summary
               if: always()
               run: |
                   echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
                   echo "- Build: ✅ Success" >> $GITHUB_STEP_SUMMARY
                   echo "- Tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
-                  echo "- Deployment: ✅ Complete" >> $GITHUB_STEP_SUMMARY
+                  echo "- Deployment: Managed by Vercel Git Integration" >> $GITHUB_STEP_SUMMARY

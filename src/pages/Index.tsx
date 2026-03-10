@@ -154,27 +154,64 @@ function getProtocolColor(protocol: ProtocolType): string {
 type SidebarTab = "collections" | "environments" | "history" | "flows";
 type AgentStatus = "not-installed" | "inactive" | "active" | "error";
 
+function pingExtensionAgent(timeoutMs = 1200): Promise<boolean> {
+  return new Promise((resolve) => {
+    const requestId = `qf-agent-ping-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      window.removeEventListener("message", onMessage);
+    };
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window) return;
+      if (event.data?.type !== "QUEFORK_AGENT_PONG") return;
+      if (event.data?.id !== requestId) return;
+      cleanup();
+      resolve(true);
+    };
+
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve(false);
+    }, timeoutMs);
+
+    window.addEventListener("message", onMessage);
+    window.postMessage({ type: "QUEFORK_AGENT_PING", id: requestId }, "*");
+  });
+}
+
 function useAgentStatus(): AgentStatus {
   const [status, setStatus] = useState<AgentStatus>("not-installed");
   useEffect(() => {
-    const detect = () => {
+    let disposed = false;
+
+    const detect = async () => {
       // Check for meta tag injected by content script
       const marker = document.querySelector('meta[name="quefork-agent"]');
       if (marker && marker.getAttribute("content") === "active") {
-        setStatus("active");
+        if (!disposed) setStatus("active");
+        return;
       }
+
+      // Fallback: actively ping content script bridge.
+      const hasBridge = await pingExtensionAgent();
+      if (!disposed) setStatus(hasBridge ? "active" : "not-installed");
     };
 
     // Check immediately (content script may have already run)
-    detect();
+    void detect();
 
     // Also listen for the custom event (if page loads before content script)
     const handler = () => setStatus("active");
     window.addEventListener("quefork-agent-ready", handler);
 
     // Re-check periodically (e.g. if extension is enabled/disabled)
-    const i = setInterval(detect, 10000);
+    const i = setInterval(() => {
+      void detect();
+    }, 10000);
     return () => {
+      disposed = true;
       clearInterval(i);
       window.removeEventListener("quefork-agent-ready", handler);
     };

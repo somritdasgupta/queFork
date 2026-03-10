@@ -169,7 +169,7 @@ function updateProxyStatus() {
       text.textContent = proxy ? `${proxy.host}:${proxy.port}` : 'Proxy Active';
     } else {
       dot.classList.remove('active');
-      text.textContent = 'Direct';
+      text.textContent = 'Direct (no browser proxy)';
     }
   });
 }
