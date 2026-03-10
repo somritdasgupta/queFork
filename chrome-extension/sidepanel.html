@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>queFork Agent</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="agent-root">
+    <!-- Header -->
+    <header class="agent-header">
+      <div class="header-brand">
+        <span class="logo-text"><span class="logo-q">que</span><span class="logo-f">Fork</span></span>
+        <span class="header-title">Agent</span>
+      </div>
+      <div class="header-status" id="proxyStatus">
+        <span class="status-dot"></span>
+        <span class="status-text">Direct</span>
+      </div>
+    </header>
+
+    <!-- Tab bar -->
+    <nav class="tab-bar">
+      <button class="tab active" data-tab="interceptor">Interceptor</button>
+      <button class="tab" data-tab="proxy">Proxy Settings</button>
+      <button class="tab" data-tab="about">About</button>
+    </nav>
+
+    <!-- Interceptor Tab -->
+    <div class="tab-content active" id="tab-interceptor">
+      <div class="section-header">
+        <h3>Localhost Requests</h3>
+        <div class="header-actions">
+          <span class="request-count" id="requestCount">0</span>
+          <button class="btn-icon" id="clearLog" title="Clear log">✕</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="filterInput" placeholder="Filter by URL..." class="filter-input" />
+        <select id="filterMethod" class="filter-select">
+          <option value="">All Methods</option>
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+          <option value="PATCH">PATCH</option>
+        </select>
+      </div>
+      <div class="request-list" id="requestList">
+        <div class="empty-state">
+          <p class="empty-title">No localhost requests intercepted</p>
+          <p class="empty-desc">Requests to localhost, 127.0.0.1, and 0.0.0.0 will appear here automatically.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Proxy Settings Tab -->
+    <div class="tab-content" id="tab-proxy">
+      <div class="section-header">
+        <h3>Proxy Configuration</h3>
+      </div>
+      <div class="proxy-form">
+        <div class="form-group">
+          <label>Proxy Mode</label>
+          <div class="toggle-group">
+            <button class="toggle-btn active" data-mode="direct" id="modeDirectBtn">Direct</button>
+            <button class="toggle-btn" data-mode="proxy" id="modeProxyBtn">Custom Proxy</button>
+          </div>
+        </div>
+        <div class="form-group" id="proxyUrlGroup" style="display:none">
+          <label>Proxy Server URL</label>
+          <input type="text" id="proxyUrlInput" placeholder="http://proxy.example.com:8080" class="input-field" />
+          <p class="help-text">Enter your proxy server address. Supports HTTP/HTTPS/SOCKS proxies.</p>
+        </div>
+        <div class="form-group" id="proxyUrlGroup2" style="display:none">
+          <label>queFork API Proxy URL (for CORS bypass)</label>
+          <input type="text" id="customProxyInput" placeholder="https://your-vercel-proxy.app/api/proxy" class="input-field" />
+          <p class="help-text">Optional: Your custom Vercel/Edge Function proxy URL for CORS bypass.</p>
+        </div>
+        <button class="btn-primary" id="applyProxy">Apply Settings</button>
+        <div id="proxyFeedback" class="feedback-msg"></div>
+      </div>
+
+      <div class="section-header" style="margin-top:16px">
+        <h3>Presets</h3>
+      </div>
+      <div class="preset-list">
+        <button class="preset-btn" data-url="http://localhost:8080">localhost:8080</button>
+        <button class="preset-btn" data-url="http://localhost:3128">Squid (3128)</button>
+        <button class="preset-btn" data-url="socks5://localhost:1080">SOCKS5 (1080)</button>
+        <button class="preset-btn" data-url="http://localhost:9119">queFork Agent (9119)</button>
+      </div>
+    </div>
+
+    <!-- About Tab -->
+    <div class="tab-content" id="tab-about">
+      <div class="about-content">
+        <div class="about-logo">
+          <span class="logo-text large"><span class="logo-q">que</span><span class="logo-f">Fork</span></span>
+        </div>
+        <h3>queFork Agent Extension</h3>
+        <p>Lightweight localhost request interceptor and proxy configuration tool for developers.</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">⚡</span>
+            <div>
+              <strong>Localhost Interceptor</strong>
+              <p>Automatically captures and logs all requests to localhost, 127.0.0.1, and local endpoints.</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">🔀</span>
+            <div>
+              <strong>Proxy Management</strong>
+              <p>Configure custom proxy servers (HTTP, HTTPS, SOCKS5) directly from the extension.</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">🛡️</span>
+            <div>
+              <strong>CORS-Free Proxy</strong>
+              <p>Route requests through the extension's background worker to bypass CORS restrictions.</p>
+            </div>
+          </div>
+        </div>
+        <a href="https://github.com/somritdasgupta/queFork" target="_blank" class="link-btn">View on GitHub →</a>
+      </div>
+    </div>
+  </div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
