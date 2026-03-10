@@ -275,9 +275,13 @@ function useAgentStatus(): AgentState {
     const detect = async () => {
       // Check for meta tag injected by content script
       const markerReady = hasExtensionMarker();
-      if (markerReady) bridgeDebug("status-marker-active");
+      if (markerReady) {
+        bridgeDebug("status-marker-active");
+        setStateIfChanged(computeAgentState(true, false));
+        return;
+      }
 
-      const hasBridge = markerReady ? true : await probeExtensionBridge(3);
+      const hasBridge = await probeExtensionBridge(3);
       // Only probe local agent if extension bridge is still unavailable.
       const hasLocalAgent = hasBridge ? false : await pingLocalAgent();
       bridgeDebug("status-probe-result", {

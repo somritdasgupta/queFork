@@ -203,6 +203,32 @@ function isLocalhostUrl(url: string): boolean {
   }
 }
 
+// ── Extension detection latch ─────────────────────────────────────────
+let extensionEverDetected = false;
+
+function hasExtensionBridgeMarker(): boolean {
+  if (typeof document === "undefined") return false;
+  const meta = document.querySelector('meta[name="quefork-agent"]');
+  if (meta?.getAttribute("content") === "active") return true;
+  if (document.documentElement?.getAttribute("data-quefork-agent") === "active") return true;
+  return false;
+}
+
+if (typeof window !== "undefined") {
+  const latchExtension = () => { extensionEverDetected = true; };
+  window.addEventListener("quefork-agent-ready", latchExtension);
+  window.addEventListener("message", (e) => {
+    const d = e.data as { type?: string } | undefined;
+    if (d?.type === "QUEFORK_AGENT_READY" || d?.type === "QUEFORK_AGENT_HEARTBEAT" || d?.type === "QUEFORK_AGENT_PONG") {
+      latchExtension();
+    }
+  });
+}
+
+// ── Local agent failure cache ─────────────────────────────────────────
+let localAgentDownUntil = 0;
+const LOCAL_AGENT_COOLDOWN_MS = 30_000;
+
 function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
   if (!headers) return {};
   if (headers instanceof Headers) {
@@ -220,9 +246,10 @@ async function tryExtensionFetch(
 ): Promise<Response | null> {
   if (typeof window === "undefined") return null;
 
-  const marker = document.querySelector('meta[name="quefork-agent"]');
-  const hasMarker = marker?.getAttribute("content") === "active";
-  const timeoutMs = hasMarker ? 2500 : 450;
+  const hasMarker = hasExtensionBridgeMarker();
+  if (!hasMarker && !extensionEverDetected) return null;
+  extensionEverDetected = true;
+  const timeoutMs = 2500;
 
   return new Promise((resolve) => {
     const startedAt = performance.now();
@@ -307,6 +334,9 @@ async function tryAgentFetch(
   url: string,
   options: RequestInit,
 ): Promise<Response | null> {
+  // Skip if we recently confirmed the local agent is unreachable
+  if (Date.now() < localAgentDownUntil) return null;
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2000);
@@ -314,7 +344,10 @@ async function tryAgentFetch(
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!healthRes.ok) return null;
+    if (!healthRes.ok) {
+      localAgentDownUntil = Date.now() + LOCAL_AGENT_COOLDOWN_MS;
+      return null;
+    }
 
     // Agent is alive — use it as proxy
     const agentRes = await fetch("http://localhost:9119/proxy", {
@@ -329,6 +362,7 @@ async function tryAgentFetch(
     });
     return agentRes;
   } catch {
+    localAgentDownUntil = Date.now() + LOCAL_AGENT_COOLDOWN_MS;
     return null;
   }
 }
