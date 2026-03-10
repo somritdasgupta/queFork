@@ -169,7 +169,10 @@ function hasExtensionMarker(): boolean {
   return Boolean(metaActive || attrActive);
 }
 
-function computeAgentState(hasBridge: boolean, hasLocalAgent: boolean): AgentState {
+function computeAgentState(
+  hasBridge: boolean,
+  hasLocalAgent: boolean,
+): AgentState {
   if (hasBridge && hasLocalAgent) {
     return { status: "active", source: "both" };
   }
@@ -295,7 +298,10 @@ function useAgentStatus(): AgentState {
     const markExtensionReady = (source: string) => {
       bridgeDebug("status-extension-ready", { source });
       setState((prev) => {
-        const next = computeAgentState(true, prev.source === "local" || prev.source === "both");
+        const next = computeAgentState(
+          true,
+          prev.source === "local" || prev.source === "both",
+        );
         if (prev.status === next.status && prev.source === next.source) {
           return prev;
         }
@@ -1418,7 +1424,8 @@ export default function Index() {
           color: "text-status-success",
           label: "Extension + local",
           icon: Wifi,
-          title: "Chrome extension bridge and local quefork-agent are both available",
+          title:
+            "Chrome extension bridge and local quefork-agent are both available",
         }
       : agentSource === "extension"
         ? {

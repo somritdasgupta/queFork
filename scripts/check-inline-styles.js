@@ -54,7 +54,9 @@ for (const absPath of files) {
 }
 
 if (violations.length > 0) {
-  console.error("Inline style guard failed. Move styles to CSS/classes or add explicit allowlist entry if justified.");
+  console.error(
+    "Inline style guard failed. Move styles to CSS/classes or add explicit allowlist entry if justified.",
+  );
   for (const v of violations) {
     console.error(`- ${v.file}: ${v.lines.join(", ")}`);
   }
