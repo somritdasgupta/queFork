@@ -202,6 +202,77 @@ function isLocalhostUrl(url: string): boolean {
   }
 }
 
+function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
+  if (!headers) return {};
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries());
+  }
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+  return headers as Record<string, string>;
+}
+
+async function tryExtensionFetch(
+  url: string,
+  options: RequestInit,
+): Promise<Response | null> {
+  if (typeof window === "undefined") return null;
+
+  const marker = document.querySelector('meta[name="quefork-agent"]');
+  if (!marker || marker.getAttribute("content") !== "active") return null;
+
+  return new Promise((resolve) => {
+    const requestId = `qf-ext-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      window.removeEventListener("message", onMessage);
+    };
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window) return;
+      if (event.data?.type !== "QUEFORK_PROXY_RESPONSE") return;
+      if (event.data?.id !== requestId) return;
+
+      cleanup();
+      const payload = event.data.payload || {};
+      if (payload.error || payload.status === 0) {
+        resolve(null);
+        return;
+      }
+
+      resolve(
+        new Response(payload.body ?? "", {
+          status: payload.status ?? 200,
+          statusText: payload.statusText ?? "OK",
+          headers: payload.headers || {},
+        }),
+      );
+    };
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      resolve(null);
+    }, 2500);
+
+    window.addEventListener("message", onMessage);
+    window.postMessage(
+      {
+        type: "QUEFORK_PROXY_REQUEST",
+        id: requestId,
+        payload: {
+          url,
+          method: (options.method || "GET").toUpperCase(),
+          headers: normalizeHeaders(options.headers),
+          body: typeof options.body === "string" ? options.body : undefined,
+        },
+      },
+      "*",
+    );
+  });
+}
+
 // ── Check if queFork Agent is available ───────────────────────────────
 async function tryAgentFetch(
   url: string,
@@ -223,7 +294,7 @@ async function tryAgentFetch(
       body: JSON.stringify({
         url,
         method: (options.method || "GET").toUpperCase(),
-        headers: options.headers || {},
+        headers: normalizeHeaders(options.headers),
         body: typeof options.body === "string" ? options.body : undefined,
       }),
     });
@@ -268,11 +339,15 @@ async function fetchWithProxy(
     }
   }
 
-  // 2) Try queFork Agent if available
+  // 2) Try Chrome extension bridge if available
+  const extensionRes = await tryExtensionFetch(url, options);
+  if (extensionRes) return extensionRes;
+
+  // 3) Try local queFork Agent service if available
   const agentRes = await tryAgentFetch(url, options);
   if (agentRes) return agentRes;
 
-  // 2.5) Try custom proxy (Vercel/Edge Function) if configured
+  // 3.5) Try custom proxy (Vercel/Edge Function) if configured
   const customProxy = getCustomProxyUrl();
   if (customProxy) {
     try {
@@ -299,7 +374,7 @@ async function fetchWithProxy(
     }
   }
 
-  // 3) Cascade through CORS proxies
+  // 4) Cascade through CORS proxies
   const errors: string[] = [];
   for (const proxy of CORS_PROXIES) {
     try {

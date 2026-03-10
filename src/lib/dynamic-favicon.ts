@@ -10,9 +10,17 @@ const FAVICON_SELECTOR = 'link[rel="icon"]';
 const DOT_DISPLAY_MS = 5000;
 let clearTimer: ReturnType<typeof setTimeout> | null = null;
 let baseIconCanvas: HTMLCanvasElement | null = null;
+const DEFAULT_FAVICON = '/favicon.ico?v=3';
+let originalFaviconHref: string | null = null;
 
 function getFaviconLink(): HTMLLinkElement | null {
   return document.querySelector(FAVICON_SELECTOR);
+}
+
+function captureOriginalFavicon() {
+  if (originalFaviconHref) return;
+  const link = getFaviconLink();
+  originalFaviconHref = link?.href || DEFAULT_FAVICON;
 }
 
 function getBaseIcon(): HTMLCanvasElement {
@@ -23,6 +31,7 @@ function getBaseIcon(): HTMLCanvasElement {
 }
 
 function drawFaviconWithDot(color: string) {
+  captureOriginalFavicon();
   const link = getFaviconLink();
   if (!link) return;
 
@@ -59,7 +68,8 @@ function drawFaviconWithDot(color: string) {
 function restoreFavicon() {
   const link = getFaviconLink();
   if (link) {
-    link.href = getBaseIcon().toDataURL('image/png');
+    captureOriginalFavicon();
+    link.href = originalFaviconHref || DEFAULT_FAVICON;
   }
 }
 

@@ -55,22 +55,20 @@ jobs:
       - name: Run type check
         if: steps.outdated.outputs.has_updates == 'true'
         run: npx tsc --noEmit
-        continue-on-error: true
         id: typecheck
 
       - name: Run build
         if: steps.outdated.outputs.has_updates == 'true'
         run: npm run build
-        continue-on-error: true
         id: build
 
       - name: Run tests
         if: steps.outdated.outputs.has_updates == 'true'
-        run: npm test -- --run 2>/dev/null || true
-        continue-on-error: true
+        run: npm test -- --run
         id: tests
 
       - name: Create Pull Request
+        id: create_pr
         if: steps.outdated.outputs.has_updates == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
@@ -96,3 +94,11 @@ jobs:
           labels: |
             dependencies
             automated
+
+      - name: Enable Pull Request Auto-merge
+        if: steps.create_pr.outputs.pull-request-number != ''
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
+          merge-method: squash
