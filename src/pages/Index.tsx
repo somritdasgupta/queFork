@@ -130,7 +130,6 @@ const PROTOCOLS: {
 ];
 const REALTIME_PROTOCOLS: ProtocolType[] = ["websocket", "sse", "socketio"];
 const WS_IO_PROTOCOLS: ProtocolType[] = ["websocket", "socketio"];
-const AGENT_TOAST_SESSION_KEY = "qf_agent_missing_toast_shown";
 
 function getProtocolBadge(protocol: ProtocolType): string {
   return PROTOCOLS.find((p) => p.value === protocol)?.badge || "REST";
@@ -182,6 +181,20 @@ function pingExtensionAgent(timeoutMs = 1200): Promise<boolean> {
   });
 }
 
+async function pingLocalAgent(timeoutMs = 1200): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch("http://localhost:9119/health", {
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 function useAgentStatus(): AgentStatus {
   const [status, setStatus] = useState<AgentStatus>("not-installed");
   useEffect(() => {
@@ -195,9 +208,14 @@ function useAgentStatus(): AgentStatus {
         return;
       }
 
-      // Fallback: actively ping content script bridge.
-      const hasBridge = await pingExtensionAgent();
-      if (!disposed) setStatus(hasBridge ? "active" : "not-installed");
+      // Fallback: actively ping both extension bridge and local agent service.
+      const [hasBridge, hasLocalAgent] = await Promise.all([
+        pingExtensionAgent(),
+        pingLocalAgent(),
+      ]);
+      if (!disposed) {
+        setStatus(hasBridge || hasLocalAgent ? "active" : "not-installed");
+      }
     };
 
     // Check immediately (content script may have already run)
@@ -275,7 +293,6 @@ export default function Index() {
   const [realtimeConnected, setRealtimeConnected] = useState<
     Record<string, boolean>
   >({});
-  const [agentToastShown, setAgentToastShown] = useState(false);
   const [pinnedTabs, setPinnedTabs] = useState<Set<string>>(
     () => new Set(lsGet<string[]>("qf_pinned_tabs", [])),
   );
@@ -353,33 +370,6 @@ export default function Index() {
   const activeRequest = tabs.find((t) => t.id === activeTabId) || tabs[0];
   const activeEnv = workspace.environments.find((e) => e.isActive) || null;
   const isRealtime = REALTIME_PROTOCOLS.includes(activeRequest.protocol);
-
-  // Agent toast
-  useEffect(() => {
-    if (agentStatus === "not-installed" && !agentToastShown) {
-      try {
-        if (sessionStorage.getItem(AGENT_TOAST_SESSION_KEY) === "1") {
-          setAgentToastShown(true);
-          return;
-        }
-        sessionStorage.setItem(AGENT_TOAST_SESSION_KEY, "1");
-      } catch {
-        // Ignore storage errors and still show one toast in this render cycle.
-      }
-
-      setAgentToastShown(true);
-      toast("queFork Agent not detected", {
-        id: "qf-agent-not-detected",
-        description: "Install the agent for local testing without CORS issues.",
-        action: {
-          label: "Learn more",
-          onClick: () =>
-            window.open("https://github.com/somritdasgupta/queFork", "_blank"),
-        },
-        duration: 8000,
-      });
-    }
-  }, [agentStatus, agentToastShown]);
 
   // ── Actions ─────────────────────────────────────────────────────────
   const updateRequest = useCallback((updated: RequestConfig) => {
@@ -1321,11 +1311,11 @@ export default function Index() {
     AgentStatus,
     { color: string; label: string; icon: typeof Wifi }
   > = {
-    active: { color: "text-status-success", label: "Agent", icon: Wifi },
+    active: { color: "text-status-success", label: "Agent ready", icon: Wifi },
     inactive: { color: "text-method-put", label: "Idle", icon: WifiOff },
     "not-installed": {
       color: "text-muted-foreground/50",
-      label: "No agent",
+      label: "No agent bridge",
       icon: WifiOff,
     },
     error: { color: "text-destructive", label: "Error", icon: WifiOff },
@@ -2122,7 +2112,9 @@ export default function Index() {
             }}
             className={`flex items-center gap-1 text-[9px] font-bold transition-colors ${agentCfg.color}`}
             title={
-              agentStatus === "active" ? "Agent running" : "Click to install"
+              agentStatus === "active"
+                ? "Chrome extension or local agent is available"
+                : "Install/enable Chrome extension, or run local `quefork-agent`"
             }
           >
             {agentStatus === "active" && (
