@@ -154,6 +154,33 @@ function getProtocolColor(protocol: ProtocolType): string {
 
 type SidebarTab = "collections" | "environments" | "history" | "flows";
 type AgentStatus = "not-installed" | "inactive" | "active" | "error";
+type AgentSource = "none" | "extension" | "local" | "both";
+
+interface AgentState {
+  status: AgentStatus;
+  source: AgentSource;
+}
+
+function hasExtensionMarker(): boolean {
+  const meta = document.querySelector('meta[name="quefork-agent"]');
+  const metaActive = meta?.getAttribute("content") === "active";
+  const attrActive =
+    document.documentElement?.getAttribute("data-quefork-agent") === "active";
+  return Boolean(metaActive || attrActive);
+}
+
+function computeAgentState(hasBridge: boolean, hasLocalAgent: boolean): AgentState {
+  if (hasBridge && hasLocalAgent) {
+    return { status: "active", source: "both" };
+  }
+  if (hasBridge) {
+    return { status: "active", source: "extension" };
+  }
+  if (hasLocalAgent) {
+    return { status: "inactive", source: "local" };
+  }
+  return { status: "not-installed", source: "none" };
+}
 
 function pingExtensionAgent(timeoutMs = 1200): Promise<boolean> {
   return new Promise((resolve) => {
@@ -193,6 +220,23 @@ function pingExtensionAgent(timeoutMs = 1200): Promise<boolean> {
   });
 }
 
+async function probeExtensionBridge(retries = 3): Promise<boolean> {
+  if (hasExtensionMarker()) return true;
+
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    const ok = await pingExtensionAgent(1200);
+    if (ok) return true;
+    if (hasExtensionMarker()) return true;
+
+    if (attempt < retries) {
+      // Backoff gives content-script startup/signaling time on slow tabs.
+      await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+    }
+  }
+
+  return hasExtensionMarker();
+}
+
 async function pingLocalAgent(timeoutMs = 1200): Promise<boolean> {
   try {
     const controller = new AbortController();
@@ -207,59 +251,98 @@ async function pingLocalAgent(timeoutMs = 1200): Promise<boolean> {
   }
 }
 
-function useAgentStatus(): AgentStatus {
-  const [status, setStatus] = useState<AgentStatus>("not-installed");
+function useAgentStatus(): AgentState {
+  const [state, setState] = useState<AgentState>({
+    status: "not-installed",
+    source: "none",
+  });
   useEffect(() => {
     let disposed = false;
 
+    const setStateIfChanged = (next: AgentState) => {
+      if (disposed) return;
+      setState((prev) => {
+        if (prev.status === next.status && prev.source === next.source) {
+          return prev;
+        }
+        return next;
+      });
+    };
+
     const detect = async () => {
       // Check for meta tag injected by content script
-      const marker = document.querySelector('meta[name="quefork-agent"]');
-      if (marker && marker.getAttribute("content") === "active") {
-        bridgeDebug("status-marker-active");
-        if (!disposed) setStatus("active");
-        return;
-      }
+      const markerReady = hasExtensionMarker();
+      if (markerReady) bridgeDebug("status-marker-active");
 
       // Fallback: actively ping both extension bridge and local agent service.
       const [hasBridge, hasLocalAgent] = await Promise.all([
-        pingExtensionAgent(),
+        markerReady ? Promise.resolve(true) : probeExtensionBridge(3),
         pingLocalAgent(),
       ]);
-      bridgeDebug("status-probe-result", { hasBridge, hasLocalAgent });
-      if (!disposed) {
-        setStatus(hasBridge || hasLocalAgent ? "active" : "not-installed");
-      }
+      bridgeDebug("status-probe-result", {
+        markerReady,
+        hasBridge,
+        hasLocalAgent,
+      });
+
+      setStateIfChanged(computeAgentState(hasBridge, hasLocalAgent));
     };
 
     // Check immediately (content script may have already run)
     void detect();
 
     // Also listen for the custom event (if page loads before content script)
+    const markExtensionReady = (source: string) => {
+      bridgeDebug("status-extension-ready", { source });
+      setState((prev) => {
+        const next = computeAgentState(true, prev.source === "local" || prev.source === "both");
+        if (prev.status === next.status && prev.source === next.source) {
+          return prev;
+        }
+        return next;
+      });
+    };
+
     const handler = () => {
-      bridgeDebug("status-event-ready");
-      setStatus("active");
+      markExtensionReady("custom-event");
     };
     window.addEventListener("quefork-agent-ready", handler);
+
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string } | undefined;
+      if (!data) return;
+
+      if (
+        data.type === "QUEFORK_AGENT_READY" ||
+        data.type === "QUEFORK_AGENT_HEARTBEAT"
+      ) {
+        markExtensionReady(data.type);
+      }
+    };
+    window.addEventListener("message", onMessage);
 
     // Re-check periodically (e.g. if extension is enabled/disabled)
     const i = setInterval(() => {
       void detect();
-    }, 10000);
+    }, 5000);
+
     return () => {
       disposed = true;
       clearInterval(i);
       window.removeEventListener("quefork-agent-ready", handler);
+      window.removeEventListener("message", onMessage);
     };
   }, []);
-  return status;
+  return state;
 }
 
 // ── Main Component ────────────────────────────────────────────────────
 export default function Index() {
   const isMobile = useIsMobile();
   const { dark, toggle: toggleTheme } = useTheme();
-  const agentStatus = useAgentStatus();
+  const agentState = useAgentStatus();
+  const agentStatus = agentState.status;
+  const agentSource = agentState.source;
 
   // Persisted state
   const [workspaces, setWorkspaces] = useState<Workspace[]>(() =>
@@ -1324,20 +1407,41 @@ export default function Index() {
     }
   };
 
-  const agentStatusConfig: Record<
-    AgentStatus,
-    { color: string; label: string; icon: typeof Wifi }
-  > = {
-    active: { color: "text-status-success", label: "Agent ready", icon: Wifi },
-    inactive: { color: "text-method-put", label: "Idle", icon: WifiOff },
-    "not-installed": {
-      color: "text-muted-foreground/50",
-      label: "No agent bridge",
-      icon: WifiOff,
-    },
-    error: { color: "text-destructive", label: "Error", icon: WifiOff },
-  };
-  const agentCfg = agentStatusConfig[agentStatus];
+  const agentCfg: {
+    color: string;
+    label: string;
+    icon: typeof Wifi;
+    title: string;
+  } =
+    agentSource === "both"
+      ? {
+          color: "text-status-success",
+          label: "Extension + local",
+          icon: Wifi,
+          title: "Chrome extension bridge and local quefork-agent are both available",
+        }
+      : agentSource === "extension"
+        ? {
+            color: "text-status-success",
+            label: "Extension bridge",
+            icon: Wifi,
+            title: "Chrome extension bridge is available on this page",
+          }
+        : agentSource === "local"
+          ? {
+              color: "text-method-put",
+              label: "Local agent only",
+              icon: WifiOff,
+              title:
+                "Local `quefork-agent` is reachable, but extension bridge is not detected on this page",
+            }
+          : {
+              color: "text-muted-foreground/50",
+              label: "No extension bridge",
+              icon: WifiOff,
+              title:
+                "Extension bridge not detected. Enable extension site access for this domain and reload the page.",
+            };
 
   const expandedSidebarWidth = "w-80";
 
@@ -2121,20 +2225,16 @@ export default function Index() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
-              if (agentStatus === "not-installed")
+              if (agentSource === "none")
                 window.open(
                   "https://github.com/somritdasgupta/queFork",
                   "_blank",
                 );
             }}
             className={`flex items-center gap-1 text-[9px] font-bold transition-colors ${agentCfg.color}`}
-            title={
-              agentStatus === "active"
-                ? "Chrome extension or local agent is available"
-                : "Install/enable Chrome extension, or run local `quefork-agent`"
-            }
+            title={agentCfg.title}
           >
-            {agentStatus === "active" && (
+            {(agentSource === "extension" || agentSource === "both") && (
               <span className="w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />
             )}
             <agentCfg.icon className="h-2.5 w-2.5" />

@@ -31,6 +31,9 @@ jobs:
       - name: Lint code
         run: npm run lint
 
+      - name: Guard against inline styles
+        run: npm run lint:inline-styles
+
       - name: Run tests
         run: npm test
 

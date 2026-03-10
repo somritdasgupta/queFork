@@ -2,6 +2,18 @@
 // Injects a marker so the web app can detect the extension is installed & active.
 
 (function () {
+  const BRIDGE_VERSION = "2.1.0";
+
+  function publishReadySignal(type) {
+    window.postMessage(
+      {
+        type,
+        payload: { version: BRIDGE_VERSION },
+      },
+      "*",
+    );
+  }
+
   function markAgentReady() {
     const existing = document.querySelector('meta[name="quefork-agent"]');
     if (existing) {
@@ -13,9 +25,17 @@
       (document.head || document.documentElement).appendChild(marker);
     }
 
+    if (document.documentElement) {
+      document.documentElement.setAttribute("data-quefork-agent", "active");
+    }
+
+    publishReadySignal("QUEFORK_AGENT_READY");
+
     // Notify the web app that extension bridge is active.
     window.dispatchEvent(
-      new CustomEvent("quefork-agent-ready", { detail: { version: "2.1.0" } }),
+      new CustomEvent("quefork-agent-ready", {
+        detail: { version: BRIDGE_VERSION },
+      }),
     );
   }
 
@@ -24,6 +44,14 @@
   } else {
     window.addEventListener("DOMContentLoaded", markAgentReady, { once: true });
   }
+
+  // Keep a lightweight heartbeat so pages that initialize late can still detect bridge availability.
+  setInterval(() => {
+    if (document.documentElement) {
+      document.documentElement.setAttribute("data-quefork-agent", "active");
+    }
+    publishReadySignal("QUEFORK_AGENT_HEARTBEAT");
+  }, 5000);
 
   // Listen for proxy requests from the web app
   window.addEventListener("message", (event) => {
@@ -35,7 +63,7 @@
         {
           type: "QUEFORK_AGENT_PONG",
           id: data.id,
-          payload: { version: "2.1.0" },
+          payload: { version: BRIDGE_VERSION },
         },
         "*",
       );
