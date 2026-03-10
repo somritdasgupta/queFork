@@ -46,30 +46,30 @@ queFork is a browser-based API testing client that works entirely offline after 
 
 ## Supported Protocols
 
-| Protocol | Capabilities |
-|----------|-------------|
-| REST | GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD with headers, params, and body |
-| GraphQL | Query editor, variables panel, schema introspection |
-| SOAP | XML envelope editor, Content-Type auto-detection |
-| WebSocket | Bidirectional messaging, sub-protocol support |
-| Socket.IO | Event-based messaging, transport configuration, event listeners |
-| SSE | Auto-reconnect, event buffering, real-time statistics |
+| Protocol  | Capabilities                                                                |
+| --------- | --------------------------------------------------------------------------- |
+| REST      | GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD with headers, params, and body |
+| GraphQL   | Query editor, variables panel, schema introspection                         |
+| SOAP      | XML envelope editor, Content-Type auto-detection                            |
+| WebSocket | Bidirectional messaging, sub-protocol support                               |
+| Socket.IO | Event-based messaging, transport configuration, event listeners             |
+| SSE       | Auto-reconnect, event buffering, real-time statistics                       |
 
 ---
 
 ## Features
 
-| Category | Details |
-|----------|---------|
-| Scripting | Pre/post request JavaScript with `qf.*` API |
-| Variables | Environment variables using `{{variable}}` syntax |
-| Collections | Organize requests into folders with workspace isolation |
-| Code Export | cURL import and export to 14 languages |
-| CORS | Built-in proxy cascade with custom proxy support |
-| History | Searchable request history with date grouping |
-| Auth | OAuth 2.0, Bearer, Basic, API Key |
-| Themes | Dark and light mode |
-| Offline | Full PWA support for localhost testing without internet |
+| Category        | Details                                                 |
+| --------------- | ------------------------------------------------------- |
+| Scripting       | Pre/post request JavaScript with `qf.*` API             |
+| Variables       | Environment variables using `{{variable}}` syntax       |
+| Collections     | Organize requests into folders with workspace isolation |
+| Code Export     | cURL import and export to 14 languages                  |
+| CORS            | Built-in proxy cascade with custom proxy support        |
+| History         | Searchable request history with date grouping           |
+| Auth            | OAuth 2.0, Bearer, Basic, API Key                       |
+| Themes          | Dark and light mode                                     |
+| Offline         | Full PWA support for localhost testing without internet |
 | Dynamic Favicon | Green/red status dot on favicon based on response codes |
 
 ---
@@ -111,13 +111,13 @@ npm run dev
 
 ### Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server with hot reload |
-| `npm run build` | Create production build |
-| `npm run preview` | Preview production build locally |
-| `npm run lint` | Run ESLint checks |
-| `npm test` | Run test suite |
+| Command                  | Description                                                 |
+| ------------------------ | ----------------------------------------------------------- |
+| `npm run dev`            | Start development server with hot reload                    |
+| `npm run build`          | Create production build                                     |
+| `npm run preview`        | Preview production build locally                            |
+| `npm run lint`           | Run ESLint checks                                           |
+| `npm test`               | Run test suite                                              |
 | `npm run secrets:vercel` | Auto-set `VERCEL_*` GitHub secrets from local Vercel config |
 
 ---
@@ -148,12 +148,12 @@ docker run -d -p 3000:80 ghcr.io/somritdasgupta/quefork:latest
 
 ### Docker configuration
 
-| File | Purpose |
-|------|---------|
-| `Dockerfile` | Multi-stage build: Node 20 Alpine for build, Nginx Alpine for serving |
-| `docker-compose.yml` | Single-command setup with health checks |
-| `docker/nginx.conf` | Gzip, SPA routing, caching, security headers |
-| `.dockerignore` | Excludes node_modules, .git, and non-essential files |
+| File                 | Purpose                                                               |
+| -------------------- | --------------------------------------------------------------------- |
+| `Dockerfile`         | Multi-stage build: Node 20 Alpine for build, Nginx Alpine for serving |
+| `docker-compose.yml` | Single-command setup with health checks                               |
+| `docker/nginx.conf`  | Gzip, SPA routing, caching, security headers                          |
+| `.dockerignore`      | Excludes node_modules, .git, and non-essential files                  |
 
 ---
 
@@ -186,10 +186,10 @@ quefork-agent
 
 ### Options
 
-| Flag | Description |
-|------|-------------|
-| `--port 9120` | Custom port |
-| `--verbose` | Enable verbose logging |
+| Flag          | Description            |
+| ------------- | ---------------------- |
+| `--port 9120` | Custom port            |
+| `--verbose`   | Enable verbose logging |
 
 Agent status appears in the app footer. When the agent is running, all requests are routed through it instead of the built-in CORS proxy.
 
@@ -202,15 +202,18 @@ Deploy your own proxy on Vercel for persistent CORS bypass:
 ```javascript
 // api/proxy.js
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+  );
+  res.setHeader("Access-Control-Allow-Headers", "*");
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method === "OPTIONS") return res.status(200).end();
 
   const { url, method, headers, body } = req.body;
   const response = await fetch(url, {
-    method: method || 'GET',
+    method: method || "GET",
     headers: headers || {},
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -261,17 +264,17 @@ quefork/
 
 ## Tech Stack
 
-| Technology | Role |
-|-----------|------|
-| React 18 | UI framework |
-| TypeScript | Type safety |
-| Vite | Build tooling and dev server |
-| Tailwind CSS | Utility-first styling |
-| shadcn/ui | Component primitives |
-| CodeMirror 6 | Code editors |
-| socket.io-client | Socket.IO protocol support |
-| vite-plugin-pwa | PWA and offline support |
-| Nginx | Production static file serving |
+| Technology       | Role                           |
+| ---------------- | ------------------------------ |
+| React 18         | UI framework                   |
+| TypeScript       | Type safety                    |
+| Vite             | Build tooling and dev server   |
+| Tailwind CSS     | Utility-first styling          |
+| shadcn/ui        | Component primitives           |
+| CodeMirror 6     | Code editors                   |
+| socket.io-client | Socket.IO protocol support     |
+| vite-plugin-pwa  | PWA and offline support        |
+| Nginx            | Production static file serving |
 
 ---
 
@@ -319,14 +322,14 @@ npx serve dist
 
 ## CI/CD
 
-| Workflow | Trigger | Description |
-|----------|---------|-------------|
-| `ci.yml` | Push to main/develop, pull requests | Lint, test, and build matrix checks |
-| `build-deploy.yml` | Push to main, manual dispatch | Build + deploy summary workflow |
-| `edge-deploy.yml` | Push to main/develop, pull requests, manual dispatch | Type check, build, deploy to Vercel |
-| `docker-publish.yml` | Push to main, tags, manual dispatch | Build and push Docker image to GHCR |
-| `extension-release.yml` | Tag push `extension-v*`, manual dispatch | Package Chrome extension and publish GitHub release |
-| `dependency-update.yml` | Weekly schedule, manual dispatch | Update dependencies, verify build, create PR |
+| Workflow                | Trigger                                              | Description                                         |
+| ----------------------- | ---------------------------------------------------- | --------------------------------------------------- |
+| `ci.yml`                | Push to main/develop, pull requests                  | Lint, test, and build matrix checks                 |
+| `build-deploy.yml`      | Push to main, manual dispatch                        | Build + deploy summary workflow                     |
+| `edge-deploy.yml`       | Push to main/develop, pull requests, manual dispatch | Type check, build, deploy to Vercel                 |
+| `docker-publish.yml`    | Push to main, tags, manual dispatch                  | Build and push Docker image to GHCR                 |
+| `extension-release.yml` | Tag push `extension-v*`, manual dispatch             | Package Chrome extension and publish GitHub release |
+| `dependency-update.yml` | Weekly schedule, manual dispatch                     | Update dependencies, verify build, create PR        |
 
 ### Extension Release Automation
 

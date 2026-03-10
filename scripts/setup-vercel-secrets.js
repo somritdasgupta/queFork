@@ -35,8 +35,12 @@ const authCandidates = [
   join(homedir(), ".vercel", "auth.json"),
   join(homedir(), ".vercel", "Data", "auth.json"),
   // Current Windows Vercel CLI location
-  process.env.APPDATA ? join(process.env.APPDATA, "com.vercel.cli", "Data", "auth.json") : "",
-  process.env.APPDATA ? join(process.env.APPDATA, "com.vercel.cli", "auth.json") : "",
+  process.env.APPDATA
+    ? join(process.env.APPDATA, "com.vercel.cli", "Data", "auth.json")
+    : "",
+  process.env.APPDATA
+    ? join(process.env.APPDATA, "com.vercel.cli", "auth.json")
+    : "",
 ].filter(Boolean);
 
 const projectJson = readJsonIfExists(projectFile);
@@ -50,13 +54,13 @@ const token = process.env.VERCEL_TOKEN || authJson?.token || "";
 
 if (!orgId || !projectId) {
   fail(
-    "Missing orgId/projectId. Run `vercel link` in this repo first, or set VERCEL_ORG_ID and VERCEL_PROJECT_ID env vars."
+    "Missing orgId/projectId. Run `vercel link` in this repo first, or set VERCEL_ORG_ID and VERCEL_PROJECT_ID env vars.",
   );
 }
 
 if (!token) {
   fail(
-    "Missing Vercel token. Run `vercel login` first, set VERCEL_TOKEN env var, or create a token in Vercel dashboard."
+    "Missing Vercel token. Run `vercel login` first, set VERCEL_TOKEN env var, or create a token in Vercel dashboard.",
   );
 }
 
@@ -66,5 +70,9 @@ run("gh", ["secret", "set", "VERCEL_TOKEN", "-b", token]);
 run("gh", ["secret", "set", "VERCEL_ORG_ID", "-b", orgId]);
 run("gh", ["secret", "set", "VERCEL_PROJECT_ID", "-b", projectId]);
 
-console.log("Set GitHub secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID");
-console.log("Source: .vercel/project.json and Vercel CLI auth file (or env vars)");
+console.log(
+  "Set GitHub secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID",
+);
+console.log(
+  "Source: .vercel/project.json and Vercel CLI auth file (or env vars)",
+);
