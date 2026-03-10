@@ -14,22 +14,38 @@
     );
   }
 
-  function markAgentReady() {
+  function upsertMetaMarker() {
     const existing = document.querySelector('meta[name="quefork-agent"]');
     if (existing) {
       existing.setAttribute("content", "active");
-    } else {
-      const marker = document.createElement("meta");
-      marker.name = "quefork-agent";
-      marker.content = "active";
-      (document.head || document.documentElement).appendChild(marker);
+      return true;
     }
 
+    const parent = document.head || document.documentElement;
+    if (!parent) return false;
+
+    const marker = document.createElement("meta");
+    marker.name = "quefork-agent";
+    marker.content = "active";
+    parent.appendChild(marker);
+    return true;
+  }
+
+  function setRootMarker() {
     if (document.documentElement) {
       document.documentElement.setAttribute("data-quefork-agent", "active");
+      return true;
     }
+    return false;
+  }
 
-    publishReadySignal("QUEFORK_AGENT_READY");
+  function markAgentReady(signalType = "QUEFORK_AGENT_READY") {
+    const markerOk = upsertMetaMarker();
+    const rootOk = setRootMarker();
+
+    if (!markerOk && !rootOk) return false;
+
+    publishReadySignal(signalType);
 
     // Notify the web app that extension bridge is active.
     window.dispatchEvent(
@@ -37,21 +53,38 @@
         detail: { version: BRIDGE_VERSION },
       }),
     );
+
+    return true;
   }
 
-  if (document.head || document.documentElement) {
-    markAgentReady();
-  } else {
-    window.addEventListener("DOMContentLoaded", markAgentReady, { once: true });
-  }
+  function ensureReadyMarkersEventually() {
+    if (markAgentReady()) return;
 
-  // Keep a lightweight heartbeat so pages that initialize late can still detect bridge availability.
-  setInterval(() => {
-    if (document.documentElement) {
-      document.documentElement.setAttribute("data-quefork-agent", "active");
+    const tryReady = () => {
+      if (!markAgentReady()) return;
+
+      window.removeEventListener("DOMContentLoaded", tryReady);
+      window.removeEventListener("load", tryReady);
+      observer.disconnect();
+    };
+
+    if (document.readyState === "loading") {
+      window.addEventListener("DOMContentLoaded", tryReady, { once: true });
+      window.addEventListener("load", tryReady, { once: true });
     }
-    publishReadySignal("QUEFORK_AGENT_HEARTBEAT");
-  }, 5000);
+
+    const observer = new MutationObserver(() => {
+      tryReady();
+    });
+
+    observer.observe(document, {
+      childList: true,
+      subtree: true,
+    });
+
+    // Safety stop to avoid observing forever on unsupported pages.
+    setTimeout(() => observer.disconnect(), 10000);
+  }
 
   // Listen for proxy requests from the web app
   window.addEventListener("message", (event) => {
@@ -89,4 +122,11 @@
       );
     }
   });
+
+  ensureReadyMarkersEventually();
+
+  // Keep a lightweight heartbeat so pages that initialize late can still detect bridge availability.
+  setInterval(() => {
+    markAgentReady("QUEFORK_AGENT_HEARTBEAT");
+  }, 5000);
 })();

@@ -277,11 +277,9 @@ function useAgentStatus(): AgentState {
       const markerReady = hasExtensionMarker();
       if (markerReady) bridgeDebug("status-marker-active");
 
-      // Fallback: actively ping both extension bridge and local agent service.
-      const [hasBridge, hasLocalAgent] = await Promise.all([
-        markerReady ? Promise.resolve(true) : probeExtensionBridge(3),
-        pingLocalAgent(),
-      ]);
+      const hasBridge = markerReady ? true : await probeExtensionBridge(3);
+      // Only probe local agent if extension bridge is still unavailable.
+      const hasLocalAgent = hasBridge ? false : await pingLocalAgent();
       bridgeDebug("status-probe-result", {
         markerReady,
         hasBridge,
