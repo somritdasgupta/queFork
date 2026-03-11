@@ -11,10 +11,12 @@ import {
   EyeOff,
   Hash,
   GripVertical,
+  MoreHorizontal,
 } from "lucide-react";
 import type { KeyValuePair } from "@/types/api";
 import { CodeEditor } from "@/components/CodeEditor";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Props {
   pairs: KeyValuePair[];
@@ -33,12 +35,15 @@ export function KeyValueEditor({
   showDescription = true,
   compact = false,
 }: Props) {
+  const isMobile = useIsMobile();
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [bulkText, setBulkText] = useState("");
   const [maskedValues, setMaskedValues] = useState<Set<string>>(new Set());
   const [encodedValues, setEncodedValues] = useState<Set<string>>(new Set());
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const add = () => {
     onChange([
@@ -66,6 +71,17 @@ export function KeyValueEditor({
       ]);
     }
   }, [pairs.length, onChange]);
+
+  React.useEffect(() => {
+    if (!openMenuId) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openMenuId]);
 
   const update = (id: string, field: keyof KeyValuePair, val: any) => {
     onChange(pairs.map((p) => (p.id === id ? { ...p, [field]: val } : p)));
@@ -229,62 +245,62 @@ export function KeyValueEditor({
   return (
     <div className="flex flex-col">
       {/* Toolbar */}
-      <div className="flex items-center gap-0 border-b border-border bg-surface-sunken">
+      <div className="flex items-center h-8 border-b border-border bg-surface-sunken">
         <button
           onClick={add}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-r border-border"
+          className="flex items-center justify-center h-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-r border-border"
           title="Add row"
         >
           <Plus className="h-3 w-3" />
         </button>
         <button
           onClick={() => setShowBulkImport(!showBulkImport)}
-          className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold transition-colors border-r border-border ${showBulkImport ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
+          className={`flex items-center justify-center h-full px-2 text-[11px] font-bold transition-colors border-r border-border ${showBulkImport ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
           title="Bulk Import"
         >
           <ClipboardPaste className="h-3 w-3" />
         </button>
         <button
           onClick={() => toggleAll(true)}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-r border-border"
+          className="flex items-center justify-center h-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-r border-border"
           title="Enable All"
         >
           <CircleCheck className="h-3 w-3" />
         </button>
         <button
           onClick={() => toggleAll(false)}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-r border-border"
+          className="flex items-center justify-center h-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-r border-border"
           title="Disable All"
         >
           <Circle className="h-3 w-3" />
         </button>
         <button
           onClick={clearAll}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-destructive hover:bg-accent transition-colors border-r border-border"
+          className="flex items-center justify-center h-full px-2 text-[11px] font-bold text-muted-foreground hover:text-destructive hover:bg-accent transition-colors"
           title="Clear All"
         >
           <Trash2 className="h-3 w-3" />
         </button>
         <div className="flex-1" />
+        {activeCount > 0 && (
+          <span className="px-2 text-[9px] font-extrabold text-primary">
+            {activeCount}
+          </span>
+        )}
         <button
           onClick={copyAllAsJson}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-l border-border"
+          className="flex items-center justify-center h-full px-2.5 text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-l border-border"
           title="Copy all as JSON"
         >
           JSON
         </button>
         <button
           onClick={copyAllAsCurl}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-l border-border"
+          className="flex items-center justify-center h-full px-2.5 text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border-l border-border"
           title="Copy all as cURL headers"
         >
           cURL
         </button>
-        {activeCount > 0 && (
-          <span className="px-2 text-[9px] font-extrabold text-primary border-l border-border py-1.5">
-            {activeCount}
-          </span>
-        )}
       </div>
 
       {/* Bulk import area */}
@@ -323,26 +339,6 @@ export function KeyValueEditor({
         </div>
       )}
 
-      {/* Header row */}
-      <div className="flex items-center border-b border-border bg-surface-sunken text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        <div className="w-6 shrink-0" />
-        <div className="w-8 shrink-0" />
-        <div className="flex-1 px-2 py-1.5 border-r border-border">
-          {keyPlaceholder}
-        </div>
-        <div className="flex-1 px-2 py-1.5 border-r border-border">
-          {valuePlaceholder}
-        </div>
-        {showDescription && !compact && (
-          <div className="flex-1 px-2 py-1.5 border-r border-border">
-            Description
-          </div>
-        )}
-        <div className="w-[100px] shrink-0 px-2 py-1.5 text-center">
-          Actions
-        </div>
-      </div>
-
       {/* Rows */}
       {pairs.map((pair, idx) => (
         <div
@@ -353,13 +349,14 @@ export function KeyValueEditor({
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, idx)}
           onDragEnd={handleDragEnd}
-          className={`flex items-center border-b border-border transition-all hover:bg-accent/30 ${!pair.enabled ? "opacity-30 blur-[0.3px]" : ""} ${dragIdx === idx ? "opacity-40" : ""} ${dragOverIdx === idx && dragIdx !== idx ? "border-t-2 border-t-primary" : ""}`}
+          className={`group flex items-center border-b border-border transition-all hover:bg-accent/30 ${!pair.enabled ? "opacity-30 blur-[0.3px]" : ""} ${dragIdx === idx ? "opacity-40" : ""} ${dragOverIdx === idx && dragIdx !== idx ? "border-t-2 border-t-primary" : ""}`}
         >
           {/* Drag handle */}
-          <div className="w-6 shrink-0 flex items-center justify-center cursor-grab active:cursor-grabbing text-muted-foreground/20 hover:text-muted-foreground/50 transition-colors">
+          <div className="w-5 shrink-0 flex items-center justify-center cursor-grab active:cursor-grabbing text-muted-foreground/20 hover:text-muted-foreground/50 transition-colors">
             <GripVertical className="h-3 w-3" />
           </div>
-          <div className="w-8 shrink-0 flex items-center justify-center">
+          {/* Toggle */}
+          <div className="w-6 shrink-0 flex items-center justify-center">
             <button
               onClick={() => update(pair.id, "enabled", !pair.enabled)}
               className={`transition-colors ${pair.enabled ? "text-primary" : "text-muted-foreground/30 hover:text-muted-foreground"}`}
@@ -371,7 +368,8 @@ export function KeyValueEditor({
               )}
             </button>
           </div>
-          <div className="flex-1 border-r border-border">
+          {/* Key */}
+          <div className="flex-1 min-w-0 border-r border-border">
             <input
               value={pair.key}
               onChange={(e) => update(pair.id, "key", e.target.value)}
@@ -379,68 +377,108 @@ export function KeyValueEditor({
               className="w-full h-8 px-2 text-[12px] font-mono bg-transparent focus:outline-none focus:bg-accent/50 placeholder:text-muted-foreground/20 text-foreground transition-colors"
             />
           </div>
-          <div className="flex-1 border-r border-border relative">
+          {/* Value */}
+          <div className="flex-1 min-w-0 border-r border-border relative">
             <input
               value={pair.value}
               onChange={(e) => update(pair.id, "value", e.target.value)}
               placeholder={valuePlaceholder}
               type={maskedValues.has(pair.id) ? "password" : "text"}
-              className="w-full h-8 px-2 text-[12px] font-mono bg-transparent focus:outline-none focus:bg-accent/50 placeholder:text-muted-foreground/20 text-foreground transition-colors"
+              className="w-full h-8 px-2 pr-6 text-[12px] font-mono bg-transparent focus:outline-none focus:bg-accent/50 placeholder:text-muted-foreground/20 text-foreground transition-colors"
             />
+            {maskedValues.has(pair.id) && (
+              <button
+                onClick={() => toggleMask(pair.id)}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-primary hover:text-primary/80 transition-colors"
+                title="Show value"
+              >
+                <EyeOff className="h-2.5 w-2.5" />
+              </button>
+            )}
           </div>
-          {showDescription && !compact && (
-            <div className="flex-1 border-r border-border">
+          {/* Description */}
+          {showDescription && !compact && !isMobile && (
+            <div className="flex-[0.7] min-w-0 border-r border-border">
               <input
                 value={(pair as any).description || ""}
                 onChange={(e) =>
                   update(pair.id, "description" as any, e.target.value)
                 }
                 placeholder="Description"
-                className="w-full h-8 px-2 text-[12px] bg-transparent focus:outline-none focus:bg-accent/50 placeholder:text-muted-foreground/20 text-foreground transition-colors"
+                className="w-full h-8 px-2 text-[11px] bg-transparent focus:outline-none focus:bg-accent/50 placeholder:text-muted-foreground/20 text-muted-foreground transition-colors"
               />
             </div>
           )}
-          <div className="w-[100px] shrink-0 flex items-center justify-center gap-0">
-            <button
-              onClick={() => toggleMask(pair.id)}
-              className={`p-1 transition-colors ${maskedValues.has(pair.id) ? "text-primary" : "text-muted-foreground/40 hover:text-foreground"}`}
-              title={maskedValues.has(pair.id) ? "Show" : "Mask"}
-            >
-              {maskedValues.has(pair.id) ? (
-                <EyeOff className="h-2.5 w-2.5" />
-              ) : (
-                <Eye className="h-2.5 w-2.5" />
-              )}
-            </button>
-            <button
-              onClick={() => toggleEncode(pair.id)}
-              className={`p-1 transition-colors ${encodedValues.has(pair.id) ? "text-primary" : "text-muted-foreground/40 hover:text-foreground"}`}
-              title={encodedValues.has(pair.id) ? "Decode" : "Encode"}
-            >
-              <Hash className="h-2.5 w-2.5" />
-            </button>
+          {/* Row actions */}
+          <div className="w-[68px] shrink-0 flex items-center justify-center gap-0">
             <button
               onClick={() => copyPair(pair)}
-              className="p-1 text-muted-foreground/40 hover:text-foreground transition-colors"
-              title="Copy"
+              className="p-1 text-muted-foreground/30 hover:text-foreground transition-colors"
+              title="Copy pair"
             >
               <Copy className="h-2.5 w-2.5" />
             </button>
             <button
-              onClick={() => duplicate(pair)}
-              className="p-1 text-muted-foreground/40 hover:text-foreground transition-colors"
-              title="Duplicate"
-            >
-              <CopyPlus className="h-2.5 w-2.5" />
-            </button>
-            <button
               onClick={() => remove(pair.id)}
-              className={`p-1 transition-colors ${pairs.length <= 1 ? "text-muted-foreground/10 cursor-not-allowed" : "text-muted-foreground/40 hover:text-destructive"}`}
+              className={`p-1 transition-colors ${pairs.length <= 1 ? "text-muted-foreground/10 cursor-not-allowed" : "text-muted-foreground/30 hover:text-destructive"}`}
               title="Delete"
               disabled={pairs.length <= 1}
             >
               <Trash2 className="h-2.5 w-2.5" />
             </button>
+            {/* More menu */}
+            <div className="relative">
+              <button
+                onClick={() =>
+                  setOpenMenuId(openMenuId === pair.id ? null : pair.id)
+                }
+                className="p-1 text-muted-foreground/30 hover:text-foreground transition-colors"
+                title="More actions"
+              >
+                <MoreHorizontal className="h-2.5 w-2.5" />
+              </button>
+              {openMenuId === pair.id && (
+                <div
+                  ref={menuRef}
+                  className="absolute right-0 top-full mt-1 z-50 min-w-[140px] bg-card border border-border shadow-lg py-1 animate-fade-in"
+                >
+                  <button
+                    onClick={() => {
+                      toggleMask(pair.id);
+                      setOpenMenuId(null);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-left hover:bg-accent transition-colors"
+                  >
+                    {maskedValues.has(pair.id) ? (
+                      <Eye className="h-3 w-3" />
+                    ) : (
+                      <EyeOff className="h-3 w-3" />
+                    )}
+                    {maskedValues.has(pair.id) ? "Unmask value" : "Mask value"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      toggleEncode(pair.id);
+                      setOpenMenuId(null);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-left hover:bg-accent transition-colors"
+                  >
+                    <Hash className="h-3 w-3" />
+                    {encodedValues.has(pair.id) ? "URL decode" : "URL encode"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      duplicate(pair);
+                      setOpenMenuId(null);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-left hover:bg-accent transition-colors"
+                  >
+                    <CopyPlus className="h-3 w-3" />
+                    Duplicate row
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ))}

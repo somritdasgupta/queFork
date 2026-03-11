@@ -61,7 +61,7 @@ export interface RequestConfig {
     type: BodyType;
     raw: string;
     formData: KeyValuePair[];
-    graphql: { query: string; variables: string };
+    graphql: { query: string; variables: string; operationName?: string };
   };
   auth: AuthConfig;
   preScript: string;
@@ -93,6 +93,7 @@ export interface WebSocketMessage {
   type: "sent" | "received";
   data: string;
   timestamp: number;
+  binary?: boolean;
 }
 
 export interface HistoryItem {

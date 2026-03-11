@@ -66,6 +66,8 @@ export const RealtimePanel = forwardRef<RealtimePanelHandle, Props>(
       "websocket",
     );
     const [ioPath, setIoPath] = useState("/socket.io");
+    const [ioNamespace, setIoNamespace] = useState("/");
+    const [ioVersion, setIoVersion] = useState<"3" | "4">("4");
     const socketRef = useRef<Socket | null>(null);
 
     const [activeTab, setActiveTab] = useState<"messages" | "config">(
@@ -121,6 +123,7 @@ export const RealtimePanel = forwardRef<RealtimePanelHandle, Props>(
         const ws = protoList.length
           ? new WebSocket(wsUrl, protoList)
           : new WebSocket(wsUrl);
+        ws.binaryType = "arraybuffer";
         ws.onopen = () => {
           setConnected(true);
           connectionTimeRef.current = Date.now();
@@ -140,11 +143,14 @@ export const RealtimePanel = forwardRef<RealtimePanelHandle, Props>(
           connectionTimeRef.current = null;
         };
         ws.onmessage = (e) => {
-          const data = typeof e.data === "string" ? e.data : "[Binary data]";
+          const isBinary = e.data instanceof ArrayBuffer;
+          const data = isBinary
+            ? `[Binary: ${e.data.byteLength} bytes]`
+            : e.data;
           addMessage({
             direction: "received",
             data,
-            format: detectFormat(data),
+            format: isBinary ? "text" : detectFormat(data),
           });
         };
         ws.onerror = () => {
@@ -193,12 +199,15 @@ export const RealtimePanel = forwardRef<RealtimePanelHandle, Props>(
         ioUrl = "https://" + ioUrl;
       }
       try {
-        const socket = io(ioUrl, {
+        const ns = ioNamespace.trim() || "/";
+        const connectUrl = ns === "/" ? ioUrl : ioUrl.replace(/\/$/, "") + ns;
+        const socket = io(connectUrl, {
           transports: [ioTransport === "polling" ? "polling" : "websocket"],
           path: ioPath,
           reconnection: true,
           reconnectionAttempts: 3,
           timeout: 10000,
+          ...(ioVersion === "3" ? { allowEIO3: true } : {}),
         });
 
         socket.on("connect", () => {
@@ -250,7 +259,7 @@ export const RealtimePanel = forwardRef<RealtimePanelHandle, Props>(
       } catch (err: any) {
         toast.error(`Socket.IO error: ${err.message}`);
       }
-    }, [url, ioTransport, ioPath, listeners, addMessage]);
+    }, [url, ioTransport, ioPath, ioNamespace, listeners, addMessage]);
 
     const ioDisconnect = useCallback(() => {
       socketRef.current?.disconnect();
@@ -265,7 +274,15 @@ export const RealtimePanel = forwardRef<RealtimePanelHandle, Props>(
       } catch {
         parsedData = input;
       }
-      socketRef.current.emit(emitEvent, parsedData);
+      socketRef.current.emit(emitEvent, parsedData, (ack: any) => {
+        const ackStr = typeof ack === "string" ? ack : JSON.stringify(ack);
+        addMessage({
+          direction: "received",
+          event: `${emitEvent}:ack`,
+          data: ackStr ?? "(empty ack)",
+          format: detectFormat(ackStr ?? ""),
+        });
+      });
       addMessage({
         direction: "sent",
         event: emitEvent,
@@ -654,6 +671,26 @@ export const RealtimePanel = forwardRef<RealtimePanelHandle, Props>(
               <div className="p-3 space-y-3">
                 <div>
                   <label className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-wider block mb-1">
+                    Client Version
+                  </label>
+                  <div className="flex gap-0 border border-border w-fit">
+                    {(["3", "4"] as const).map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => setIoVersion(v)}
+                        disabled={connected}
+                        className={`px-3 py-1 text-[10px] font-bold transition-colors ${ioVersion === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"} disabled:opacity-40`}
+                      >
+                        v{v}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-muted-foreground/30 mt-1">
+                    Match your server's Socket.IO version
+                  </p>
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-wider block mb-1">
                     Transport
                   </label>
                   <div className="flex gap-0 border border-border w-fit">
@@ -677,6 +714,18 @@ export const RealtimePanel = forwardRef<RealtimePanelHandle, Props>(
                     value={ioPath}
                     onChange={(e) => setIoPath(e.target.value)}
                     placeholder="/socket.io"
+                    disabled={connected}
+                    className="w-full h-7 px-2 text-[11px] font-mono bg-background border border-border focus:outline-none placeholder:text-muted-foreground/20 disabled:opacity-40"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-wider block mb-1">
+                    Namespace
+                  </label>
+                  <input
+                    value={ioNamespace}
+                    onChange={(e) => setIoNamespace(e.target.value)}
+                    placeholder="/"
                     disabled={connected}
                     className="w-full h-7 px-2 text-[11px] font-mono bg-background border border-border focus:outline-none placeholder:text-muted-foreground/20 disabled:opacity-40"
                   />

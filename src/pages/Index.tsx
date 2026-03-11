@@ -167,7 +167,7 @@ function getProtocolColor(protocol: ProtocolType): string {
   }
 }
 
-type SidebarTab = "collections" | "environments" | "history" | "flows";
+type SidebarTab = "collections" | "history" | "flows";
 type AgentStatus = "not-installed" | "inactive" | "active" | "error";
 type AgentSource = "none" | "extension" | "local" | "both";
 
@@ -389,9 +389,10 @@ export default function Index() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
     lsGet(LS_KEYS.sidebarCollapsed, false),
   );
-  const [sidebarTab, setSidebarTab] = useState<SidebarTab>(() =>
-    lsGet(LS_KEYS.sidebarTab, "collections"),
-  );
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>(() => {
+    const saved = lsGet(LS_KEYS.sidebarTab, "collections") as string;
+    return saved === "environments" ? "collections" : (saved as SidebarTab);
+  });
   const [splitDirection, setSplitDirection] = useState<
     "vertical" | "horizontal"
   >(() => lsGet(LS_KEYS.splitDirection, "vertical"));
@@ -426,6 +427,7 @@ export default function Index() {
   const [tabSearchQuery, setTabSearchQuery] = useState("");
   const [showTabMenu, setShowTabMenu] = useState<string | false>(false);
   const [showSaveToCollection, setShowSaveToCollection] = useState(false);
+  const [showEnvModal, setShowEnvModal] = useState(false);
   const [responseMode, setResponseMode] = useState<
     "normal" | "collapsed" | "expanded"
   >("normal");
@@ -580,6 +582,32 @@ export default function Index() {
       );
     }
   }, []);
+
+  const disconnectRealtime = useCallback(() => {
+    if (realtimeRef.current?.connected) realtimeRef.current.disconnect();
+    if (sseRef.current?.connected) sseRef.current.disconnect();
+  }, []);
+
+  const switchProtocol = useCallback(
+    (
+      protocol: ProtocolType,
+      bodyOverrides?: Partial<RequestConfig["body"]>,
+    ) => {
+      if (REALTIME_PROTOCOLS.includes(activeRequest.protocol)) {
+        disconnectRealtime();
+        setRealtimeConnected((prev) => ({
+          ...prev,
+          [activeRequest.id]: false,
+        }));
+      }
+      updateRequest({
+        ...activeRequest,
+        protocol,
+        body: { ...activeRequest.body, ...bodyOverrides },
+      });
+    },
+    [activeRequest, disconnectRealtime, updateRequest],
+  );
 
   const addTab = () => {
     const req = createEmptyRequest();
@@ -1058,8 +1086,7 @@ export default function Index() {
         setShowImport(true);
         break;
       case "environments":
-        setSidebarTab("environments");
-        setSidebarCollapsed(false);
+        setShowEnvModal(true);
         break;
       case "collections":
         setSidebarTab("collections");
@@ -1271,8 +1298,7 @@ export default function Index() {
       icon: <Layers className="h-4 w-4" />,
       category: "View",
       action: () => {
-        setSidebarTab("environments");
-        setSidebarCollapsed(false);
+        setShowEnvModal(true);
       },
     },
     {
@@ -1507,26 +1533,21 @@ export default function Index() {
       key: "1",
       ctrl: true,
       shift: true,
-      action: () => updateRequest({ ...activeRequest, protocol: "rest" }),
+      action: () => switchProtocol("rest"),
       description: "REST protocol",
     },
     {
       key: "2",
       ctrl: true,
       shift: true,
-      action: () =>
-        updateRequest({
-          ...activeRequest,
-          protocol: "graphql",
-          body: { ...activeRequest.body, type: "graphql" },
-        }),
+      action: () => switchProtocol("graphql", { type: "graphql" }),
       description: "GraphQL protocol",
     },
     {
       key: "3",
       ctrl: true,
       shift: true,
-      action: () => updateRequest({ ...activeRequest, protocol: "websocket" }),
+      action: () => switchProtocol("websocket"),
       description: "WebSocket protocol",
     },
   ]);
@@ -1538,7 +1559,6 @@ export default function Index() {
     label: string;
   }[] = [
     { key: "collections", icon: FolderOpen, label: "Collections" },
-    { key: "environments", icon: Layers, label: "Environments" },
     { key: "history", icon: Clock, label: "History" },
     { key: "flows", icon: GitBranch, label: "Flows" },
   ];
@@ -1573,7 +1593,7 @@ export default function Index() {
       case "sse":
         return "https://api.example.com/events";
       case "socketio":
-        return "wss://echo.websocket.org";
+        return "https://your-socketio-server.com";
       case "graphql":
         return "https://api.example.com/graphql";
       default:
@@ -1810,24 +1830,25 @@ export default function Index() {
             )}
           </div>
 
-          {activeEnv && (
-            <span className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold bg-status-success/10 text-status-success">
-              <span className="w-1.5 h-1.5 rounded-full bg-status-success" />
-              {activeEnv.name}
+          <button
+            onClick={() => setShowEnvModal(true)}
+            className={`flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold transition-colors ${
+              activeEnv
+                ? "text-status-success hover:text-status-success/80"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            title={activeEnv ? `Env: ${activeEnv.name}` : "Manage Environments"}
+          >
+            <Layers className="h-3 w-3" />
+            <span className="hidden sm:inline">
+              {activeEnv ? activeEnv.name : "Env"}
             </span>
-          )}
+          </button>
         </div>
         <div className="hidden sm:flex items-center justify-center flex-1 min-w-0">
           <WorldClock />
         </div>
         <div className="flex items-center gap-0">
-          <button
-            onClick={() => setShowSaveToCollection(true)}
-            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            title="Save to Collection (⌘S)"
-          >
-            <Save className="h-3.5 w-3.5" />
-          </button>
           <button
             onClick={() => setShowCommand(true)}
             className="flex items-center gap-1 px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -1882,7 +1903,7 @@ export default function Index() {
                   e.preventDefault();
                   setShowTabMenu(showTabMenu === tab.id ? false : tab.id);
                 }}
-                className={`group relative flex items-center gap-1.5 px-3 h-full text-[10px] border-b-2 min-w-0 shrink-0 transition-colors ${activeTabId === tab.id && !showDocs ? "border-primary text-foreground bg-background" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                className={`group relative flex items-center gap-1.5 px-3 h-full text-[10px] min-w-0 shrink-0 transition-colors ${activeTabId === tab.id && !showDocs ? "text-primary font-extrabold" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {isPinned && <Pin className="h-2 w-2 text-primary shrink-0" />}
                 {getTabBadge(tab)}
@@ -2057,19 +2078,14 @@ export default function Index() {
                   <button
                     key={p.value}
                     onClick={() =>
-                      updateRequest({
-                        ...activeRequest,
-                        protocol: p.value,
-                        body: {
-                          ...activeRequest.body,
-                          type:
-                            p.value === "graphql"
-                              ? "graphql"
-                              : p.value === "soap"
-                                ? "xml"
-                                : activeRequest.body.type,
-                        },
-                      })
+                      switchProtocol(
+                        p.value,
+                        p.value === "graphql"
+                          ? { type: "graphql" }
+                          : p.value === "soap"
+                            ? { type: "xml" }
+                            : undefined,
+                      )
                     }
                     className={`group relative w-10 h-[37px] flex items-center justify-center transition-colors shrink-0 ${activeRequest.protocol === p.value ? "text-primary bg-primary/10" : "text-muted-foreground/40 hover:text-foreground hover:bg-accent/50"}`}
                   >
@@ -2088,12 +2104,9 @@ export default function Index() {
                       setSidebarTab(t.key);
                       setSidebarCollapsed(false);
                     }}
-                    className={`group relative w-10 h-[37px] flex items-center justify-center transition-colors shrink-0 ${sidebarTab === t.key ? "text-primary bg-primary/10" : "text-muted-foreground/40 hover:text-foreground hover:bg-accent/50"}`}
+                    className={`group relative w-10 h-[37px] flex items-center justify-center transition-colors shrink-0 ${sidebarTab === t.key ? "text-primary" : "text-muted-foreground/40 hover:text-foreground hover:bg-accent/50"} ${fileSyncEnabled && t.key !== "history" ? "animate-sync-text-pulse" : ""}`}
                   >
                     <t.icon className="h-3.5 w-3.5" />
-                    {fileSyncEnabled && t.key !== "history" && (
-                      <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary animate-sync-pulse" />
-                    )}
                     <span className="absolute left-full ml-1 px-2 py-1 text-[9px] font-bold bg-card border border-border shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
                       {t.label}
                     </span>
@@ -2108,24 +2121,19 @@ export default function Index() {
                     <button
                       key={p.value}
                       onClick={() =>
-                        updateRequest({
-                          ...activeRequest,
-                          protocol: p.value,
-                          body: {
-                            ...activeRequest.body,
-                            type:
-                              p.value === "graphql"
-                                ? "graphql"
-                                : p.value === "soap"
-                                  ? "xml"
-                                  : activeRequest.body.type,
-                          },
-                        })
+                        switchProtocol(
+                          p.value,
+                          p.value === "graphql"
+                            ? { type: "graphql" }
+                            : p.value === "soap"
+                              ? { type: "xml" }
+                              : undefined,
+                        )
                       }
-                      className={`flex items-center justify-center gap-1 px-2 text-[9px] font-bold border-b-2 transition-all ${
+                      className={`flex items-center justify-center gap-1 px-2 text-[9px] font-bold transition-all ${
                         activeRequest.protocol === p.value
-                          ? "border-primary text-primary flex-1"
-                          : "border-transparent text-muted-foreground/40 hover:text-foreground"
+                          ? "text-primary flex-1"
+                          : "text-muted-foreground/40 hover:text-foreground"
                       }`}
                       title={p.label}
                     >
@@ -2143,17 +2151,14 @@ export default function Index() {
                     <button
                       key={t.key}
                       onClick={() => setSidebarTab(t.key)}
-                      className={`relative flex items-center justify-center gap-1 px-2 text-[9px] font-bold border-b-2 transition-all ${
+                      className={`relative flex items-center justify-center gap-1 px-2 text-[9px] font-bold transition-all ${
                         sidebarTab === t.key
-                          ? "border-primary text-foreground flex-1"
-                          : "border-transparent text-muted-foreground/40 hover:text-foreground"
-                      }`}
+                          ? "text-primary flex-1"
+                          : "text-muted-foreground/40 hover:text-foreground"
+                      } ${fileSyncEnabled && t.key !== "history" ? "animate-sync-text-pulse" : ""}`}
                       title={t.label}
                     >
                       <t.icon className="h-3 w-3 shrink-0" />
-                      {fileSyncEnabled && t.key !== "history" && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-sync-pulse shrink-0" />
-                      )}
                       {sidebarTab === t.key && (
                         <span className="truncate">{t.label}</span>
                       )}
@@ -2171,14 +2176,6 @@ export default function Index() {
                       onOpenRequest={openRequest}
                       onRunRequest={(req) =>
                         executeRequest(req, activeEnv, useProxy)
-                      }
-                    />
-                  )}
-                  {sidebarTab === "environments" && (
-                    <EnvironmentPanel
-                      environments={workspace.environments}
-                      onChange={(e) =>
-                        setWorkspace((prev) => ({ ...prev, environments: e }))
                       }
                     />
                   )}
@@ -2336,6 +2333,14 @@ export default function Index() {
                 )}
 
                 <button
+                  onClick={() => setShowSaveToCollection(true)}
+                  className="px-2 h-full transition-colors border-l border-border text-muted-foreground hover:text-foreground"
+                  title="Save to Collection (⌘S)"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                </button>
+
+                <button
                   onClick={() => {
                     setUseProxy(!useProxy);
                     toast.success(
@@ -2386,7 +2391,16 @@ export default function Index() {
                 <RealtimePanel ref={realtimeRef} url={activeRequest.url} />
               )}
               {activeRequest.protocol === "sse" && (
-                <SSEPanel ref={sseRef} url={activeRequest.url} />
+                <SSEPanel
+                  ref={sseRef}
+                  url={activeRequest.url}
+                  headers={activeRequest.headers
+                    .filter((h) => h.enabled && h.key.trim())
+                    .reduce(
+                      (acc, h) => ({ ...acc, [h.key]: h.value }),
+                      {} as Record<string, string>,
+                    )}
+                />
               )}
               {activeRequest.protocol === "graphql" && (
                 <div
@@ -2449,16 +2463,25 @@ export default function Index() {
       {/* ── Footer ─────────────────────────────────────────────────── */}
       <footer className="flex items-center justify-between px-3 h-[24px] border-t border-border bg-surface-elevated shrink-0">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowShortcuts(true)}
-            className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Keyboard className="h-2.5 w-2.5" />
-            <span className="hidden sm:inline">Shortcuts</span>
-          </button>
+          {!isMobile && (
+            <button
+              onClick={() => setShowShortcuts(true)}
+              className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Keyboard className="h-2.5 w-2.5" />
+              <span className="hidden sm:inline">Shortcuts</span>
+            </button>
+          )}
           {activeEnv && (
-            <span className="text-[9px] font-bold text-muted-foreground">
-              Env: <span className="text-status-success">{activeEnv.name}</span>
+            <span className="flex items-center gap-1 text-[9px] font-bold text-status-success">
+              <Layers className="h-2.5 w-2.5" />
+              {activeEnv.name}
+            </span>
+          )}
+          {!isMobile && fileSyncEnabled && fileSyncHandle && (
+            <span className="flex items-center gap-1 text-[9px] font-bold text-primary animate-sync-text-pulse">
+              <FolderSync className="h-2.5 w-2.5" />
+              {fileSyncHandle.name}
             </span>
           )}
           {useProxy && (
@@ -2525,13 +2548,17 @@ export default function Index() {
         >
           <div className="absolute inset-0 bg-background/60 backdrop-blur-md" />
           <div
-            className="relative w-full max-w-[300px] mx-4 bg-card border border-border shadow-2xl overflow-hidden animate-fade-in"
+            className="relative w-full max-w-[380px] mx-4 bg-card border border-border shadow-2xl overflow-hidden animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Header */}
             <div className="flex items-center justify-between px-4 h-10 border-b border-border">
-              <h3 className="text-[12px] font-black text-foreground">
-                Save to Collection
-              </h3>
+              <div className="flex items-center gap-2">
+                <Save className="h-3 w-3 text-primary" />
+                <h3 className="text-[12px] font-black text-foreground">
+                  Save to Collection
+                </h3>
+              </div>
               <button
                 onClick={() => setShowSaveToCollection(false)}
                 className="p-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -2541,35 +2568,160 @@ export default function Index() {
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
-            <div className="max-h-[300px] overflow-y-auto">
-              {workspace.collections.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground py-6 text-center font-bold">
-                  No collections. Create one first.
+
+            {/* Request preview */}
+            <div className="px-4 py-2.5 border-b border-border bg-surface-sunken/50">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[9px] font-extrabold shrink-0 ${getMethodColor(activeRequest.method)}`}
+                >
+                  {activeRequest.method}
+                </span>
+                <span className="text-[10px] font-bold text-foreground truncate">
+                  {activeRequest.url || "Untitled request"}
+                </span>
+              </div>
+              {activeRequest.collectionId && (
+                <p className="text-[9px] text-muted-foreground mt-1">
+                  Currently in:{" "}
+                  <span className="font-bold text-foreground">
+                    {
+                      workspace.collections.find(
+                        (c) => c.id === activeRequest.collectionId,
+                      )?.name
+                    }
+                  </span>
                 </p>
-              ) : (
-                workspace.collections.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => saveToCollection(c.id)}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-accent transition-colors border-b border-border"
-                  >
-                    <FolderOpen className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-bold text-foreground">
-                        {c.name}
-                      </p>
-                      <p className="text-[9px] text-muted-foreground">
-                        {c.requests.length} requests
-                      </p>
-                    </div>
-                    {c.requests.find((r) => r.id === activeRequest.id) && (
-                      <span className="text-[8px] font-bold text-status-success">
-                        UPDATE
-                      </span>
-                    )}
-                  </button>
-                ))
               )}
+            </div>
+
+            {/* Search filter */}
+            {workspace.collections.length > 3 && (
+              <div className="px-3 py-2 border-b border-border">
+                <div className="flex items-center gap-2 px-2 h-7 bg-background border border-border text-[10px]">
+                  <Search className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Filter collections..."
+                    className="flex-1 bg-transparent outline-none text-foreground placeholder:text-muted-foreground/50"
+                    onChange={(e) => {
+                      const q = e.target.value.toLowerCase();
+                      const el = document.querySelector(
+                        "[data-collection-list]",
+                      );
+                      if (!el) return;
+                      Array.from(el.children).forEach((child: any) => {
+                        const name = child.getAttribute("data-name") || "";
+                        child.style.display = name.includes(q) ? "" : "none";
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Collection list */}
+            <div className="max-h-[280px] overflow-y-auto" data-collection-list>
+              {workspace.collections.length === 0 ? (
+                <div className="py-8 text-center">
+                  <FolderOpen className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-[11px] font-bold text-muted-foreground">
+                    No collections yet
+                  </p>
+                  <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                    Create a collection to organize your requests
+                  </p>
+                </div>
+              ) : (
+                workspace.collections.map((c) => {
+                  const isUpdate = c.requests.some(
+                    (r) => r.id === activeRequest.id,
+                  );
+                  return (
+                    <button
+                      key={c.id}
+                      data-name={c.name.toLowerCase()}
+                      onClick={() => saveToCollection(c.id)}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors border-b border-border ${isUpdate ? "bg-status-success/5 hover:bg-status-success/10" : "hover:bg-accent"}`}
+                    >
+                      <div
+                        className={`flex items-center justify-center w-7 h-7 shrink-0 ${isUpdate ? "bg-status-success/10" : "bg-primary/10"}`}
+                      >
+                        <FolderOpen
+                          className={`h-3.5 w-3.5 ${isUpdate ? "text-status-success" : "text-primary"}`}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-bold text-foreground">
+                          {c.name}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground">
+                          {c.requests.length}{" "}
+                          {c.requests.length === 1 ? "request" : "requests"}
+                        </p>
+                      </div>
+                      {isUpdate ? (
+                        <span className="text-[8px] font-extrabold text-status-success bg-status-success/10 px-1.5 py-0.5">
+                          UPDATE
+                        </span>
+                      ) : (
+                        <span className="text-[8px] font-bold text-muted-foreground/50">
+                          SAVE
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer hint */}
+            <div className="px-4 py-2 border-t border-border bg-surface-sunken/30">
+              <p className="text-[9px] text-muted-foreground/60 text-center">
+                Click a collection to{" "}
+                {workspace.collections.some((c) =>
+                  c.requests.some((r) => r.id === activeRequest.id),
+                )
+                  ? "update"
+                  : "save"}{" "}
+                this request
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Environment Modal ──────────────────────────────────────── */}
+      {showEnvModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center"
+          onClick={() => setShowEnvModal(false)}
+        >
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-md" />
+          <div
+            className="relative w-full max-w-[520px] mx-4 bg-card border border-border shadow-2xl overflow-hidden animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 h-10 border-b border-border">
+              <h3 className="text-[12px] font-black text-foreground">
+                Environments
+              </h3>
+              <button
+                onClick={() => setShowEnvModal(false)}
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                title="Close"
+                aria-label="Close"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="max-h-[70dvh] overflow-y-auto">
+              <EnvironmentPanel
+                environments={workspace.environments}
+                onChange={(e) =>
+                  setWorkspace((prev) => ({ ...prev, environments: e }))
+                }
+              />
             </div>
           </div>
         </div>
@@ -2583,7 +2735,7 @@ export default function Index() {
         >
           <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" />
           <div
-            className="relative bg-card border-t border-border rounded-t-xl h-[75vh] animate-slide-up flex flex-col"
+            className="relative bg-card border-t border-border rounded-t-xl h-[75dvh] animate-slide-up flex flex-col"
             onClick={(e) => e.stopPropagation()}
             onTouchStart={(e) => {
               const tag = (e.target as HTMLElement).tagName;
@@ -2635,21 +2787,16 @@ export default function Index() {
                     <button
                       key={p.value}
                       onClick={() =>
-                        updateRequest({
-                          ...activeRequest,
-                          protocol: p.value,
-                          body: {
-                            ...activeRequest.body,
-                            type:
-                              p.value === "graphql"
-                                ? "graphql"
-                                : p.value === "soap"
-                                  ? "xml"
-                                  : activeRequest.body.type,
-                          },
-                        })
+                        switchProtocol(
+                          p.value,
+                          p.value === "graphql"
+                            ? { type: "graphql" }
+                            : p.value === "soap"
+                              ? { type: "xml" }
+                              : undefined,
+                        )
                       }
-                      className={`flex items-center justify-center gap-1 flex-1 h-full text-[9px] font-bold transition-colors ${activeRequest.protocol === p.value ? "bg-primary/10 text-primary" : "text-muted-foreground/40 hover:text-foreground"}`}
+                      className={`flex items-center justify-center gap-1 flex-1 h-full text-[9px] font-bold transition-colors ${activeRequest.protocol === p.value ? "text-primary" : "text-muted-foreground/40 hover:text-foreground"}`}
                       title={p.label}
                     >
                       <p.icon className="h-3 w-3" />
@@ -2664,12 +2811,9 @@ export default function Index() {
                     <button
                       key={t.key}
                       onClick={() => setSidebarTab(t.key)}
-                      className={`relative flex items-center justify-center gap-1 flex-1 text-[9px] font-bold border-b-2 transition-all ${sidebarTab === t.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground/40 hover:text-foreground"}`}
+                      className={`relative flex items-center justify-center gap-1 flex-1 text-[9px] font-bold transition-all ${sidebarTab === t.key ? "text-primary" : "text-muted-foreground/40 hover:text-foreground"} ${fileSyncEnabled && t.key !== "history" ? "animate-sync-text-pulse" : ""}`}
                     >
                       <t.icon className="h-3 w-3 shrink-0" />
-                      {fileSyncEnabled && t.key !== "history" && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-sync-pulse shrink-0" />
-                      )}
                       {sidebarTab === t.key && <span>{t.label}</span>}
                     </button>
                   ))}
@@ -2684,14 +2828,6 @@ export default function Index() {
                       onOpenRequest={openRequest}
                       onRunRequest={(req) =>
                         executeRequest(req, activeEnv, useProxy)
-                      }
-                    />
-                  )}
-                  {sidebarTab === "environments" && (
-                    <EnvironmentPanel
-                      environments={workspace.environments}
-                      onChange={(e) =>
-                        setWorkspace((prev) => ({ ...prev, environments: e }))
                       }
                     />
                   )}
@@ -2787,6 +2923,15 @@ function getDateLabel(ts: number): string {
   });
 }
 
+const PROTOCOL_BADGE: Record<ProtocolType, string> = {
+  rest: "REST",
+  graphql: "GQL",
+  websocket: "WS",
+  sse: "SSE",
+  socketio: "IO",
+  soap: "SOAP",
+};
+
 function HistoryList({
   history,
   onSelect,
@@ -2800,21 +2945,64 @@ function HistoryList({
   historyEnabled: boolean;
   onToggleHistory: () => void;
 }) {
-  const [showSearch, setShowSearch] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [protocolFilter, setProtocolFilter] = React.useState<ProtocolType | "">(
+    "",
+  );
+  const [methodFilter, setMethodFilter] = React.useState<HttpMethod | "">("");
+  const [statusFilter, setStatusFilter] = React.useState("");
+
+  const availableProtocols = React.useMemo(() => {
+    const set = new Set(history.map((h) => h.request.protocol));
+    return Array.from(set);
+  }, [history]);
+
+  const availableMethods = React.useMemo(() => {
+    const set = new Set(history.map((h) => h.request.method));
+    return Array.from(set);
+  }, [history]);
+
+  const hasActiveFilters = !!(protocolFilter || methodFilter || statusFilter);
 
   const grouped = React.useMemo(() => {
     const groups: { label: string; items: HistoryItem[] }[] = [];
     let currentLabel = "";
+    let filtered = history;
+
+    if (protocolFilter) {
+      filtered = filtered.filter(
+        (item) => item.request.protocol === protocolFilter,
+      );
+    }
+    if (methodFilter) {
+      filtered = filtered.filter(
+        (item) => item.request.method === methodFilter,
+      );
+    }
+    if (statusFilter) {
+      filtered = filtered.filter((item) => {
+        if (!item.response || item.response.error)
+          return statusFilter === "error";
+        const s = item.response.status;
+        if (statusFilter === "2xx") return s >= 200 && s < 300;
+        if (statusFilter === "3xx") return s >= 300 && s < 400;
+        if (statusFilter === "4xx") return s >= 400 && s < 500;
+        if (statusFilter === "5xx") return s >= 500;
+        return true;
+      });
+    }
+
     const q = searchQuery.trim().toLowerCase();
-    const filtered = q
-      ? history.filter(
-          (item) =>
-            item.request.url?.toLowerCase().includes(q) ||
-            item.request.method.toLowerCase().includes(q) ||
-            (item.response && String(item.response.status).includes(q)),
-        )
-      : history;
+    if (q) {
+      filtered = filtered.filter(
+        (item) =>
+          item.request.url?.toLowerCase().includes(q) ||
+          item.request.method.toLowerCase().includes(q) ||
+          item.request.protocol.toLowerCase().includes(q) ||
+          (item.response && String(item.response.status).includes(q)),
+      );
+    }
+
     for (const item of filtered) {
       const label = getDateLabel(item.timestamp);
       if (label !== currentLabel) {
@@ -2825,35 +3013,50 @@ function HistoryList({
       }
     }
     return groups;
-  }, [history, searchQuery]);
+  }, [history, searchQuery, protocolFilter, methodFilter, statusFilter]);
+
+  const getItemBadge = (item: HistoryItem) => {
+    if (item.request.protocol === "rest") {
+      return {
+        label: item.request.method,
+        color: getMethodColor(item.request.method),
+      };
+    }
+    return {
+      label: PROTOCOL_BADGE[item.request.protocol],
+      color: getProtocolColor(item.request.protocol),
+    };
+  };
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface-elevated">
-        <div className="flex items-center gap-2">
-          <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
-          <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60">
-            History
-          </h3>
+      {/* Header with inline search */}
+      <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border bg-surface-elevated">
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search history..."
+            aria-label="Search history"
+            className="w-full text-[10px] font-medium bg-transparent pl-6 pr-6 py-1 focus:outline-none border border-border rounded-md text-foreground placeholder:text-muted-foreground/30"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0">
           {!historyEnabled && (
-            <span className="text-[8px] font-bold uppercase tracking-wide text-destructive/60">
+            <span className="text-[8px] font-bold uppercase tracking-wide text-destructive/60 mr-0.5">
               paused
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => {
-              setShowSearch((p) => !p);
-              if (showSearch) setSearchQuery("");
-            }}
-            className={`p-1 rounded-md transition-all ${showSearch ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
-            title="Search history"
-            aria-label="Search history"
-          >
-            <Search className="h-3.5 w-3.5" />
-          </button>
           <button
             onClick={onToggleHistory}
             className={`p-1 rounded-md transition-all ${
@@ -2864,11 +3067,7 @@ function HistoryList({
             title={historyEnabled ? "Pause recording" : "Resume recording"}
             aria-label="Toggle recording"
           >
-            {historyEnabled ? (
-              <Activity className="h-3.5 w-3.5" />
-            ) : (
-              <Activity className="h-3.5 w-3.5" />
-            )}
+            <Activity className="h-3.5 w-3.5" />
           </button>
           {history.length > 0 && (
             <button
@@ -2883,29 +3082,95 @@ function HistoryList({
         </div>
       </div>
 
-      {/* Search bar */}
-      {showSearch && (
-        <div className="px-3 py-1.5 border-b border-border bg-surface-sunken">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
-            <input
-              autoFocus
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter by URL, method, status..."
-              aria-label="Search history"
-              className="w-full text-[10px] font-medium bg-transparent pl-6 pr-6 py-1 focus:outline-none border border-border rounded-md text-foreground placeholder:text-muted-foreground/30"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground"
-                aria-label="Clear search"
-              >
-                <X className="h-3 w-3" />
-              </button>
+      {/* Filter bar */}
+      {history.length > 0 && (
+        <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border bg-surface-sunken/30">
+          <div className="flex items-center gap-1 flex-1 flex-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {availableProtocols.length > 1 && (
+              <>
+                <div className="flex items-center rounded-md border border-border overflow-hidden shrink-0">
+                  {availableProtocols.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() =>
+                        setProtocolFilter(protocolFilter === p ? "" : p)
+                      }
+                      className={`px-2 py-1 text-[8px] font-extrabold uppercase tracking-wide transition-colors border-r border-border last:border-r-0 ${
+                        protocolFilter === p
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-transparent text-muted-foreground/50 hover:text-foreground hover:bg-accent/50"
+                      }`}
+                    >
+                      {PROTOCOL_BADGE[p]}
+                    </button>
+                  ))}
+                </div>
+                <span className="w-px h-4 bg-border mx-0.5" />
+              </>
             )}
+            <div className="flex items-center rounded-md border border-border overflow-hidden shrink-0">
+              <button
+                onClick={() => setMethodFilter("")}
+                className={`px-2 py-1 text-[8px] font-extrabold uppercase tracking-wide transition-colors border-r border-border ${
+                  !methodFilter
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-transparent text-muted-foreground/50 hover:text-foreground hover:bg-accent/50"
+                }`}
+              >
+                Any
+              </button>
+              {availableMethods.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMethodFilter(methodFilter === m ? "" : m)}
+                  className={`px-2 py-1 text-[8px] font-extrabold uppercase tracking-wide transition-colors border-r border-border last:border-r-0 ${
+                    methodFilter === m
+                      ? "bg-primary text-primary-foreground"
+                      : `bg-transparent ${getMethodColor(m)} opacity-60 hover:opacity-100 hover:bg-accent/50`
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center rounded-md border border-border overflow-hidden shrink-0">
+              <button
+                onClick={() => setStatusFilter("")}
+                className={`px-2 py-1 text-[8px] font-extrabold uppercase tracking-wide transition-colors border-r border-border ${
+                  !statusFilter
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-transparent text-muted-foreground/50 hover:text-foreground hover:bg-accent/50"
+                }`}
+              >
+                Any
+              </button>
+              {(["2xx", "3xx", "4xx", "5xx", "error"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(statusFilter === s ? "" : s)}
+                  className={`px-2 py-1 text-[8px] font-extrabold uppercase tracking-wide transition-colors border-r border-border last:border-r-0 ${
+                    statusFilter === s
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-transparent text-muted-foreground/50 hover:text-foreground hover:bg-accent/50"
+                  }`}
+                >
+                  {s === "error" ? "Err" : s}
+                </button>
+              ))}
+            </div>
           </div>
+          {hasActiveFilters && (
+            <button
+              onClick={() => {
+                setProtocolFilter("");
+                setMethodFilter("");
+                setStatusFilter("");
+              }}
+              className="px-2 py-1 text-[8px] font-extrabold uppercase tracking-wide text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded-md border border-border transition-colors shrink-0"
+            >
+              Clear
+            </button>
+          )}
         </div>
       )}
 
@@ -2919,36 +3184,48 @@ function HistoryList({
               </span>
             </div>
             <div className="px-2 py-1">
-              {group.items.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => onSelect(item)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md hover:bg-accent/70 transition-all text-left group mb-0.5"
-                >
-                  <span
-                    className={`text-[9px] font-extrabold shrink-0 min-w-[42px] ${getMethodColor(item.request.method)}`}
+              {group.items.map((item) => {
+                const badge = getItemBadge(item);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onSelect(item)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md hover:bg-accent/70 transition-all text-left group mb-0.5"
                   >
-                    {item.request.method}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-mono font-semibold truncate text-foreground/90 group-hover:text-foreground transition-colors">
-                      {item.request.url}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {item.response && (
-                        <span
-                          className={`text-[9px] font-bold ${item.response.error ? "text-destructive" : getStatusColor(item.response.status)}`}
-                        >
-                          {item.response.error ? "Error" : item.response.status}
+                    <span
+                      className={`text-[9px] font-extrabold shrink-0 min-w-[42px] ${badge.color}`}
+                    >
+                      {badge.label}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-mono font-semibold truncate text-foreground/90 group-hover:text-foreground transition-colors">
+                        {item.request.url}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {item.request.protocol !== "rest" && (
+                          <span
+                            className={`text-[8px] font-bold ${getMethodColor(item.request.method)}`}
+                          >
+                            {item.request.method}
+                          </span>
+                        )}
+                        {item.response && (
+                          <span
+                            className={`text-[9px] font-bold ${item.response.error ? "text-destructive" : getStatusColor(item.response.status)}`}
+                          >
+                            {item.response.error
+                              ? "Error"
+                              : item.response.status}
+                          </span>
+                        )}
+                        <span className="text-[8px] text-muted-foreground/30 font-medium">
+                          {new Date(item.timestamp).toLocaleTimeString()}
                         </span>
-                      )}
-                      <span className="text-[8px] text-muted-foreground/30 font-medium">
-                        {new Date(item.timestamp).toLocaleTimeString()}
-                      </span>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}

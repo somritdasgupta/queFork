@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { parseCurl } from "@/lib/curl-parser";
 import type { RequestConfig } from "@/types/api";
 import { SyntaxHighlighter } from "./SyntaxHighlighter";
+import { CodeEditor } from "./CodeEditor";
 import {
   Upload,
   FileText,
@@ -115,16 +116,14 @@ export function ImportDialog({ isOpen, onClose, onImport }: Props) {
           onDrop={handleFileDrop}
           className={`relative transition-colors ${dragOver ? "bg-primary/5" : ""}`}
         >
-          {/* Textarea for cURL input */}
+          {/* CodeEditor for cURL input */}
           <div className="relative">
-            <textarea
+            <CodeEditor
               value={curlInput}
-              onChange={(e) => setCurlInput(e.target.value)}
-              aria-label="cURL command input"
+              onChange={(val) => setCurlInput(val)}
               placeholder={`curl -X POST 'https://api.example.com/data' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer token123' \\\n  -d '{"key": "value"}'`}
-              className="w-full font-mono text-[11px] leading-relaxed p-4 bg-surface-sunken border-0 resize-none focus:outline-none text-foreground placeholder:text-muted-foreground/20"
-              rows={8}
-              autoFocus
+              language="javascript"
+              minHeight="200px"
             />
             {/* Action buttons overlay */}
             <div className="absolute top-2 right-2 flex items-center gap-1">

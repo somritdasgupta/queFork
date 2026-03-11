@@ -132,6 +132,13 @@ function buildHeaders(config: RequestConfig): Record<string, string> {
     if (!hasHeaderCaseInsensitive(headers, "Content-Type")) {
       headers["Content-Type"] = "application/json";
     }
+  } else if (config.protocol === "soap") {
+    if (!hasHeaderCaseInsensitive(headers, "Content-Type")) {
+      headers["Content-Type"] = "text/xml; charset=utf-8";
+    }
+    if (!hasHeaderCaseInsensitive(headers, "SOAPAction")) {
+      headers["SOAPAction"] = '""';
+    }
   } else if (config.body.type === "xml") {
     if (!hasHeaderCaseInsensitive(headers, "Content-Type")) {
       headers["Content-Type"] = "application/xml";
@@ -153,6 +160,29 @@ function buildBody(config: RequestConfig): string | FormData | undefined {
   )
     return undefined;
 
+  // SOAP: auto-wrap in envelope if not already present
+  if (
+    config.protocol === "soap" &&
+    (config.body.type === "xml" || config.body.type === "raw")
+  ) {
+    const raw = (config.body.raw || "").trim();
+    if (
+      raw &&
+      !raw.includes("soap:Envelope") &&
+      !raw.includes("soapenv:Envelope") &&
+      !raw.includes("Envelope")
+    ) {
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Header/>
+  <soap:Body>
+    ${raw}
+  </soap:Body>
+</soap:Envelope>`;
+    }
+    return raw || undefined;
+  }
+
   if (
     config.body.type === "json" ||
     config.body.type === "raw" ||
@@ -166,7 +196,14 @@ function buildBody(config: RequestConfig): string | FormData | undefined {
       const variables = config.body.graphql.variables
         ? JSON.parse(config.body.graphql.variables)
         : {};
-      return JSON.stringify({ query: config.body.graphql.query, variables });
+      const payload: Record<string, any> = {
+        query: config.body.graphql.query,
+        variables,
+      };
+      if (config.body.graphql.operationName) {
+        payload.operationName = config.body.graphql.operationName;
+      }
+      return JSON.stringify(payload);
     } catch {
       return JSON.stringify({ query: config.body.graphql.query });
     }
@@ -524,6 +561,20 @@ export async function executeRequest(
   useProxy: boolean = true,
   flowVars?: Record<string, any>,
 ): Promise<ResponseData> {
+  // Guard: realtime protocols use their own panel-based connections
+  const realtimeProtocols = ["websocket", "sse", "socketio"];
+  if (realtimeProtocols.includes(config.protocol)) {
+    return {
+      status: 0,
+      statusText: "Error",
+      headers: {},
+      body: `${config.protocol.toUpperCase()} connections are managed via the real-time panel, not HTTP requests. Use the Connect button instead.`,
+      size: 0,
+      time: 0,
+      error: `${config.protocol} is a real-time protocol`,
+    };
+  }
+
   const env = activeEnv || null;
   const resolvedConfig = {
     ...config,
@@ -594,6 +645,11 @@ export async function executeRequest(
     } catch {
       console.warn("[qF] OAuth2 auto-refresh failed, using existing token.");
     }
+  }
+
+  // SOAP always uses POST
+  if (resolvedConfig.protocol === "soap" && resolvedConfig.method === "GET") {
+    resolvedConfig.method = "POST";
   }
 
   const headers = buildHeaders(resolvedConfig);

@@ -61,7 +61,6 @@ export function CollectionPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingDescId, setEditingDescId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const [runResults, setRunResults] = useState<Record<string, RunResult[]>>({});
   const [runningId, setRunningId] = useState<string | null>(null);
   const [exportMenuId, setExportMenuId] = useState<string | null>(null);
@@ -302,23 +301,28 @@ export function CollectionPanel({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface-elevated">
-        <div className="flex items-center gap-2">
-          <FolderOpen className="h-3.5 w-3.5 text-muted-foreground/50" />
-          <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60">
-            Collections
-          </h3>
-        </div>
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => setShowSearch((p) => !p)}
-            className={`p-1 rounded-md transition-all ${showSearch ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
-            title="Search collections"
+      {/* Header with inline search */}
+      <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border bg-surface-elevated">
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search collections..."
             aria-label="Search collections"
-          >
-            <Search className="h-3.5 w-3.5" />
-          </button>
+            className="w-full text-[10px] font-medium bg-transparent pl-6 pr-6 py-1 focus:outline-none border border-border rounded-md text-foreground placeholder:text-muted-foreground/30"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
             onClick={() => importRef.current?.click()}
             className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
@@ -337,32 +341,6 @@ export function CollectionPanel({
           </button>
         </div>
       </div>
-
-      {/* Search bar */}
-      {showSearch && (
-        <div className="px-3 py-1.5 border-b border-border bg-surface-sunken">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
-            <input
-              autoFocus
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter by name, URL, method..."
-              aria-label="Search collections"
-              className="w-full text-[10px] font-medium bg-transparent pl-6 pr-6 py-1 focus:outline-none border border-border rounded-md text-foreground placeholder:text-muted-foreground/30"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground"
-                aria-label="Clear search"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">

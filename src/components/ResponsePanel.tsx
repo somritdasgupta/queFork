@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type ResponseMode = "normal" | "collapsed" | "expanded";
 
@@ -512,6 +513,7 @@ function KeyValueTable({
 }
 
 function EmptyState({ onAction }: { onAction?: (action: string) => void }) {
+  const isMobile = useIsMobile();
   const shortcuts = [
     { icon: Send, label: "Send Request", shortcut: "⌘ ↵", action: "send" },
     { icon: Plus, label: "New Request", shortcut: "⌘ N", action: "new" },
@@ -535,6 +537,95 @@ function EmptyState({ onAction }: { onAction?: (action: string) => void }) {
       action: "command",
     },
   ];
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full px-6 py-8 gap-4">
+        <div className="relative w-28 h-28">
+          <svg
+            viewBox="0 0 120 120"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-full h-full"
+          >
+            <rect
+              x="20"
+              y="30"
+              width="80"
+              height="60"
+              rx="6"
+              className="stroke-muted-foreground/15"
+              strokeWidth="2"
+              fill="none"
+            />
+            <rect
+              x="28"
+              y="42"
+              width="24"
+              height="3"
+              rx="1.5"
+              className="fill-muted-foreground/10"
+            />
+            <rect
+              x="28"
+              y="50"
+              width="40"
+              height="3"
+              rx="1.5"
+              className="fill-muted-foreground/10"
+            />
+            <rect
+              x="28"
+              y="58"
+              width="32"
+              height="3"
+              rx="1.5"
+              className="fill-muted-foreground/10"
+            />
+            <rect
+              x="28"
+              y="66"
+              width="20"
+              height="3"
+              rx="1.5"
+              className="fill-muted-foreground/10"
+            />
+            <circle
+              cx="85"
+              cy="55"
+              r="12"
+              className="stroke-primary/30"
+              strokeWidth="2"
+              strokeDasharray="4 3"
+              fill="none"
+            />
+            <path
+              d="M82 55l3 3 5-6"
+              className="stroke-primary/30"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            <path
+              d="M60 30V20M50 24l-4-6M70 24l4-6"
+              className="stroke-muted-foreground/10"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+        <div className="text-center">
+          <p className="text-[11px] font-bold text-muted-foreground/40">
+            No response yet
+          </p>
+          <p className="text-[10px] text-muted-foreground/25 mt-1">
+            Hit Send to see the response here
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6">

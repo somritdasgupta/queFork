@@ -123,6 +123,10 @@ export default {
           "0%, 100%": { opacity: "0.4" },
           "50%": { opacity: "1" },
         },
+        "sync-text-pulse": {
+          "0%, 100%": { opacity: "0.5" },
+          "50%": { opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -133,6 +137,7 @@ export default {
         "fade-out": "fade-out 0.2s ease-out forwards",
         "pulse-dot": "pulse-dot 1.5s ease-in-out infinite",
         "sync-pulse": "sync-pulse 2s ease-in-out infinite",
+        "sync-text-pulse": "sync-text-pulse 2s ease-in-out infinite",
       },
     },
   },

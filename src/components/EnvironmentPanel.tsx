@@ -14,7 +14,6 @@ import {
   Download,
   Upload,
   EllipsisVertical,
-  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -27,7 +26,6 @@ interface Props {
 export function EnvironmentPanel({ environments, onChange }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string | null>(null);
-  const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenuId, setMobileMenuId] = useState<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
@@ -139,24 +137,27 @@ export function EnvironmentPanel({ environments, onChange }: Props) {
         aria-label="Import environment file"
         onChange={handleImportEnv}
       />
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface-elevated">
-        <div className="flex items-center gap-2">
-          <Layers className="h-3.5 w-3.5 text-muted-foreground/50" />
-          <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60">
-            Environments
-          </h3>
+      <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border bg-surface-elevated">
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search environments..."
+            aria-label="Search environments"
+            className="w-full text-[10px] font-medium bg-transparent pl-6 pr-6 py-1 focus:outline-none border border-border rounded-md text-foreground placeholder:text-muted-foreground/30"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-0.5">
-          <button
-            title={showSearch ? "Close search" : "Search environments"}
-            onClick={() => {
-              setShowSearch(!showSearch);
-              if (showSearch) setSearchQuery("");
-            }}
-            className={`p-1 rounded-md transition-all ${showSearch ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
-          >
-            <Search className="h-3.5 w-3.5" />
-          </button>
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
             title="Import environment"
             onClick={() => importRef.current?.click()}
@@ -173,30 +174,6 @@ export function EnvironmentPanel({ environments, onChange }: Props) {
           </button>
         </div>
       </div>
-      {showSearch && (
-        <div className="px-3 py-1.5 border-b border-border bg-surface-sunken">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
-            <input
-              autoFocus
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter by name, key, value..."
-              aria-label="Search environments"
-              className="w-full text-[10px] font-medium bg-transparent pl-6 pr-6 py-1 focus:outline-none border border-border rounded-md text-foreground placeholder:text-muted-foreground/30"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground"
-                aria-label="Clear search"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
       <div className="flex-1 overflow-y-auto">
         {filtered.map((env) => (
           <div key={env.id} className="border-b border-border">
