@@ -13,6 +13,13 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@hookform/resolvers"
   },
+  "@tanstack/react-query": {
+    "current": "5.90.21",
+    "wanted": "5.95.0",
+    "latest": "5.95.0",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@tanstack/react-query"
+  },
   "@types/node": {
     "current": "22.19.15",
     "wanted": "22.19.15",
@@ -58,7 +65,7 @@
   "eslint": {
     "current": "9.39.4",
     "wanted": "9.39.4",
-    "latest": "10.0.3",
+    "latest": "10.1.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/eslint"
   },
@@ -86,7 +93,7 @@
   "jsdom": {
     "current": "28.1.0",
     "wanted": "28.1.0",
-    "latest": "29.0.0",
+    "latest": "29.0.1",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/jsdom"
   },
@@ -125,10 +132,17 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-dom"
   },
+  "react-hook-form": {
+    "current": "7.71.2",
+    "wanted": "7.72.0",
+    "latest": "7.72.0",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/react-hook-form"
+  },
   "react-resizable-panels": {
     "current": "2.1.9",
     "wanted": "2.1.9",
-    "latest": "4.7.3",
+    "latest": "4.7.5",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-resizable-panels"
   },
@@ -163,9 +177,16 @@
   "tailwindcss": {
     "current": "3.4.19",
     "wanted": "3.4.19",
-    "latest": "4.2.1",
+    "latest": "4.2.2",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/tailwindcss"
+  },
+  "typescript-eslint": {
+    "current": "8.57.0",
+    "wanted": "8.57.1",
+    "latest": "8.57.1",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/typescript-eslint"
   },
   "vaul": {
     "current": "0.9.9",
@@ -177,7 +198,7 @@
   "vite": {
     "current": "7.3.1",
     "wanted": "7.3.1",
-    "latest": "8.0.0",
+    "latest": "8.0.1",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/vite"
   },
