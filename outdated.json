@@ -14,16 +14,16 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/@hookform/resolvers"
   },
   "@tanstack/react-query": {
-    "current": "5.90.21",
-    "wanted": "5.95.0",
-    "latest": "5.95.0",
+    "current": "5.95.0",
+    "wanted": "5.100.5",
+    "latest": "5.100.5",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@tanstack/react-query"
   },
   "@types/node": {
     "current": "22.19.15",
-    "wanted": "22.19.15",
-    "latest": "25.5.0",
+    "wanted": "22.19.17",
+    "latest": "25.6.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@types/node"
   },
@@ -41,6 +41,13 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@types/react-dom"
   },
+  "@uiw/react-codemirror": {
+    "current": "4.25.8",
+    "wanted": "4.25.9",
+    "latest": "4.25.9",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@uiw/react-codemirror"
+  },
   "@vitejs/plugin-react-swc": {
     "current": "3.11.0",
     "wanted": "3.11.0",
@@ -55,6 +62,13 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/archiver"
   },
+  "autoprefixer": {
+    "current": "10.4.27",
+    "wanted": "10.5.0",
+    "latest": "10.5.0",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/autoprefixer"
+  },
   "date-fns": {
     "current": "3.6.0",
     "wanted": "3.6.0",
@@ -65,14 +79,14 @@
   "eslint": {
     "current": "9.39.4",
     "wanted": "9.39.4",
-    "latest": "10.1.0",
+    "latest": "10.2.1",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/eslint"
   },
   "eslint-plugin-react-hooks": {
     "current": "5.2.0",
     "wanted": "5.2.0",
-    "latest": "7.0.1",
+    "latest": "7.1.1",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/eslint-plugin-react-hooks"
   },
@@ -86,21 +100,21 @@
   "globals": {
     "current": "15.15.0",
     "wanted": "15.15.0",
-    "latest": "17.4.0",
+    "latest": "17.5.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/globals"
   },
   "jsdom": {
     "current": "28.1.0",
     "wanted": "28.1.0",
-    "latest": "29.0.1",
+    "latest": "29.1.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/jsdom"
   },
   "lucide-react": {
     "current": "0.462.0",
     "wanted": "0.462.0",
-    "latest": "0.577.0",
+    "latest": "1.11.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/lucide-react"
   },
@@ -111,10 +125,17 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/next-themes"
   },
+  "postcss": {
+    "current": "8.5.8",
+    "wanted": "8.5.12",
+    "latest": "8.5.12",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/postcss"
+  },
   "react": {
     "current": "18.3.1",
     "wanted": "18.3.1",
-    "latest": "19.2.4",
+    "latest": "19.2.5",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react"
   },
@@ -128,35 +149,35 @@
   "react-dom": {
     "current": "18.3.1",
     "wanted": "18.3.1",
-    "latest": "19.2.4",
+    "latest": "19.2.5",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-dom"
   },
   "react-hook-form": {
-    "current": "7.71.2",
-    "wanted": "7.72.0",
-    "latest": "7.72.0",
+    "current": "7.72.0",
+    "wanted": "7.74.0",
+    "latest": "7.74.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-hook-form"
   },
   "react-resizable-panels": {
     "current": "2.1.9",
     "wanted": "2.1.9",
-    "latest": "4.7.5",
+    "latest": "4.10.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-resizable-panels"
   },
   "react-router-dom": {
     "current": "6.30.3",
     "wanted": "6.30.3",
-    "latest": "7.13.1",
+    "latest": "7.14.2",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-router-dom"
   },
   "recharts": {
     "current": "2.15.4",
     "wanted": "2.15.4",
-    "latest": "3.8.0",
+    "latest": "3.8.1",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/recharts"
   },
@@ -177,14 +198,21 @@
   "tailwindcss": {
     "current": "3.4.19",
     "wanted": "3.4.19",
-    "latest": "4.2.2",
+    "latest": "4.2.4",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/tailwindcss"
   },
+  "typescript": {
+    "current": "5.9.3",
+    "wanted": "5.9.3",
+    "latest": "6.0.3",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/typescript"
+  },
   "typescript-eslint": {
-    "current": "8.57.0",
-    "wanted": "8.57.1",
-    "latest": "8.57.1",
+    "current": "8.57.1",
+    "wanted": "8.59.0",
+    "latest": "8.59.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/typescript-eslint"
   },
@@ -197,15 +225,15 @@
   },
   "vite": {
     "current": "7.3.1",
-    "wanted": "7.3.1",
-    "latest": "8.0.1",
+    "wanted": "7.3.2",
+    "latest": "8.0.10",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/vite"
   },
   "vitest": {
     "current": "3.2.4",
     "wanted": "3.2.4",
-    "latest": "4.1.0",
+    "latest": "4.1.5",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/vitest"
   },
