@@ -1,6 +1,6 @@
 {
   "@eslint/js": {
-    "current": "9.39.4",
+    "current": "9.39.5",
     "wanted": "9.39.5",
     "latest": "10.0.1",
     "dependent": "queFork",
@@ -14,168 +14,189 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/@hookform/resolvers"
   },
   "@radix-ui/react-accordion": {
-    "current": "1.2.15",
-    "wanted": "1.2.16",
-    "latest": "1.2.16",
+    "current": "1.2.16",
+    "wanted": "1.2.17",
+    "latest": "1.2.17",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-accordion"
   },
   "@radix-ui/react-alert-dialog": {
-    "current": "1.1.18",
-    "wanted": "1.1.19",
-    "latest": "1.1.19",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-alert-dialog"
-  },
-  "@radix-ui/react-avatar": {
-    "current": "1.2.1",
-    "wanted": "1.2.2",
-    "latest": "1.2.2",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-avatar"
-  },
-  "@radix-ui/react-checkbox": {
-    "current": "1.3.6",
-    "wanted": "1.3.7",
-    "latest": "1.3.7",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-checkbox"
-  },
-  "@radix-ui/react-collapsible": {
-    "current": "1.1.15",
-    "wanted": "1.1.16",
-    "latest": "1.1.16",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-collapsible"
-  },
-  "@radix-ui/react-context-menu": {
-    "current": "2.3.2",
-    "wanted": "2.3.3",
-    "latest": "2.3.3",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-context-menu"
-  },
-  "@radix-ui/react-dialog": {
-    "current": "1.1.18",
-    "wanted": "1.1.19",
-    "latest": "1.1.19",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-dialog"
-  },
-  "@radix-ui/react-dropdown-menu": {
-    "current": "2.1.19",
-    "wanted": "2.1.20",
-    "latest": "2.1.20",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-dropdown-menu"
-  },
-  "@radix-ui/react-hover-card": {
-    "current": "1.1.18",
-    "wanted": "1.1.19",
-    "latest": "1.1.19",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-hover-card"
-  },
-  "@radix-ui/react-menubar": {
     "current": "1.1.19",
     "wanted": "1.1.20",
     "latest": "1.1.20",
     "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-menubar"
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-alert-dialog"
   },
-  "@radix-ui/react-navigation-menu": {
-    "current": "1.2.17",
-    "wanted": "1.2.18",
-    "latest": "1.2.18",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-navigation-menu"
-  },
-  "@radix-ui/react-popover": {
-    "current": "1.1.18",
-    "wanted": "1.1.19",
-    "latest": "1.1.19",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-popover"
-  },
-  "@radix-ui/react-progress": {
+  "@radix-ui/react-aspect-ratio": {
     "current": "1.1.11",
     "wanted": "1.1.12",
     "latest": "1.1.12",
     "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-progress"
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-aspect-ratio"
   },
-  "@radix-ui/react-radio-group": {
-    "current": "1.4.2",
-    "wanted": "1.4.3",
-    "latest": "1.4.3",
+  "@radix-ui/react-avatar": {
+    "current": "1.2.2",
+    "wanted": "1.2.3",
+    "latest": "1.2.3",
     "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-radio-group"
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-avatar"
   },
-  "@radix-ui/react-scroll-area": {
-    "current": "1.2.13",
-    "wanted": "1.2.14",
-    "latest": "1.2.14",
+  "@radix-ui/react-checkbox": {
+    "current": "1.3.7",
+    "wanted": "1.3.8",
+    "latest": "1.3.8",
     "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-scroll-area"
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-checkbox"
   },
-  "@radix-ui/react-select": {
-    "current": "2.3.2",
-    "wanted": "2.3.3",
-    "latest": "2.3.3",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-select"
-  },
-  "@radix-ui/react-slider": {
-    "current": "1.4.2",
-    "wanted": "1.4.3",
-    "latest": "1.4.3",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-slider"
-  },
-  "@radix-ui/react-switch": {
-    "current": "1.3.2",
-    "wanted": "1.3.3",
-    "latest": "1.3.3",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-switch"
-  },
-  "@radix-ui/react-tabs": {
+  "@radix-ui/react-collapsible": {
     "current": "1.1.16",
     "wanted": "1.1.17",
     "latest": "1.1.17",
     "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-tabs"
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-collapsible"
   },
-  "@radix-ui/react-toast": {
+  "@radix-ui/react-context-menu": {
+    "current": "2.3.3",
+    "wanted": "2.3.4",
+    "latest": "2.3.4",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-context-menu"
+  },
+  "@radix-ui/react-dialog": {
+    "current": "1.1.19",
+    "wanted": "1.1.20",
+    "latest": "1.1.20",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-dialog"
+  },
+  "@radix-ui/react-dropdown-menu": {
+    "current": "2.1.20",
+    "wanted": "2.1.21",
+    "latest": "2.1.21",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-dropdown-menu"
+  },
+  "@radix-ui/react-hover-card": {
+    "current": "1.1.19",
+    "wanted": "1.1.20",
+    "latest": "1.1.20",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-hover-card"
+  },
+  "@radix-ui/react-label": {
+    "current": "2.1.11",
+    "wanted": "2.1.12",
+    "latest": "2.1.12",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-label"
+  },
+  "@radix-ui/react-menubar": {
+    "current": "1.1.20",
+    "wanted": "1.1.21",
+    "latest": "1.1.21",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-menubar"
+  },
+  "@radix-ui/react-navigation-menu": {
     "current": "1.2.18",
     "wanted": "1.2.19",
     "latest": "1.2.19",
     "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-navigation-menu"
+  },
+  "@radix-ui/react-popover": {
+    "current": "1.1.19",
+    "wanted": "1.1.20",
+    "latest": "1.1.20",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-popover"
+  },
+  "@radix-ui/react-progress": {
+    "current": "1.1.12",
+    "wanted": "1.1.13",
+    "latest": "1.1.13",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-progress"
+  },
+  "@radix-ui/react-radio-group": {
+    "current": "1.4.3",
+    "wanted": "1.4.4",
+    "latest": "1.4.4",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-radio-group"
+  },
+  "@radix-ui/react-scroll-area": {
+    "current": "1.2.14",
+    "wanted": "1.2.15",
+    "latest": "1.2.15",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-scroll-area"
+  },
+  "@radix-ui/react-select": {
+    "current": "2.3.3",
+    "wanted": "2.3.4",
+    "latest": "2.3.4",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-select"
+  },
+  "@radix-ui/react-separator": {
+    "current": "1.1.11",
+    "wanted": "1.1.12",
+    "latest": "1.1.12",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-separator"
+  },
+  "@radix-ui/react-slider": {
+    "current": "1.4.3",
+    "wanted": "1.4.4",
+    "latest": "1.4.4",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-slider"
+  },
+  "@radix-ui/react-switch": {
+    "current": "1.3.3",
+    "wanted": "1.3.4",
+    "latest": "1.3.4",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-switch"
+  },
+  "@radix-ui/react-tabs": {
+    "current": "1.1.17",
+    "wanted": "1.1.18",
+    "latest": "1.1.18",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-tabs"
+  },
+  "@radix-ui/react-toast": {
+    "current": "1.2.19",
+    "wanted": "1.2.20",
+    "latest": "1.2.20",
+    "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-toast"
   },
   "@radix-ui/react-toggle": {
-    "current": "1.1.13",
-    "wanted": "1.1.14",
-    "latest": "1.1.14",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-toggle"
-  },
-  "@radix-ui/react-toggle-group": {
     "current": "1.1.14",
     "wanted": "1.1.15",
     "latest": "1.1.15",
     "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-toggle"
+  },
+  "@radix-ui/react-toggle-group": {
+    "current": "1.1.15",
+    "wanted": "1.1.16",
+    "latest": "1.1.16",
+    "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-toggle-group"
   },
   "@radix-ui/react-tooltip": {
-    "current": "1.2.11",
-    "wanted": "1.2.12",
-    "latest": "1.2.12",
+    "current": "1.2.12",
+    "wanted": "1.2.13",
+    "latest": "1.2.13",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@radix-ui/react-tooltip"
   },
   "@types/node": {
-    "current": "22.20.0",
+    "current": "22.20.1",
     "wanted": "22.20.1",
     "latest": "26.1.1",
     "dependent": "queFork",
@@ -195,13 +216,6 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@types/react-dom"
   },
-  "@uiw/react-codemirror": {
-    "current": "4.25.10",
-    "wanted": "4.25.11",
-    "latest": "4.25.11",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/@uiw/react-codemirror"
-  },
   "@vitejs/plugin-react-swc": {
     "current": "3.11.0",
     "wanted": "3.11.0",
@@ -216,6 +230,13 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/archiver"
   },
+  "autoprefixer": {
+    "current": "10.5.2",
+    "wanted": "10.5.4",
+    "latest": "10.5.4",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/autoprefixer"
+  },
   "date-fns": {
     "current": "3.6.0",
     "wanted": "3.6.0",
@@ -224,7 +245,7 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/date-fns"
   },
   "eslint": {
-    "current": "9.39.4",
+    "current": "9.39.5",
     "wanted": "9.39.5",
     "latest": "10.7.0",
     "dependent": "queFork",
@@ -261,7 +282,7 @@
   "lucide-react": {
     "current": "0.462.0",
     "wanted": "0.462.0",
-    "latest": "1.24.0",
+    "latest": "1.25.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/lucide-react"
   },
@@ -273,9 +294,9 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/next-themes"
   },
   "postcss": {
-    "current": "8.5.16",
-    "wanted": "8.5.18",
-    "latest": "8.5.18",
+    "current": "8.5.18",
+    "wanted": "8.5.20",
+    "latest": "8.5.20",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/postcss"
   },
@@ -299,6 +320,13 @@
     "latest": "19.2.7",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-dom"
+  },
+  "react-hook-form": {
+    "current": "7.81.0",
+    "wanted": "7.82.0",
+    "latest": "7.82.0",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/react-hook-form"
   },
   "react-resizable-panels": {
     "current": "2.1.9",
@@ -338,7 +366,7 @@
   "tailwindcss": {
     "current": "3.4.19",
     "wanted": "3.4.19",
-    "latest": "4.3.2",
+    "latest": "4.3.3",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/tailwindcss"
   },
@@ -350,9 +378,9 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/typescript"
   },
   "typescript-eslint": {
-    "current": "8.62.1",
-    "wanted": "8.63.0",
-    "latest": "8.63.0",
+    "current": "8.63.0",
+    "wanted": "8.64.0",
+    "latest": "8.64.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/typescript-eslint"
   },
@@ -366,7 +394,7 @@
   "vite": {
     "current": "7.3.6",
     "wanted": "7.3.6",
-    "latest": "8.1.4",
+    "latest": "8.1.5",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/vite"
   },
