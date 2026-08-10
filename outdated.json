@@ -16,7 +16,7 @@
   "@types/node": {
     "current": "22.20.1",
     "wanted": "22.20.1",
-    "latest": "26.1.2",
+    "latest": "26.2.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@types/node"
   },
@@ -58,7 +58,7 @@
   "eslint": {
     "current": "9.39.5",
     "wanted": "9.39.5",
-    "latest": "10.8.0",
+    "latest": "10.8.1",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/eslint"
   },
@@ -93,7 +93,7 @@
   "lucide-react": {
     "current": "0.462.0",
     "wanted": "0.462.0",
-    "latest": "1.28.0",
+    "latest": "1.31.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/lucide-react"
   },
@@ -105,9 +105,9 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/next-themes"
   },
   "postcss": {
-    "current": "8.5.23",
-    "wanted": "8.5.25",
-    "latest": "8.5.25",
+    "current": "8.5.25",
+    "wanted": "8.5.26",
+    "latest": "8.5.26",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/postcss"
   },
@@ -133,9 +133,9 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/react-dom"
   },
   "react-hook-form": {
-    "current": "7.83.0",
-    "wanted": "7.84.0",
-    "latest": "7.84.0",
+    "current": "7.84.0",
+    "wanted": "7.85.0",
+    "latest": "7.85.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-hook-form"
   },
@@ -163,7 +163,7 @@
   "sonner": {
     "current": "1.7.4",
     "wanted": "1.7.4",
-    "latest": "2.0.7",
+    "latest": "2.0.8",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/sonner"
   },
@@ -188,6 +188,13 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/typescript"
   },
+  "typescript-eslint": {
+    "current": "8.65.0",
+    "wanted": "8.66.0",
+    "latest": "8.66.0",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/typescript-eslint"
+  },
   "vaul": {
     "current": "0.9.9",
     "wanted": "0.9.9",
@@ -198,7 +205,7 @@
   "vite": {
     "current": "7.3.6",
     "wanted": "7.3.6",
-    "latest": "8.2.0",
+    "latest": "8.2.1",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/vite"
   },
