@@ -9,7 +9,7 @@
   "@hookform/resolvers": {
     "current": "3.10.0",
     "wanted": "3.10.0",
-    "latest": "5.7.1",
+    "latest": "5.9.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@hookform/resolvers"
   },
@@ -72,14 +72,14 @@
   "eslint-plugin-react-refresh": {
     "current": "0.4.26",
     "wanted": "0.4.26",
-    "latest": "0.5.3",
+    "latest": "0.5.4",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/eslint-plugin-react-refresh"
   },
   "globals": {
     "current": "15.15.0",
     "wanted": "15.15.0",
-    "latest": "17.9.0",
+    "latest": "17.11.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/globals"
   },
@@ -104,13 +104,6 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/next-themes"
   },
-  "postcss": {
-    "current": "8.5.25",
-    "wanted": "8.5.26",
-    "latest": "8.5.26",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/postcss"
-  },
   "react": {
     "current": "18.3.1",
     "wanted": "18.3.1",
@@ -132,17 +125,10 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-dom"
   },
-  "react-hook-form": {
-    "current": "7.84.0",
-    "wanted": "7.85.0",
-    "latest": "7.85.0",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/react-hook-form"
-  },
   "react-resizable-panels": {
     "current": "2.1.9",
     "wanted": "2.1.9",
-    "latest": "4.12.2",
+    "latest": "4.12.3",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-resizable-panels"
   },
@@ -189,9 +175,9 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/typescript"
   },
   "typescript-eslint": {
-    "current": "8.65.0",
-    "wanted": "8.66.0",
-    "latest": "8.66.0",
+    "current": "8.66.0",
+    "wanted": "8.67.0",
+    "latest": "8.67.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/typescript-eslint"
   },
