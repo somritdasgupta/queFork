@@ -14,16 +14,23 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/@hookform/resolvers"
   },
   "@tanstack/react-query": {
-    "current": "5.101.4",
-    "wanted": "5.102.2",
-    "latest": "5.102.2",
+    "current": "5.102.2",
+    "wanted": "5.102.8",
+    "latest": "5.102.8",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@tanstack/react-query"
+  },
+  "@testing-library/react": {
+    "current": "16.3.2",
+    "wanted": "16.3.3",
+    "latest": "16.3.3",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/@testing-library/react"
   },
   "@types/node": {
     "current": "22.20.1",
     "wanted": "22.20.1",
-    "latest": "26.2.0",
+    "latest": "26.4.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@types/node"
   },
@@ -65,7 +72,7 @@
   "eslint": {
     "current": "9.39.5",
     "wanted": "9.39.5",
-    "latest": "10.9.0",
+    "latest": "10.9.1",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/eslint"
   },
@@ -79,7 +86,7 @@
   "eslint-plugin-react-refresh": {
     "current": "0.4.26",
     "wanted": "0.4.26",
-    "latest": "0.5.4",
+    "latest": "0.5.5",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/eslint-plugin-react-refresh"
   },
@@ -89,13 +96,6 @@
     "latest": "17.11.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/globals"
-  },
-  "input-otp": {
-    "current": "1.4.2",
-    "wanted": "1.5.0",
-    "latest": "1.5.0",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/input-otp"
   },
   "jsdom": {
     "current": "28.1.0",
@@ -107,7 +107,7 @@
   "lucide-react": {
     "current": "0.462.0",
     "wanted": "0.462.0",
-    "latest": "1.33.0",
+    "latest": "1.38.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/lucide-react"
   },
@@ -140,9 +140,9 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/react-dom"
   },
   "react-hook-form": {
-    "current": "7.85.0",
-    "wanted": "7.86.0",
-    "latest": "7.86.0",
+    "current": "7.86.0",
+    "wanted": "7.87.0",
+    "latest": "7.87.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-hook-form"
   },
@@ -154,9 +154,9 @@
     "location": "/home/runner/work/queFork/queFork/node_modules/react-resizable-panels"
   },
   "react-router-dom": {
-    "current": "6.30.4",
+    "current": "6.30.6",
     "wanted": "6.30.6",
-    "latest": "7.18.2",
+    "latest": "7.18.3",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-router-dom"
   },
@@ -195,6 +195,13 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/typescript"
   },
+  "typescript-eslint": {
+    "current": "8.67.0",
+    "wanted": "8.68.0",
+    "latest": "8.68.0",
+    "dependent": "queFork",
+    "location": "/home/runner/work/queFork/queFork/node_modules/typescript-eslint"
+  },
   "vaul": {
     "current": "0.9.9",
     "wanted": "0.9.9",
@@ -219,7 +226,7 @@
   "zod": {
     "current": "3.25.76",
     "wanted": "3.25.76",
-    "latest": "4.4.3",
+    "latest": "4.5.4",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/zod"
   }
