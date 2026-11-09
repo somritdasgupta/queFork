@@ -9,14 +9,14 @@
   "@hookform/resolvers": {
     "current": "3.10.0",
     "wanted": "3.10.0",
-    "latest": "7.0.1",
+    "latest": "7.0.5",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@hookform/resolvers"
   },
   "@tanstack/react-query": {
-    "current": "5.105.0",
-    "wanted": "5.105.2",
-    "latest": "5.105.2",
+    "current": "5.105.2",
+    "wanted": "5.107.1",
+    "latest": "5.107.1",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/@tanstack/react-query"
   },
@@ -54,13 +54,6 @@
     "latest": "8.0.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/archiver"
-  },
-  "autoprefixer": {
-    "current": "10.6.1",
-    "wanted": "10.6.2",
-    "latest": "10.6.2",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/autoprefixer"
   },
   "date-fns": {
     "current": "3.6.0",
@@ -107,7 +100,7 @@
   "lucide-react": {
     "current": "0.462.0",
     "wanted": "0.462.0",
-    "latest": "1.66.0",
+    "latest": "1.70.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/lucide-react"
   },
@@ -117,13 +110,6 @@
     "latest": "0.4.6",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/next-themes"
-  },
-  "postcss": {
-    "current": "8.5.31",
-    "wanted": "8.5.32",
-    "latest": "8.5.32",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/postcss"
   },
   "react": {
     "current": "18.3.1",
@@ -149,7 +135,7 @@
   "react-resizable-panels": {
     "current": "2.1.9",
     "wanted": "2.1.9",
-    "latest": "4.16.1",
+    "latest": "4.21.0",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/react-resizable-panels"
   },
@@ -184,7 +170,7 @@
   "tailwindcss": {
     "current": "3.4.19",
     "wanted": "3.4.19",
-    "latest": "4.3.3",
+    "latest": "4.3.5",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/tailwindcss"
   },
@@ -195,13 +181,6 @@
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/typescript"
   },
-  "typescript-eslint": {
-    "current": "8.72.0",
-    "wanted": "8.72.1",
-    "latest": "8.72.1",
-    "dependent": "queFork",
-    "location": "/home/runner/work/queFork/queFork/node_modules/typescript-eslint"
-  },
   "vaul": {
     "current": "0.9.9",
     "wanted": "0.9.9",
@@ -211,8 +190,8 @@
   },
   "vite": {
     "current": "7.3.7",
-    "wanted": "7.3.7",
-    "latest": "8.3.5",
+    "wanted": "7.3.8",
+    "latest": "8.3.7",
     "dependent": "queFork",
     "location": "/home/runner/work/queFork/queFork/node_modules/vite"
   },
